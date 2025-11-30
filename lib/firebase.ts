@@ -1,27 +1,26 @@
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
-// NOTE: In a real Next.js project, install firebase: npm install firebase
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
-import { getStorage, FirebaseStorage } from "firebase/storage";
-
+// Cấu hình mới sử dụng chuẩn VITE_
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: Firestore | undefined;
-let storage: FirebaseStorage | undefined;
-let googleProvider: GoogleAuthProvider | undefined;
+let app;
+let auth;
+let db;
+let storage;
+let googleProvider;
 
-// Only initialize if API key is present to prevent runtime crash
-if (firebaseConfig.apiKey) {
+// Kiểm tra xem đã có API Key chưa để tránh lỗi màn hình trắng
+if (firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("nhập_api_key") === -1) {
   try {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
@@ -32,7 +31,7 @@ if (firebaseConfig.apiKey) {
     console.error("Firebase initialization error:", error);
   }
 } else {
-  console.warn("Firebase config missing (API Key). Cloud features will be disabled.");
+  console.warn("Chưa điền mã Firebase API Key trong file .env.local!");
 }
 
 export { auth, db, storage, googleProvider };
