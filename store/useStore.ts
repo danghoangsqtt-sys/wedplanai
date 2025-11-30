@@ -7,23 +7,26 @@ import { saveUserDataToCloud, loadUserDataFromCloud, syncUserProfile, getUserPub
 import { fetchAllProfiles, fetchAnalyticsData, AdminAnalytics } from '../services/adminService';
 import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS } from '../data/initialData';
 import { db } from '../lib/firebase';
-import { doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import * as Firestore from 'firebase/firestore';
+
+// Destructure from namespace import to avoid "no exported member" errors in strict environments
+const { doc, updateDoc, deleteDoc, setDoc } = Firestore;
 
 interface AppState {
   user: UserProfile | null;
   settings: AppSettings;
-  
+
   // Real Admin Data
-  adminUsers: UserProfile[]; 
+  adminUsers: UserProfile[];
   adminStats: AdminAnalytics | null;
-  
+
   notifications: Notification[];
-  
+
   // App Data (Now in Store)
   guests: Guest[];
   budgetItems: BudgetItem[];
   isSyncing: boolean;
-  
+
   // Feng Shui Data
   fengShuiProfile: CoupleProfile | null;
   fengShuiResults: {
@@ -37,9 +40,9 @@ interface AppState {
   // Actions
   login: (user: UserProfile) => Promise<void>;
   logout: () => void;
-  setOpenAiKey: (key: string) => void;
+  setGeminiApiKey: (key: string) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
-  
+
   // Admin Actions
   fetchAdminData: () => Promise<void>;
   addUser: (user: UserProfile) => Promise<void>;
@@ -50,13 +53,13 @@ interface AppState {
   // Data Actions
   addGuest: (guest: Guest) => void;
   removeGuest: (id: string) => void;
-  updateGuest: (guest: Guest) => void; 
-  
+  updateGuest: (guest: Guest) => void;
+
   addBudgetItem: (item: BudgetItem) => void;
   updateBudgetItem: (id: string, field: keyof BudgetItem, value: any) => void;
   deleteBudgetItem: (id: string) => void;
-  setBudgetItems: (items: BudgetItem[]) => void; 
-  
+  setBudgetItems: (items: BudgetItem[]) => void;
+
   // Advanced Actions
   recalculateDeadlines: (weddingDateStr: string) => void;
   resetData: () => void;
@@ -78,8 +81,8 @@ const triggerCloudSync = (get: () => AppState) => {
   if (user?.enableCloudStorage) {
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
-      saveUserDataToCloud(user.uid, { 
-        guests, 
+      saveUserDataToCloud(user.uid, {
+        guests,
         budgetItems,
         fengShuiProfile: fengShuiProfile || undefined,
         fengShuiResults: fengShuiResults || undefined
@@ -93,8 +96,8 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       // Initialize with DEFAULT_GUEST_USER if no user exists in storage
       user: DEFAULT_GUEST_USER,
-      settings: { 
-        openaiApiKey: '',
+      settings: {
+        geminiApiKey: '',
         currency: 'VND',
         themeMode: 'light',
         enableNotifications: true
@@ -111,7 +114,7 @@ export const useStore = create<AppState>()(
 
       login: async (user) => {
         set({ user, isSyncing: true });
-        
+
         get().addNotification('SUCCESS', `Chào mừng ${user.displayName} đã quay trở lại!`);
 
         // 1. Sync public profile for Admin visibility
@@ -121,8 +124,8 @@ export const useStore = create<AppState>()(
         if (user.enableCloudStorage) {
           const cloudData = await loadUserDataFromCloud(user.uid);
           if (cloudData) {
-            set({ 
-              guests: cloudData.guests, 
+            set({
+              guests: cloudData.guests,
               budgetItems: cloudData.budgetItems,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
@@ -132,23 +135,23 @@ export const useStore = create<AppState>()(
             return;
           }
         }
-        
+
         set({ isSyncing: false });
       },
 
       logout: () => {
-        set({ 
-           user: DEFAULT_GUEST_USER, 
-           guests: INITIAL_GUESTS, 
-           budgetItems: INITIAL_BUDGET_ITEMS, 
-           fengShuiProfile: null, 
-           fengShuiResults: { harmony: null, dates: [] } 
+        set({
+          user: DEFAULT_GUEST_USER,
+          guests: INITIAL_GUESTS,
+          budgetItems: INITIAL_BUDGET_ITEMS,
+          fengShuiProfile: null,
+          fengShuiResults: { harmony: null, dates: [] }
         });
         get().addNotification('INFO', 'Đã đăng xuất thành công.');
       },
-      
-      setOpenAiKey: (key) => set((state) => ({ settings: { ...state.settings, openaiApiKey: key } })),
-      
+
+      setGeminiApiKey: (key) => set((state) => ({ settings: { ...state.settings, geminiApiKey: key } })),
+
       updateSettings: (newSettings) => set((state) => ({ settings: { ...state.settings, ...newSettings } })),
 
       // --- Real Admin Actions ---
@@ -159,36 +162,36 @@ export const useStore = create<AppState>()(
       },
 
       addUser: async (newUser) => {
-         // In real app, create via Admin SDK. Here we just add to public_profiles
-         await syncUserProfile(newUser);
-         // Refresh list
-         const users = await fetchAllProfiles();
-         set((state) => ({ 
-           adminUsers: users,
-           users: [...state.users, newUser]
-         }));
-         get().addNotification('SUCCESS', 'Đã thêm người dùng mới.');
+        // In real app, create via Admin SDK. Here we just add to public_profiles
+        await syncUserProfile(newUser);
+        // Refresh list
+        const users = await fetchAllProfiles();
+        set((state) => ({
+          adminUsers: users,
+          users: [...state.users, newUser]
+        }));
+        get().addNotification('SUCCESS', 'Đã thêm người dùng mới.');
       },
-      
+
       updateUser: async (uid, data) => {
         // 1. Update Firestore FIRST. If this fails, throw error so UI knows.
         if (db) {
-            try {
-                const userRef = doc(db, "public_profiles", uid);
-                // Use setDoc with merge: true. 
-                // This is safer than updateDoc because it creates the document if it doesn't exist (e.g. initial sync failed).
-                await setDoc(userRef, data, { merge: true });
-            } catch (e: any) { 
-                console.error("Update User Error (Firestore):", e);
-                // Re-throw to allow component to handle alert
-                throw new Error("Lỗi cập nhật quyền trên Cloud: " + e.message); 
-            }
+          try {
+            const userRef = doc(db, "public_profiles", uid);
+            // Use setDoc with merge: true. 
+            // This is safer than updateDoc because it creates the document if it doesn't exist (e.g. initial sync failed).
+            await setDoc(userRef, data, { merge: true });
+          } catch (e: any) {
+            console.error("Update User Error (Firestore):", e);
+            // Re-throw to allow component to handle alert
+            throw new Error("Lỗi cập nhật quyền trên Cloud: " + e.message);
+          }
         }
 
         // 2. Optimistic update for local state (Only if Firestore didn't throw)
         const currentUser = get().user;
         if (currentUser && currentUser.uid === uid) {
-           set({ user: { ...currentUser, ...data } });
+          set({ user: { ...currentUser, ...data } });
         }
 
         // Refresh list in state
@@ -196,15 +199,15 @@ export const useStore = create<AppState>()(
         const updatedUsers = get().users.map(u => u.uid === uid ? { ...u, ...data } : u);
         set({ adminUsers: updatedAdminUsers, users: updatedUsers });
       },
-      
+
       deleteUser: async (uid) => {
         if (db) {
-            try {
-                await deleteDoc(doc(db, "public_profiles", uid));
-                await deleteDoc(doc(db, "userData", uid)); // Delete actual data
-            } catch(e) { console.error(e); }
+          try {
+            await deleteDoc(doc(db, "public_profiles", uid));
+            await deleteDoc(doc(db, "userData", uid)); // Delete actual data
+          } catch (e) { console.error(e); }
         }
-        set((state) => ({ 
+        set((state) => ({
           adminUsers: state.adminUsers.filter(u => u.uid !== uid),
           users: state.users.filter(u => u.uid !== uid)
         }));
@@ -216,21 +219,21 @@ export const useStore = create<AppState>()(
         if (!currentUser || currentUser.role === 'GUEST') return;
 
         try {
-            const cloudProfile = await getUserPublicProfile(currentUser.uid);
-            if (cloudProfile) {
-                // Update local status with cloud status
-                set((state) => ({
-                    user: {
-                        ...state.user!, // Keep existing local fields
-                        isActive: cloudProfile.isActive, // Sync these important fields
-                        allowCustomApiKey: cloudProfile.allowCustomApiKey,
-                        enableCloudStorage: cloudProfile.enableCloudStorage,
-                        role: cloudProfile.role
-                    }
-                }));
-            }
+          const cloudProfile = await getUserPublicProfile(currentUser.uid);
+          if (cloudProfile) {
+            // Update local status with cloud status
+            set((state) => ({
+              user: {
+                ...state.user!, // Keep existing local fields
+                isActive: cloudProfile.isActive, // Sync these important fields
+                allowCustomApiKey: cloudProfile.allowCustomApiKey,
+                enableCloudStorage: cloudProfile.enableCloudStorage,
+                role: cloudProfile.role
+              }
+            }));
+          }
         } catch (e) {
-            console.error("Failed to refresh user profile", e);
+          console.error("Failed to refresh user profile", e);
         }
       },
 
@@ -261,7 +264,7 @@ export const useStore = create<AppState>()(
 
       updateBudgetItem: (id, field, value) => {
         set((state) => ({
-          budgetItems: state.budgetItems.map(item => 
+          budgetItems: state.budgetItems.map(item =>
             item.id === id ? { ...item, [field]: value } : item
           )
         }));
@@ -273,87 +276,87 @@ export const useStore = create<AppState>()(
         get().addNotification('INFO', 'Đã xóa khoản chi.');
         triggerCloudSync(get);
       },
-      
+
       setBudgetItems: (items) => {
-         set({ budgetItems: items });
-         triggerCloudSync(get);
+        set({ budgetItems: items });
+        triggerCloudSync(get);
       },
-      
+
       recalculateDeadlines: (weddingDateStr) => {
         if (!weddingDateStr) return;
         const weddingDate = new Date(weddingDateStr);
-        
+
         set((state) => {
           const newItems = state.budgetItems.map(item => {
-             if (item.status === TaskStatus.DONE || item.status === TaskStatus.PAID) return item;
+            if (item.status === TaskStatus.DONE || item.status === TaskStatus.PAID) return item;
 
-             let daysBefore = 0;
-             const cat = item.category.toLowerCase();
-             const name = item.itemName.toLowerCase();
+            let daysBefore = 0;
+            const cat = item.category.toLowerCase();
+            const name = item.itemName.toLowerCase();
 
-             if (cat.includes('nhà hàng') || cat.includes('tiệc cưới')) {
-                 if (name.includes('đặt cọc')) daysBefore = 180;
-                 else if (name.includes('thực đơn') || name.includes('chốt')) daysBefore = 30;
-                 else daysBefore = 0;
-             } else if (cat.includes('ảnh') || cat.includes('phim')) {
-                 daysBefore = 60;
-             } else if (cat.includes('trang phục') || cat.includes('váy') || cat.includes('vest')) {
-                 daysBefore = 45;
-             } else if (cat.includes('nhẫn') || cat.includes('trang sức')) {
-                 daysBefore = 90;
-             } else if (cat.includes('thiệp')) {
-                 daysBefore = 45;
-             } else if (cat.includes('lễ ăn hỏi') || cat.includes('dạm ngõ')) {
-                 daysBefore = 30;
-             } else if (cat.includes('xe') || cat.includes('hoa')) {
-                 daysBefore = 14;
-             } else {
-                 daysBefore = 7;
-             }
+            if (cat.includes('nhà hàng') || cat.includes('tiệc cưới')) {
+              if (name.includes('đặt cọc')) daysBefore = 180;
+              else if (name.includes('thực đơn') || name.includes('chốt')) daysBefore = 30;
+              else daysBefore = 0;
+            } else if (cat.includes('ảnh') || cat.includes('phim')) {
+              daysBefore = 60;
+            } else if (cat.includes('trang phục') || cat.includes('váy') || cat.includes('vest')) {
+              daysBefore = 45;
+            } else if (cat.includes('nhẫn') || cat.includes('trang sức')) {
+              daysBefore = 90;
+            } else if (cat.includes('thiệp')) {
+              daysBefore = 45;
+            } else if (cat.includes('lễ ăn hỏi') || cat.includes('dạm ngõ')) {
+              daysBefore = 30;
+            } else if (cat.includes('xe') || cat.includes('hoa')) {
+              daysBefore = 14;
+            } else {
+              daysBefore = 7;
+            }
 
-             const deadlineDate = new Date(weddingDate);
-             deadlineDate.setDate(weddingDate.getDate() - daysBefore);
-             
-             return {
-                 ...item,
-                 deadline: deadlineDate.toISOString().split('T')[0]
-             };
+            const deadlineDate = new Date(weddingDate);
+            deadlineDate.setDate(weddingDate.getDate() - daysBefore);
+
+            return {
+              ...item,
+              deadline: deadlineDate.toISOString().split('T')[0]
+            };
           });
-          
+
           return { budgetItems: newItems };
         });
-        
+
         get().addNotification('SUCCESS', 'Đã cập nhật lại hạn chót công việc.');
         triggerCloudSync(get);
       },
 
       // --- Advanced Actions ---
       resetData: () => {
-         set({
-            guests: INITIAL_GUESTS,
-            budgetItems: INITIAL_BUDGET_ITEMS,
-            fengShuiProfile: null,
-            fengShuiResults: { harmony: null, dates: [] }
-         });
-         get().addNotification('WARNING', 'Dữ liệu đã được đặt lại về mặc định.');
+        set({
+          guests: INITIAL_GUESTS,
+          budgetItems: INITIAL_BUDGET_ITEMS,
+          fengShuiProfile: null,
+          fengShuiResults: { harmony: null, dates: [] }
+        });
+        get().addNotification('WARNING', 'Dữ liệu đã được đặt lại về mặc định.');
       },
-      
+
       importData: (data: any) => {
-         set({
-            guests: data.guests || [],
-            budgetItems: data.budgetItems || [],
-            fengShuiProfile: data.fengShuiProfile || null,
-            fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] }
-         });
-         get().addNotification('SUCCESS', 'Khôi phục dữ liệu thành công.');
-         triggerCloudSync(get);
+        set({
+          guests: data.guests || [],
+          budgetItems: data.budgetItems || [],
+          fengShuiProfile: data.fengShuiProfile || null,
+          fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] }
+        });
+        get().addNotification('SUCCESS', 'Khôi phục dữ liệu thành công.');
+        triggerCloudSync(get);
       },
 
       updateFengShuiProfile: (profile) => {
         set({ fengShuiProfile: profile });
         triggerCloudSync(get);
       },
-      
+
       setFengShuiResults: (harmony, dates) => {
         set({ fengShuiResults: { harmony, dates } });
         triggerCloudSync(get);
@@ -361,26 +364,26 @@ export const useStore = create<AppState>()(
 
       // --- Notification Implementation ---
       addNotification: (type, message, duration = 3000) => {
-         const id = Date.now().toString();
-         set((state) => ({ notifications: [...state.notifications, { id, type, message, duration }] }));
-         
-         if (duration > 0) {
-            setTimeout(() => {
-               get().removeNotification(id);
-            }, duration);
-         }
+        const id = Date.now().toString();
+        set((state) => ({ notifications: [...state.notifications, { id, type, message, duration }] }));
+
+        if (duration > 0) {
+          setTimeout(() => {
+            get().removeNotification(id);
+          }, duration);
+        }
       },
 
       removeNotification: (id) => {
-         set((state) => ({ notifications: state.notifications.filter(n => n.id !== id) }));
+        set((state) => ({ notifications: state.notifications.filter(n => n.id !== id) }));
       }
     }),
     {
       name: 'wedplan-storage-v6',
-      partialize: (state) => ({ 
+      partialize: (state) => ({
         settings: state.settings,
         user: state.user,
-        guests: state.guests, 
+        guests: state.guests,
         budgetItems: state.budgetItems,
         fengShuiProfile: state.fengShuiProfile,
         fengShuiResults: state.fengShuiResults,

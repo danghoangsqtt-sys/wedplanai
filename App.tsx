@@ -9,25 +9,21 @@ import UserManagement from './components/admin/UserManagement';
 import Dashboard from './components/Dashboard';
 import ProcessGuide from './components/ProcessGuide';
 import FengShuiConsultant from './components/fengshui/FengShuiConsultant';
-import SettingsPage from './components/SettingsPage';
+import SettingsPage, { SettingsTab } from './components/SettingsPage';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import { Menu, ShieldAlert, LogIn, AlertTriangle } from 'lucide-react';
 import { logAppVisit } from './services/cloudService';
 
 function App() {
-  const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile } = useStore();
-
-  // State quản lý tab chính
+  const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile, addNotification } = useStore();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'process' | 'fengshui' | 'guests' | 'budget' | 'ai' | 'admin' | 'settings'>('dashboard');
-
-  // MỚI: State quản lý tab con trong trang Cài đặt ('ACCOUNT', 'DATA', 'SYSTEM', 'ABOUT')
-  const [settingsTab, setSettingsTab] = useState<any>('ACCOUNT');
 
   // UI State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>('ACCOUNT');
 
   // --- Apply Theme Effect ---
   useEffect(() => {
@@ -49,18 +45,19 @@ function App() {
     }
   }, [user?.uid]);
 
-  // --- MỚI: Tự động điều hướng khi tài khoản được kích hoạt nhưng chưa có Key ---
+  // --- Redirect Logic: Active User without Gemini Key ---
   useEffect(() => {
-    if (user && user.role === 'USER') {
-      // Logic: Đã kích hoạt (isActive=true) NHƯNG chưa có API Key
-      if (user.isActive && !settings.openaiApiKey) {
-        // Chuyển ngay đến trang Settings
+    if (user?.role === 'USER' && user.isActive && user.allowCustomApiKey && !settings.geminiApiKey) {
+      // Only redirect if trying to use AI, or perhaps force it generally. 
+      // For now, let's redirect if they land on AI tab or just general check.
+      // To avoid looping, we check if we aren't already there.
+      if (activeTab === 'ai') {
+        setSettingsDefaultTab('SYSTEM');
         setActiveTab('settings');
-        // Mở sẵn tab SYSTEM để nhập Key
-        setSettingsTab('SYSTEM');
+        addNotification('WARNING', 'Vui lòng cấu hình Gemini API Key để tiếp tục sử dụng AI.', 5000);
       }
     }
-  }, [user?.isActive, user?.role, settings.openaiApiKey]);
+  }, [activeTab, user, settings.geminiApiKey]);
 
   // --- Statistics Calculation Logic ---
   const stats: DashboardStats = useMemo(() => {
@@ -217,14 +214,14 @@ function App() {
                     <div className={`p-3 rounded-lg text-sm ${user.role === 'ADMIN' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
                       {user.role === 'ADMIN'
                         ? "Bạn đang dùng Google Gemini (System Key)."
-                        : "Bạn đang dùng OpenAI (Personal Key)."}
+                        : "Bạn đang dùng Google Gemini (Personal Key)."}
                     </div>
                     {user.role === 'USER' && !user.allowCustomApiKey && (
                       <div className="mt-2 text-xs text-red-500 flex items-center gap-1">
                         <ShieldAlert className="w-3 h-3" /> Bạn chưa được cấp quyền nhập Key.
                       </div>
                     )}
-                    {user.role === 'USER' && user.allowCustomApiKey && !settings.openaiApiKey && (
+                    {user.role === 'USER' && user.allowCustomApiKey && !settings.geminiApiKey && (
                       <div className="mt-2 text-xs text-red-500">
                         ⚠️ Chưa có API Key. Vui lòng vào Cài Đặt.
                       </div>
@@ -262,7 +259,7 @@ function App() {
             )}
 
             {activeTab === 'settings' && (
-              <SettingsPage defaultTab={settingsTab} />
+              <SettingsPage defaultTab={settingsDefaultTab} />
             )}
           </div>
         </main>

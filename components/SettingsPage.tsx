@@ -1,8 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { validateOpenAIKey } from '../services/aiService';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { validateGeminiKey } from '../services/aiService';
+import * as Storage from 'firebase/storage';
 import { storage } from '../lib/firebase';
 import {
    User, Calendar, Settings as SettingsIcon, Database,
@@ -12,6 +12,8 @@ import {
    Loader2, ExternalLink, BookOpen, CreditCard, MousePointerClick
 } from 'lucide-react';
 
+const { ref, uploadBytes, getDownloadURL } = Storage;
+
 export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
 interface SettingsPageProps {
@@ -19,16 +21,15 @@ interface SettingsPageProps {
 }
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) => {
-   const { user, updateUser, settings, updateSettings, setOpenAiKey, resetData, importData, recalculateDeadlines, guests, budgetItems, fengShuiProfile, fengShuiResults, users } = useStore();
+   const { user, updateUser, settings, updateSettings, setGeminiApiKey, resetData, importData, recalculateDeadlines, guests, budgetItems, fengShuiProfile, fengShuiResults, users } = useStore();
    const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab);
 
    // --- CẤU HÌNH LINK VIDEO HƯỚNG DẪN TẠI ĐÂY ---
-   // Bạn hãy thay đường dẫn bên dưới bằng link video của bạn
-   const YOUTUBE_GUIDE_LINK = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+   const YOUTUBE_GUIDE_LINK = "https://aistudio.google.com/app/apikey";
    // ---------------------------------------------
 
    // Local states for inputs
-   const [tempApiKey, setTempApiKey] = useState(settings.openaiApiKey);
+   const [tempApiKey, setTempApiKey] = useState(settings.geminiApiKey || '');
    const [showApiKey, setShowApiKey] = useState(false);
    const [isValidatingKey, setIsValidatingKey] = useState(false);
    const [isUploading, setIsUploading] = useState(false);
@@ -42,9 +43,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
    // Get Admin User info for contact display
    const adminContact = users.find(u => u.role === 'ADMIN') || users[0];
 
-   // Helper to check format validity
-   const isKeyFormatValid = !tempApiKey || tempApiKey.trim().startsWith('sk-');
-
    // --- Handlers ---
 
    const handleExportData = () => {
@@ -54,7 +52,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
          fengShuiProfile,
          fengShuiResults,
          exportedAt: new Date().toISOString(),
-         appVersion: '1.0.0'
+         appVersion: '2.1.0'
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -113,14 +111,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
       setIsUploading(true);
       try {
          // Path: wedplanai/${user.uid}/${fileName}
-         // Ensure unique name or overwrite? Using original name usually overwrites if same name, which is fine for avatar.
          const storageRef = ref(storage, `wedplanai/${user!.uid}/${file.name}`);
 
          const snapshot = await uploadBytes(storageRef, file);
          const downloadURL = await getDownloadURL(snapshot.ref);
 
          updateUser(user!.uid, { photoURL: downloadURL });
-         // Optional: Add notification here if desired, but sticking to alert for simplicity/consistency with existing code
       } catch (error: any) {
          console.error("Upload error:", error);
          alert(`Lỗi khi tải ảnh: ${error.message}`);
@@ -156,23 +152,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
          return;
       }
 
-      // --- VALIDATION START ---
-      if (!cleanKey.startsWith('sk-')) {
-         alert("Định dạng API Key không hợp lệ. Key phải bắt đầu bằng 'sk-'.");
+      // Simple format check for Gemini Keys
+      if (!cleanKey.startsWith("AIza") && cleanKey.length < 20) {
+         alert("Định dạng API Key không hợp lệ (Key thường bắt đầu bằng 'AIza').");
          return;
       }
-
-      if (cleanKey.length < 30) {
-         alert("API Key có vẻ quá ngắn. Vui lòng kiểm tra lại.");
-         return;
-      }
-      // --- VALIDATION END ---
 
       setIsValidatingKey(true);
       try {
-         await validateOpenAIKey(cleanKey);
-         setOpenAiKey(cleanKey);
-         alert("Kết nối thành công! Đã lưu API Key.");
+         await validateGeminiKey(cleanKey);
+         setGeminiApiKey(cleanKey);
+         alert("Kết nối thành công! Đã lưu Google Gemini API Key.");
       } catch (error: any) {
          alert(`Kết nối thất bại: ${error.message}`);
       } finally {
@@ -513,7 +503,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                            <Shield className="w-6 h-6 text-emerald-400" /> Kích Hoạt Tính Năng Cao Cấp
                         </h3>
                         <p className="text-slate-300 text-sm max-w-xl leading-relaxed">
-                           WedPlan AI sử dụng các mô hình trí tuệ nhân tạo tiên tiến (OpenAI GPT-4o Mini, Google Gemini) để tư vấn phong thủy, lập ngân sách và viết lời hay.
+                           WedPlan AI sử dụng Google Gemini (AI thông minh nhất của Google) để tư vấn phong thủy, lập ngân sách và viết lời hay.
                            Để sử dụng trọn vẹn, bạn cần kích hoạt tài khoản Pro.
                         </p>
                      </div>
@@ -575,12 +565,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                               {user.allowCustomApiKey && user.isActive && (
                                  <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                                     <div className="flex justify-between items-center mb-2">
-                                       <label className="block text-sm font-bold text-gray-700">OpenAI API Key Cá Nhân</label>
+                                       <label className="block text-sm font-bold text-gray-700">Google Gemini API Key Cá Nhân</label>
                                        <button
                                           onClick={() => setShowApiGuide(!showApiGuide)}
                                           className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-md transition-colors"
                                        >
-                                          <BookOpen className="w-3 h-3" /> Hướng dẫn lấy Key (Cho người mới)
+                                          <BookOpen className="w-3 h-3" /> Hướng dẫn lấy Key (Miễn phí)
                                        </button>
                                     </div>
 
@@ -591,40 +581,34 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                              <h5 className="font-bold text-indigo-900 flex items-center gap-2">
                                                 <MousePointerClick className="w-4 h-4" /> Cách lấy Key nhanh:
                                              </h5>
-
-                                             {/* Nút xem Video hướng dẫn */}
-                                             {YOUTUBE_GUIDE_LINK && (
-                                                <a
-                                                   href={YOUTUBE_GUIDE_LINK}
-                                                   target="_blank"
-                                                   rel="noopener noreferrer"
-                                                   className="flex items-center gap-1 text-xs font-bold text-red-600 bg-white border border-red-100 px-2 py-1 rounded shadow-sm hover:bg-red-50 transition-colors"
-                                                >
-                                                   <ExternalLink className="w-3 h-3" /> Xem Video Hướng Dẫn
-                                                </a>
-                                             )}
                                           </div>
 
                                           <ol className="space-y-3 pl-2">
                                              <li className="flex gap-2 items-start">
                                                 <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">1</span>
                                                 <span>
-                                                   Truy cập đường dẫn quản lý Key: <br />
-                                                   <a href="https://platform.openai.com/api-keys" target="_blank" className="text-blue-600 underline font-bold break-all">
-                                                      https://platform.openai.com/api-keys
+                                                   Truy cập: <br />
+                                                   <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline font-bold break-all">
+                                                      https://aistudio.google.com/app/apikey
                                                    </a>
                                                 </span>
                                              </li>
                                              <li className="flex gap-2 items-start">
                                                 <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">2</span>
                                                 <span>
-                                                   Nhấn vào nút <span className="font-bold bg-white px-1.5 py-0.5 rounded border border-indigo-100 mx-1 text-gray-800">+ Create new secret key</span>.
+                                                   Đăng nhập Google và nhấn <strong>Create API key</strong>.
                                                 </span>
                                              </li>
                                              <li className="flex gap-2 items-start">
                                                 <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">3</span>
                                                 <span>
-                                                   Đặt tên bất kỳ (ví dụ: "WedPlan") <span className="text-gray-400">→</span> Nhấn <strong>Create secret key</strong> <span className="text-gray-400">→</span> Nhấn <strong>Copy</strong> và dán vào ô bên dưới.
+                                                   Chọn <strong>Create API key in new project</strong> hoặc dự án có sẵn.
+                                                </span>
+                                             </li>
+                                             <li className="flex gap-2 items-start">
+                                                <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">4</span>
+                                                <span>
+                                                   Copy key và dán vào ô bên dưới.
                                                 </span>
                                              </li>
                                           </ol>
@@ -633,14 +617,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     <div className="relative mb-2">
                                        <input
                                           type={showApiKey ? "text" : "password"}
-                                          className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none transition-all font-mono text-sm ${!isKeyFormatValid ? 'border-red-300 focus:border-red-500 bg-red-50' : 'border-gray-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
+                                          className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none transition-all font-mono text-sm ${!tempApiKey ? 'border-gray-300' : 'border-gray-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
                                              }`}
-                                          placeholder="sk-..."
+                                          placeholder="AIzaSy..."
                                           value={tempApiKey}
                                           onChange={(e) => setTempApiKey(e.target.value)}
                                           disabled={isValidatingKey}
                                        />
-                                       <Key className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${!isKeyFormatValid ? 'text-red-400' : 'text-gray-400'}`} />
+                                       <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                        <button
                                           onClick={() => setShowApiKey(!showApiKey)}
                                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
@@ -650,21 +634,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                        </button>
                                     </div>
 
-                                    {!isKeyFormatValid && (
-                                       <p className="text-xs text-red-500 mb-2 font-medium flex items-center gap-1">
-                                          <AlertTriangle className="w-3 h-3" /> Định dạng không hợp lệ. Key phải bắt đầu bằng 'sk-'.
-                                       </p>
-                                    )}
-
                                     <div className="flex justify-between items-center mb-4">
                                        <p className="text-[11px] text-gray-400">
-                                          * Key được lưu cục bộ và chỉ dùng để gọi OpenAI.
+                                          * Key được lưu cục bộ và chỉ dùng để gọi Google Gemini.
                                        </p>
                                     </div>
 
                                     <button
                                        onClick={handleSaveApiKey}
-                                       disabled={isValidatingKey || !tempApiKey.trim() || !isKeyFormatValid}
+                                       disabled={isValidatingKey || !tempApiKey.trim()}
                                        className="w-full px-4 py-2.5 bg-gray-900 hover:bg-black text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                                     >
                                        {isValidatingKey ? (
@@ -746,7 +724,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                      Trợ lý đám cưới thông minh, giúp bạn lên kế hoạch chi tiết, quản lý ngân sách và khách mời một cách hiệu quả nhất.
                   </p>
                   <div className="flex justify-center gap-4 text-sm font-medium text-gray-600">
-                     <span>Phiên bản: 1.0.0 (Beta)</span>
+                     <span>Phiên bản: 2.1.0 (Beta)</span>
                      <span>•</span>
                      <span>Xây dựng bởi Đăng Hoàng</span>
                   </div>

@@ -1,7 +1,9 @@
 
-import { collection, getDocs, query, orderBy, limit, where, Timestamp } from "firebase/firestore";
+import * as Firestore from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { UserProfile } from "../types";
+
+const { collection, getDocs, query, orderBy, limit, where, Timestamp } = Firestore;
 
 export interface AdminAnalytics {
   dailyVisits: { name: string; visits: number }[];
@@ -16,24 +18,24 @@ export const fetchAllProfiles = async (): Promise<UserProfile[]> => {
     // OPTIMIZATION: Limit to 50 most recent users to save Firestore Reads.
     // In a real production app, you would implement "Load More" pagination.
     const q = query(
-        collection(db, "public_profiles"), 
-        limit(50)
-    ); 
+      collection(db, "public_profiles"),
+      limit(50)
+    );
     const snapshot = await getDocs(q);
-    
+
     const users = snapshot.docs.map(doc => doc.data() as UserProfile);
-    
+
     // Sort in memory (Newest first)
     return users.sort((a, b) => {
-        const dateA = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
-        const dateB = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
-        return dateB - dateA;
+      const dateA = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
+      const dateB = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
+      return dateB - dateA;
     });
   } catch (error: any) {
     if (error.code === 'permission-denied') {
-        console.warn("Admin Service: Cannot fetch profiles (Permission Denied). Check Firestore Rules.");
+      console.warn("Admin Service: Cannot fetch profiles (Permission Denied). Check Firestore Rules.");
     } else {
-        console.error("Error fetching profiles:", error);
+      console.error("Error fetching profiles:", error);
     }
     return [];
   }
@@ -53,7 +55,7 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
     // 1. Get Logs for Chart (Last 7 days)
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const logsQ = query(
-      collection(db, "analytics_logs"), 
+      collection(db, "analytics_logs"),
       where("timestamp", ">", sevenDaysAgo)
     );
     const logsSnapshot = await getDocs(logsQ);
@@ -61,13 +63,13 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
     // Process logs into daily buckets
     const daysMap: Record<string, number> = {};
     const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    
+
     // Initialize last 7 days with 0
     for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const key = weekDays[d.getDay()];
-        if (!daysMap[key]) daysMap[key] = 0;
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = weekDays[d.getDay()];
+      if (!daysMap[key]) daysMap[key] = 0;
     }
 
     logsSnapshot.forEach(doc => {
@@ -92,7 +94,7 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
     const tenMinsAgo = Date.now() - 10 * 60 * 1000;
     const profilesQ = query(collection(db, "public_profiles"));
     const profilesSnap = await getDocs(profilesQ);
-    
+
     let onlineCount = 0;
     let roleCounts = { admin: 0, user: 0, guest: 0, inactive: 0 };
 
@@ -121,15 +123,15 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
 
   } catch (error: any) {
     if (error.code === 'permission-denied') {
-        console.warn("Admin Service: Cannot fetch analytics (Permission Denied).");
+      console.warn("Admin Service: Cannot fetch analytics (Permission Denied).");
     } else {
-        console.error("Error fetching analytics:", error);
+      console.error("Error fetching analytics:", error);
     }
     return {
-        dailyVisits: [],
-        onlineNow: 0,
-        totalUsers: 0,
-        userRoles: { admin: 0, user: 0, guest: 0, inactive: 0 }
+      dailyVisits: [],
+      onlineNow: 0,
+      totalUsers: 0,
+      userRoles: { admin: 0, user: 0, guest: 0, inactive: 0 }
     };
   }
 };

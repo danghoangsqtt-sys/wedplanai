@@ -36,7 +36,7 @@ export interface BudgetItem {
   category: string; // e.g., "Lễ Hỏi", "Trang Trí", "Tiệc Cưới"
   itemName: string; // e.g., "Tráp ăn hỏi", "Backdrop"
   assignee: string; // e.g., "Chú Rể", "Mẹ Cô Dâu"
-  side: WeddingSide; 
+  side: WeddingSide;
   collaborator?: string;
   deadline?: string; // ISO date string (YYYY-MM-DD)
   status: TaskStatus;
@@ -77,7 +77,7 @@ export interface UserProfile {
 }
 
 export interface AppSettings {
-  openaiApiKey: string;
+  geminiApiKey: string; // Changed from openaiApiKey
   currency: 'VND' | 'USD';
   themeMode: 'light' | 'dark';
   enableNotifications: boolean;

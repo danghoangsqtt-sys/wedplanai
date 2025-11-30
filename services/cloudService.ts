@@ -1,8 +1,10 @@
 
-import { doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, limit, orderBy } from "firebase/firestore";
+import * as Firestore from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { Guest, BudgetItem, UserProfile } from "../types";
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from "../types/fengshui";
+
+const { doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, limit, orderBy } = Firestore;
 
 export interface UserCloudData {
   guests: Guest[];
@@ -43,7 +45,7 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
   try {
     const userDocRef = doc(db, "userData", uid);
     const docSnap = await getDoc(userDocRef);
-    
+
     if (docSnap.exists()) {
       return docSnap.data() as UserCloudData;
     } else {
@@ -83,7 +85,7 @@ export const syncUserProfile = async (user: UserProfile) => {
   } catch (error: any) {
     // Suppress permission errors in console to avoid red noise
     if (error.code !== 'permission-denied') {
-        console.error("Error syncing profile:", error);
+      console.error("Error syncing profile:", error);
     }
   }
 };
@@ -100,7 +102,7 @@ export const getUserPublicProfile = async (uid: string): Promise<UserProfile | n
     return null;
   } catch (e: any) {
     if (e.code !== 'permission-denied') {
-        console.error("Error fetching public profile:", e);
+      console.error("Error fetching public profile:", e);
     }
     return null;
   }
@@ -121,7 +123,7 @@ export const logAppVisit = async (uid?: string) => {
     // Check if we logged a visit recently (session based - e.g., 1 hour) to avoid spam
     const sessionKey = `last_visit_${new Date().toDateString()}`;
     const hasLoggedToday = sessionStorage.getItem(sessionKey);
-    
+
     if (!hasLoggedToday) {
       const analyticsRef = collection(db, "analytics_logs");
       await addDoc(analyticsRef, {
@@ -135,9 +137,9 @@ export const logAppVisit = async (uid?: string) => {
   } catch (error: any) {
     // Suppress permission errors (common if rules not set)
     if (error.code === 'permission-denied') {
-       console.warn("Analytics: Firestore permissions missing. Visit not logged.");
+      console.warn("Analytics: Firestore permissions missing. Visit not logged.");
     } else {
-       console.error("Analytics error:", error);
+      console.error("Analytics error:", error);
     }
   }
 };
