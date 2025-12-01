@@ -47,10 +47,12 @@ const InvitationBuilder: React.FC = () => {
         });
     };
 
+    // --- FIX LỖI UPLOAD ẢNH (QUAN TRỌNG) ---
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // 1. Kiểm tra dung lượng
         if (file.size > 5 * 1024 * 1024) {
             alert("Ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhỏ hơn.");
             return;
@@ -63,25 +65,44 @@ const InvitationBuilder: React.FC = () => {
 
         setIsUploading(true);
         try {
-            const storageRef = ref(storage, `invitations/${user!.uid}/${file.name}_${Date.now()}`);
+            // 2. Đặt tên file an toàn (tránh ký tự đặc biệt gây lỗi đường dẫn)
+            const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            const storageRef = ref(storage, `invitations/${user!.uid}/${safeName}_${Date.now()}`);
 
-            // --- BỔ SUNG PHẦN NÀY ---
+            // 3. Tự động xác định Content-Type nếu trình duyệt không nhận diện được
+            let mimeType = file.type;
+            if (!mimeType || mimeType === '') {
+                const ext = file.name.split('.').pop()?.toLowerCase();
+                if (ext === 'png') mimeType = 'image/png';
+                else if (ext === 'webp') mimeType = 'image/webp';
+                else if (ext === 'gif') mimeType = 'image/gif';
+                else mimeType = 'image/jpeg'; // Fallback mặc định là JPG
+            }
+
+            // 4. Tạo Metadata chuẩn
             const metadata = {
-                contentType: file.type, // Ví dụ: 'image/jpeg', 'image/png', 'image/webp'
+                contentType: mimeType
             };
-            // ------------------------
 
-            // Truyền metadata vào tham số thứ 3 của uploadBytes
+            // 5. Gửi Metadata kèm file để vượt qua Security Rules
             const snapshot = await uploadBytes(storageRef, file, metadata);
 
+            // 6. Lấy URL tải xuống
             const url = await getDownloadURL(snapshot.ref);
+
             updateInvitation({ coverImage: url });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
         } catch (error: any) {
             console.error("Upload failed", error);
-            alert("Lỗi upload: " + error.message);
+            if (error.code === 'storage/unauthorized') {
+                alert("Lỗi quyền truy cập (403). Vui lòng thử đổi sang ảnh JPG hoặc PNG khác.");
+            } else {
+                alert("Lỗi upload: " + error.message);
+            }
         } finally {
             setIsUploading(false);
+            // Reset input để cho phép chọn lại cùng file
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
