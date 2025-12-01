@@ -118,8 +118,8 @@ function App() {
       <div className="flex-1 flex flex-col h-full overflow-hidden w-full relative">
 
         {/* Mobile Header */}
-        <header className="md:hidden h-16 bg-white border-b border-rose-100 flex items-center justify-between px-4 flex-shrink-0">
-          <h1 className="font-bold text-gray-900">WedPlan AI</h1>
+        <header className="lg:hidden h-16 bg-white border-b border-rose-100 flex items-center justify-between px-4 flex-shrink-0 z-40 relative">
+          <h1 className="font-bold text-gray-900 text-lg">WedPlan AI</h1>
           <div className="flex items-center gap-2">
             {user.role === 'GUEST' && (
               <button
@@ -145,18 +145,18 @@ function App() {
 
         {/* Prominent Floating Login Button (Top Right) */}
         {user.role === 'GUEST' && (
-          <div className="absolute top-5 right-5 z-[50]">
+          <div className="absolute top-20 right-5 z-[50] lg:top-5 lg:right-5">
             <button
               onClick={() => setShowLoginModal(true)}
-              className="bg-rose-600 hover:bg-rose-700 text-white border-2 border-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-rose-500/40 transition-all flex items-center gap-2 hover:shadow-xl hover:scale-105 active:scale-95 animate-pulse"
+              className="bg-rose-600 hover:bg-rose-700 text-white border-2 border-white px-4 py-2 lg:px-6 lg:py-2.5 rounded-full text-xs lg:text-sm font-bold shadow-lg shadow-rose-500/40 transition-all flex items-center gap-2 hover:shadow-xl hover:scale-105 active:scale-95 animate-pulse"
             >
-              <LogIn className="w-5 h-5" /> Đăng nhập ngay
+              <LogIn className="w-4 h-4 lg:w-5 lg:h-5" /> <span className="hidden sm:inline">Đăng nhập ngay</span><span className="sm:hidden">Login</span>
             </button>
           </div>
         )}
 
         {/* Scrollable Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#FDF2F8]">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 lg:p-8 bg-[#FDF2F8]">
           <div className="max-w-7xl mx-auto h-full flex flex-col">
 
             {activeTab === 'dashboard' && (
@@ -172,56 +172,44 @@ function App() {
               <ProcessGuide />
             )}
 
-            {activeTab === 'fengshui' && !isRestricted && (
-              <div className="h-full flex-1 min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
-                <FengShuiConsultant />
-              </div>
-            )}
-
-            {activeTab === 'fengshui' && isRestricted && (
-              <div className="h-full flex flex-col items-center justify-center bg-white rounded-xl shadow-sm border border-rose-100 p-8 text-center">
-                <ShieldAlert className="w-16 h-16 text-rose-300 mb-4" />
-                <h2 className="text-xl font-bold text-gray-800 mb-2">Tính năng giới hạn</h2>
-                <p className="text-gray-500 mb-6 max-w-md">
-                  {user.role === 'GUEST'
-                    ? "Tính năng Phong Thủy AI chỉ dành cho thành viên chính thức. Vui lòng đăng nhập để sử dụng."
-                    : "Tài khoản của bạn chưa được kích hoạt. Vui lòng liên hệ Admin để mở khóa tính năng này."}
-                </p>
-                {user.role === 'GUEST' && (
-                  <button
-                    onClick={() => setShowLoginModal(true)}
-                    className="bg-rose-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-rose-700 transition-transform active:scale-95 animate-pulse"
-                  >
-                    Đăng nhập ngay
-                  </button>
-                )}
+            {activeTab === 'fengshui' && (
+              <div className="h-full flex-1 min-h-[500px] lg:min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
+                <FengShuiConsultant isRestricted={isRestricted} />
               </div>
             )}
 
             {activeTab === 'guests' && <GuestManager />}
 
             {activeTab === 'budget' && (
-              <div className="flex-1 flex flex-col h-full min-h-[600px]">
+              <div className="flex-1 flex flex-col h-full min-h-[500px] lg:min-h-[600px] overflow-hidden rounded-xl border border-gray-200">
                 <DetailedBudgetPlanner />
               </div>
             )}
 
-            {activeTab === 'ai' && !isRestricted && (
+            {activeTab === 'ai' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6">
                 <div className="lg:col-span-1 space-y-4">
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-rose-100">
                     <h3 className="font-bold text-gray-700 mb-2">Trạng thái AI</h3>
-                    <div className={`p-3 rounded-lg text-sm ${user.role === 'ADMIN' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
-                      {user.role === 'ADMIN'
-                        ? "Bạn đang dùng Google Gemini (System Key)."
-                        : "Bạn đang dùng Google Gemini (Personal Key)."}
+                    <div className={`p-3 rounded-lg text-sm ${isRestricted
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : user.role === 'ADMIN'
+                          ? 'bg-purple-50 text-purple-700'
+                          : 'bg-blue-50 text-blue-700'
+                      }`}>
+                      {isRestricted
+                        ? "Đang dùng thử miễn phí"
+                        : user.role === 'ADMIN'
+                          ? "Bạn đang dùng Google Gemini (System Key)."
+                          : "Bạn đang dùng Google Gemini (Personal Key)."
+                      }
                     </div>
-                    {user.role === 'USER' && !user.allowCustomApiKey && (
+                    {user.role === 'USER' && !user.allowCustomApiKey && !isRestricted && (
                       <div className="mt-2 text-xs text-red-500 flex items-center gap-1">
                         <ShieldAlert className="w-3 h-3" /> Bạn chưa được cấp quyền nhập Key.
                       </div>
                     )}
-                    {user.role === 'USER' && user.allowCustomApiKey && !settings.geminiApiKey && (
+                    {user.role === 'USER' && user.allowCustomApiKey && !settings.geminiApiKey && !isRestricted && (
                       <div className="mt-2 text-xs text-red-500">
                         ⚠️ Chưa có API Key. Vui lòng vào Cài Đặt.
                       </div>
@@ -229,28 +217,8 @@ function App() {
                   </div>
                 </div>
                 <div className="lg:col-span-2">
-                  <AIAdvisor stats={stats} />
+                  <AIAdvisor stats={stats} isRestricted={isRestricted} />
                 </div>
-              </div>
-            )}
-
-            {activeTab === 'ai' && isRestricted && (
-              <div className="h-full flex flex-col items-center justify-center bg-white rounded-xl shadow-sm border border-rose-100 p-8 text-center">
-                <ShieldAlert className="w-16 h-16 text-rose-300 mb-4" />
-                <h2 className="text-xl font-bold text-gray-800 mb-2">Trợ Lý AI</h2>
-                <p className="text-gray-500 mb-6 max-w-md">
-                  {user.role === 'GUEST'
-                    ? "Vui lòng đăng nhập để chat với Cố vấn Cưới hỏi thông minh."
-                    : "Tài khoản chưa kích hoạt không thể sử dụng AI. Vui lòng liên hệ Admin."}
-                </p>
-                {user.role === 'GUEST' && (
-                  <button
-                    onClick={() => setShowLoginModal(true)}
-                    className="bg-rose-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-rose-700 transition-transform active:scale-95 animate-pulse"
-                  >
-                    Đăng nhập ngay
-                  </button>
-                )}
               </div>
             )}
 

@@ -1,14 +1,15 @@
 
 import * as Firestore from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { Guest, BudgetItem, UserProfile } from "../types";
+import { Guest, BudgetItem, UserProfile, ProcedureStep, WeddingRegion } from "../types";
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from "../types/fengshui";
 
-const { doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, limit, orderBy } = Firestore;
+const { doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, limit, orderBy, increment } = Firestore;
 
 export interface UserCloudData {
   guests: Guest[];
   budgetItems: BudgetItem[];
+  procedures?: Record<WeddingRegion, ProcedureStep[]>; // Added procedures
   fengShuiProfile?: CoupleProfile;
   fengShuiResults?: {
     harmony: HarmonyResult | null;
@@ -16,6 +17,22 @@ export interface UserCloudData {
   };
   lastUpdated: number;
 }
+
+// --- UTILS ---
+
+/**
+ * Lấy địa chỉ IP Public của người dùng hiện tại
+ */
+export const getPublicIP = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip;
+  } catch (error) {
+    console.warn("Failed to get public IP:", error);
+    return null; // Fail safe
+  }
+};
 
 // --- CORE DATA SYNC ---
 
@@ -116,7 +133,7 @@ const updateLastActive = async (uid: string) => {
   } catch (e) { /* silent fail */ }
 };
 
-// 2. Log Visit for Analytics
+// 2. Log Visit for Analytics (Updated with IP & Referrer)
 export const logAppVisit = async (uid?: string) => {
   if (!db) return;
   try {
@@ -125,12 +142,17 @@ export const logAppVisit = async (uid?: string) => {
     const hasLoggedToday = sessionStorage.getItem(sessionKey);
 
     if (!hasLoggedToday) {
+      const ip = await getPublicIP(); // Fetch IP
+      const referrer = document.referrer || 'direct'; // Get referrer
+
       const analyticsRef = collection(db, "analytics_logs");
       await addDoc(analyticsRef, {
         timestamp: Date.now(),
         uid: uid || 'guest',
         page: window.location.pathname,
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        ip: ip || 'unknown',
+        referrer: referrer
       });
       sessionStorage.setItem(sessionKey, 'true');
     }
@@ -141,5 +163,66 @@ export const logAppVisit = async (uid?: string) => {
     } else {
       console.error("Analytics error:", error);
     }
+  }
+};
+
+// --- GUEST LIMIT MANAGEMENT BY IP (Cloud-based) ---
+
+/**
+ * Kiểm tra xem IP hiện tại đã vượt quá giới hạn sử dụng tính năng chưa.
+ * @param feature Tên tính năng ('fengshui', 'ai_chat', 'speech')
+ * @param maxLimit Số lần tối đa cho phép
+ * @returns true nếu ĐÃ VƯỢT QUÁ giới hạn
+ */
+export const checkGuestIPLimit = async (
+  feature: 'fengShuiCount' | 'aiChatCount' | 'speechCount',
+  maxLimit: number
+): Promise<boolean> => {
+  if (!db) return false; // Không có DB thì thả cửa (hoặc chặn tùy logic, ở đây chọn thả để không lỗi app)
+
+  try {
+    const ip = await getPublicIP();
+    if (!ip) return false; // Không lấy được IP thì tạm thời cho qua
+
+    const docRef = doc(db, "guest_usage", ip);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const currentCount = data[feature] || 0;
+      return currentCount >= maxLimit;
+    }
+
+    return false; // Chưa có record -> chưa vượt
+  } catch (error) {
+    console.warn("Check IP Limit failed:", error);
+    return false;
+  }
+};
+
+/**
+ * Tăng biến đếm sử dụng cho IP hiện tại trên Firestore.
+ * @param feature Tên tính năng cần tăng
+ */
+export const incrementGuestIPUsage = async (
+  feature: 'fengShuiCount' | 'aiChatCount' | 'speechCount'
+): Promise<void> => {
+  if (!db) return;
+
+  try {
+    const ip = await getPublicIP();
+    if (!ip) return;
+
+    const docRef = doc(db, "guest_usage", ip);
+
+    // Dùng setDoc với merge: true và increment(1) để atomic update
+    await setDoc(docRef, {
+      [feature]: increment(1),
+      lastUpdated: Date.now(),
+      ip: ip // Lưu lại IP string để dễ query nếu cần
+    }, { merge: true });
+
+  } catch (error) {
+    console.warn("Increment IP Usage failed:", error);
   }
 };

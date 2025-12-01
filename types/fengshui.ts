@@ -2,12 +2,12 @@ export type ElementKey = 'KIM' | 'MOC' | 'THUY' | 'HOA' | 'THO';
 
 export interface CoupleProfile {
   groomName: string;
-  groomDob: string; // YYYY-MM-DD
-  groomTime: string; // HH:mm
+  groomDob: string;
+  groomTime: string;
   brideName: string;
-  brideDob: string; // YYYY-MM-DD
-  brideTime: string; // HH:mm
-  desiredPeriod: string; // e.g. "Tháng 10 năm 2024"
+  brideDob: string;
+  brideTime: string;
+  desiredPeriod: string;
 }
 
 export interface HarmonyResult {
@@ -26,13 +26,20 @@ export interface HarmonyResult {
 
   detailedAnalysis: string;
 
-  // MỚI: Phần mở rộng đa chiều
+  // THÊM MỚI: Dữ liệu cho biểu đồ Radar (Mạng nhện)
+  radarChart?: {
+    subject: string;
+    A: number; // Điểm Chồng
+    B: number; // Điểm Vợ (hoặc điểm hòa hợp)
+    fullMark: number;
+  }[];
+
   combinedAnalysis?: {
-    groomZodiac: string; // Cung Hoàng Đạo
+    groomZodiac: string;
     brideZodiac: string;
-    groomLifePath: number; // Thần số học
+    groomLifePath: number;
     brideLifePath: number;
-    synthesis: string; // Lời bình tổng hợp từ AI
+    synthesis: string;
   };
 }
 

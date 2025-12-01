@@ -10,6 +10,7 @@ export interface AdminAnalytics {
   onlineNow: number;
   totalUsers: number;
   userRoles: { admin: number; user: number; guest: number; inactive: number };
+  trafficSources: { name: string; value: number }[]; // NEW: Thống kê nguồn truy cập
 }
 
 export const fetchAllProfiles = async (): Promise<UserProfile[]> => {
@@ -47,7 +48,8 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
       dailyVisits: [],
       onlineNow: 0,
       totalUsers: 0,
-      userRoles: { admin: 0, user: 0, guest: 0, inactive: 0 }
+      userRoles: { admin: 0, user: 0, guest: 0, inactive: 0 },
+      trafficSources: []
     };
   }
 
@@ -60,8 +62,9 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
     );
     const logsSnapshot = await getDocs(logsQ);
 
-    // Process logs into daily buckets
+    // Process logs into daily buckets & Traffic Sources
     const daysMap: Record<string, number> = {};
+    const sourceMap: Record<string, number> = {}; // Map đếm nguồn traffic
     const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
     // Initialize last 7 days with 0
@@ -73,18 +76,56 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
     }
 
     logsSnapshot.forEach(doc => {
-      const data = doc.data();
+      const data = doc.data() as { timestamp: number; referrer?: string };
+
+      // A. Daily Visits Logic
       const date = new Date(data.timestamp);
       const dayName = weekDays[date.getDay()];
       if (daysMap[dayName] !== undefined) {
         daysMap[dayName]++;
       }
+
+      // B. Traffic Source Logic
+      let sourceName = 'Direct';
+      const rawRef = data.referrer ? data.referrer.toLowerCase() : '';
+
+      if (!rawRef || rawRef === 'direct' || rawRef === '') {
+        sourceName = 'Direct';
+      } else if (rawRef.includes('facebook')) {
+        sourceName = 'Facebook';
+      } else if (rawRef.includes('google')) {
+        sourceName = 'Google';
+      } else if (rawRef.includes('youtube')) {
+        sourceName = 'YouTube';
+      } else if (rawRef.includes('zalo')) {
+        sourceName = 'Zalo';
+      } else if (rawRef.includes('tiktok')) {
+        sourceName = 'TikTok';
+      } else {
+        try {
+          // Cố gắng lấy hostname (ví dụ: https://abc.com/xyz -> abc.com)
+          const url = new URL(data.referrer || '');
+          sourceName = url.hostname.replace('www.', '');
+          // Nếu là nội bộ (localhost hoặc domain của app)
+          if (sourceName.includes(window.location.hostname)) sourceName = 'Internal';
+        } catch {
+          sourceName = 'Other';
+        }
+      }
+
+      sourceMap[sourceName] = (sourceMap[sourceName] || 0) + 1;
     });
 
     const dailyVisits = Object.keys(daysMap).map(key => ({
       name: key,
       visits: daysMap[key]
     }));
+
+    // Convert sourceMap to Array & Sort by value descending
+    const trafficSources = Object.keys(sourceMap)
+      .map(key => ({ name: key, value: sourceMap[key] }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5); // Lấy top 5 nguồn phổ biến nhất
 
     // 2. Calculate Online Users (Active in last 10 mins)
     // OPTIMIZATION: Instead of reading ALL users to count them, we ideally use a counter document.
@@ -99,7 +140,7 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
     let roleCounts = { admin: 0, user: 0, guest: 0, inactive: 0 };
 
     profilesSnap.forEach(doc => {
-      const p = doc.data();
+      const p = doc.data() as UserProfile & { lastSeen?: number };
       // Count Roles
       if (p.role === 'ADMIN') roleCounts.admin++;
       else if (p.role === 'GUEST') roleCounts.guest++;
@@ -118,7 +159,8 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
       dailyVisits,
       onlineNow: onlineCount,
       totalUsers: profilesSnap.size,
-      userRoles: roleCounts
+      userRoles: roleCounts,
+      trafficSources
     };
 
   } catch (error: any) {
@@ -131,7 +173,8 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
       dailyVisits: [],
       onlineNow: 0,
       totalUsers: 0,
-      userRoles: { admin: 0, user: 0, guest: 0, inactive: 0 }
+      userRoles: { admin: 0, user: 0, guest: 0, inactive: 0 },
+      trafficSources: []
     };
   }
 };

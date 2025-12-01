@@ -4,7 +4,7 @@ import { ProcedureStep, WeddingRegion } from "../types";
 const COMMON_DAM_NGO: ProcedureStep = {
   id: "dam-ngo",
   title: "Lễ Dạm Ngõ (Chạm Ngõ)",
-  description: "Buổi gặp mặt chính thức đầu tiên giữa hai gia đình.",
+  description: "Buổi gặp mặt chính thức đầu tiên. Giai đoạn này là lúc thiết lập ngân sách và kế hoạch tổng thể.",
   meaning: "Nhà trai đến nhà gái đặt vấn đề chính thức cho đôi uyên ương tìm hiểu nhau kỹ càng hơn. Đây là bước khởi đầu quan trọng, 'đầu xuôi đuôi lọt'.",
   participants: "Nội bộ gia đình (Bố mẹ, Ông bà, Cô dì chú bác ruột thịt). Số lượng ít (5-7 người mỗi bên).",
   offerings: ["Trầu cau (bắt buộc)", "Chai rượu ngoại/Vang", "Hộp chè (trà) ngon", "Bánh kẹo/Hoa quả cao cấp"],
@@ -15,9 +15,9 @@ const COMMON_DAM_NGO: ProcedureStep = {
     "Không nên mời người ngoài dòng tộc tham dự để giữ sự riêng tư."
   ],
   tips: [
-    "Nhà gái nên dọn dẹp bàn thờ gia tiên thật sạch sẽ, cắm hoa tươi.",
-    "Chuẩn bị sẵn một bữa cơm thân mật tại nhà hàng hoặc tại gia để đãi nhà trai sau khi thưa chuyện.",
-    "Trang phục: Nam sơ mi, quần âu; Nữ váy kín đáo hoặc áo dài cách tân nhẹ nhàng."
+    "💰 **Quản lý tài chính & Ngân sách:**\n- Áp dụng quy tắc 50/30/20: 50% cho Tiệc & Cỗ, 30% cho Dịch vụ (Quay, Chụp, Trang trí, Lễ phục), 20% dự phòng phát sinh.\n- Lập file Excel hoặc dùng App này để track từng khoản nhỏ nhất (kể cả tiền taxi, lì xì).\n- Thống nhất ai chi khoản nào ngay từ đầu: Thường nhà trai lo Nhẫn, Xe, Tráp; Nhà gái lo Trang trí nhà gái; Tiệc nhà nào nhà nấy trả (hoặc chia đôi nếu chung).",
+    "💍 **Mẹo chọn Nhẫn Cầu Hôn & Nhẫn Cưới:**\n- **Nhẫn Cầu Hôn:** Không nhất thiết phải kim cương tự nhiên. Đá Moissanite có độ sáng 98% kim cương nhưng giá chỉ bằng 1/10. Chọn kiểu Solitaire (1 viên chủ) là kinh điển nhất.\n- **Nhẫn Cưới:** Nên chọn vàng 14K hoặc 18K (cứng, bền hơn 24K). Tránh mẫu quá nhiều đá nhỏ dễ rơi khi đeo hàng ngày. Nên mua sớm khi có đợt sale (Valentine, 8/3) để tiết kiệm 10-20%.\n- **Đo size tay:** Lấy sợi chỉ quấn quanh ngón tay lúc bình thường (không quá nóng/lạnh) rồi đo chiều dài.",
+    "🤝 **Phân công công việc:**\n- Lập nhóm chat Zalo chung cho BTC đám cưới (Bố mẹ 2 bên + CDCR).\n- **Bố mẹ:** Lo danh sách khách mời người lớn, làm việc với họ hàng.\n- **CDCR:** Lo tìm nhà cung cấp (chụp ảnh, makeup), khách mời bạn bè, kịch bản chương trình."
   ],
   scriptSuggestion: "Kính thưa hai họ, hôm nay ngày lành tháng tốt, nhà trai chúng tôi có cơi trầu chai rượu sang thưa chuyện với nhà gái, xin phép cho hai cháu [Tên CR] và [Tên CĐ] được chính thức qua lại tìm hiểu...",
   tasks: [
@@ -31,7 +31,7 @@ const COMMON_DAM_NGO: ProcedureStep = {
 const COMMON_TIEC_CUOI: ProcedureStep = {
   id: "tiec-cuoi",
   title: "Tiệc Cưới (Đãi Khách)",
-  description: "Tiệc chiêu đãi khách mời, bạn bè và đồng nghiệp.",
+  description: "Tiệc chiêu đãi khách mời. Phần tốn kém và phức tạp nhất.",
   meaning: "Ra mắt họ hàng, bạn bè xã hội, công bố sự thành đôi của hai bạn.",
   participants: "Toàn bộ khách mời (Bạn bè, Đồng nghiệp, Họ hàng).",
   offerings: ["Tháp ly Champagne", "Bánh kem cưới", "Nhẫn cưới"],
@@ -42,10 +42,9 @@ const COMMON_TIEC_CUOI: ProcedureStep = {
     "Kiêng để bàn tiệc trống quá nhiều (nên confirm khách kỹ)."
   ],
   tips: [
-    "Nên có sơ đồ chỗ ngồi (Seating Chart) và người dẫn chỗ để tránh lộn xộn.",
-    "Cô dâu chú rể nên ăn nhẹ trước lễ vì sẽ rất đói và mệt.",
-    "Chuẩn bị giày bệt cho cô dâu thay lúc đi chào bàn.",
-    "Kiểm tra kỹ mic, âm thanh, ánh sáng trước giờ G."
+    "🏨 **Bí kíp chọn Nhà Hàng & Deal giá 'Không bị hớ':**\n- **Thời điểm đi xem:** Hãy đến lúc họ đang tổ chức một tiệc cưới thật. Để xem ánh sáng, âm thanh, thái độ phục vụ và *đặc biệt là cỗ có đầy đặn không*.\n- **Hỏi kỹ các loại phí:** Phí phục vụ (5-10%?), Phí mang rượu từ ngoài vào (Corkage charge), Phí giờ quá giờ, Phí màn hình LED.\n- **Deal khuyến mãi:** Thay vì xin giảm giá bàn (khó), hãy xin tặng: Tháp ly, Bánh kem, MC, Vũ đoàn, Màn hình LED, Nước ngọt miễn phí.\n- **Hợp đồng:** Ghi rõ 'Không tăng giá thực đơn nếu nguyên liệu tăng'.",
+    "🚌 **Bố trí xe & Chỗ ở khách xa:**\n- Nếu đón dâu xa (>50km), nên thuê xe giường nằm hoặc xe du lịch rộng rãi.\n- Book khách sạn gần nhà hàng tiệc cưới cho họ hàng nghỉ ngơi thay đổi trang phục.\n- Chuẩn bị đồ ăn nhẹ (bánh mì, sữa, nước suối) trên xe vì mọi người sẽ rất đói.",
+    "🛡️ **Quản lý Tiền Mừng (Cực Quan Trọng):**\n- Chuẩn bị thùng tiền có khóa chắc chắn.\n- **Phân công 1 người ruột thịt** (Chị gái/Em gái/Mẹ) chỉ có nhiệm vụ duy nhất là canh thùng tiền. Tuyệt đối không rời mắt kể cả khi chụp ảnh.\n- Sau tiệc, gom tiền vào túi đen, di chuyển thẳng về nhà hoặc cất vào két sắt khách sạn, không đếm tiền tại sảnh tiệc đông người."
   ],
   scriptSuggestion: "Hôm nay, trước sự chứng kiến của hai bên gia đình và quý vị quan khách, chúng tôi xin tuyên bố hai con chính thức nên vợ thành chồng. Xin nâng ly chúc mừng hạnh phúc...",
   tasks: [
@@ -65,7 +64,7 @@ export const WEDDING_PROCEDURES: Record<WeddingRegion, ProcedureStep[]> = {
     {
       id: "an-hoi-bac",
       title: "Lễ Ăn Hỏi (Miền Bắc)",
-      description: "Nhà trai mang sính lễ sang nhà gái. Đặc trưng số tráp LẺ, lễ vật CHẴN.",
+      description: "Nhà trai mang sính lễ sang nhà gái. Giai đoạn cần lo toan nhiều nhất về hậu cần.",
       meaning: "Lễ đính ước quan trọng nhất. Sau lễ này, hai bạn được coi là vợ chồng chưa cưới.",
       participants: "Bố mẹ, Ông bà, Đội bê tráp (Nam thanh Nữ tú), Họ hàng.",
       offerings: [
@@ -84,9 +83,9 @@ export const WEDDING_PROCEDURES: Record<WeddingRegion, ProcedureStep[]> = {
         "Kiêng may áo dài ăn hỏi màu quá tối hoặc quá sặc sỡ không phù hợp."
       ],
       tips: [
-        "Chuẩn bị sẵn phong bao lì xì 'trả duyên' cho đội bê tráp hai nhà.",
-        "Nhà gái cần chuẩn bị phông bạt, bàn ghế, nước nôi chu đáo để đón khách.",
-        "Nên thuê tráp ăn hỏi trọn gói để đẹp và đồng bộ."
+        "🎁 **Mẹo chuẩn bị Mâm Lễ (Tráp):**\n- **Tiết kiệm:** Chọn gói tráp cơ bản, thay vì dùng hoa tươi nhập khẩu đắt tiền thì dùng hoa lụa cao cấp hoặc hoa nội địa.\n- **Đẹp đội hình:** Tháp bia/nước ngọt nên chọn loại lon cao, xếp tháp sẽ thanh thoát hơn. Tráp hoa quả nên có nho, táo, xoài (màu sắc tươi sáng).\n- **Tráp Rượu Thuốc:** Nên dùng rượu vang (màu đỏ may mắn) hoặc Vodka (giá mềm, chai đẹp).",
+        "👥 **Thuê người & Dịch vụ:**\n- **Đội bê tráp:** Có thể nhờ bạn bè (tiết kiệm tiền thuê, chỉ mất tiền lì xì) nhưng rủi ro giờ giấc cao. Thuê dịch vụ trọn gói (Sinh viên) sẽ đảm bảo đồng phục đẹp, chiều cao đồng đều và chuyên nghiệp hơn.\n- **Makeup:** Bắt buộc phải book lịch 'Test Makeup' trước ngày cưới để xem tone có hợp không. Đừng để đến ngày cưới mới mặt mộc cho thợ vẽ.",
+        "🌸 **Trang trí tại nhà (Tư gia):**\n- Backdrop chụp ảnh có thể tự làm bằng khung gỗ + voan + hoa lụa (mua Shopee) để tiết kiệm 50% so với thuê.\n- Nếu thuê rạp, hãy đo kỹ kích thước vỉa hè/sân, tránh lấn chiếm lòng đường gây rắc rối với chính quyền."
       ],
       scriptSuggestion: "Kính thưa các cụ, các ông các bà. Hôm nay ngày lành tháng tốt, nhà trai chúng tôi xin dâng các lễ vật gồm... để xin hỏi cưới cháu [Tên CĐ] cho cháu [Tên CR]...",
       tasks: [
@@ -126,9 +125,9 @@ export const WEDDING_PROCEDURES: Record<WeddingRegion, ProcedureStep[]> = {
         "Kiêng rước dâu đi đường cũ (nếu có thể thì đi đường vòng để tránh điều không may, mang ý nghĩa mới mẻ)."
       ],
       tips: [
-        "Chuẩn bị tiền lẻ, muối, gạo để rải khi qua cầu, ngã tư (quan niệm rải cho các vong linh).",
-        "Cô dâu nên mang theo 7 hoặc 9 cái kim gài vào vạt áo để trừ tà.",
-        "Mang theo một ít tiền lẻ và gạo muối trong túi xách cô dâu."
+        "💐 **Hoa Cưới & Ý Nghĩa:**\n- **Hoa Hồng đỏ:** Tình yêu cháy bỏng. **Hoa Baby:** Sự ngây thơ, thuần khiết. **Hoa Rum:** Sự thanh cao, sang trọng.\n- Nên chọn 2 bó hoa: 1 bó chính để chụp ảnh làm lễ (hoa nhập khẩu), 1 bó phụ để ném (hoa nội địa giá rẻ hơn).",
+        "🚗 **Xe Hoa & Di chuyển:**\n- Chọn màu xe: Trắng (trẻ trung, hiện đại), Đen (Sang trọng, quyền lực).\n- Trang trí xe hoa: Dùng hoa giả cao cấp (bền, không nát khi đi gió) sẽ đẹp hơn hoa tươi héo rũ khi đi đường xa.\n- **Lưu ý:** Chú rể nên chuẩn bị sẵn ô (dù) trong xe, phòng khi trời nắng/mưa lúc đón cô dâu xuống xe.",
+        "🏠 **Phòng Tân Hôn:**\n- Thay toàn bộ Chăn - Ga - Gối - Đệm mới. Kiêng dùng lại đồ cũ.\n- Không để gương chiếu thẳng vào giường ngủ.\n- Nhờ một người phụ nữ 'tốt vía' (gia đình hạnh phúc, có nếp có tẻ) trải ga giường giúp để lấy may."
       ],
       scriptSuggestion: "Xin phép ông bà tổ tiên cho cháu [Tên CĐ] về làm dâu con nhà họ [Họ CR]...",
       tasks: [
@@ -177,8 +176,8 @@ export const WEDDING_PROCEDURES: Record<WeddingRegion, ProcedureStep[]> = {
         "Kiêng làm tắt nến tơ hồng khi đang làm lễ."
       ],
       tips: [
-        "Cặp nến tơ hồng phải ướm thử vào chân nến trên bàn thờ nhà gái trước, tránh bị lỏng hoặc to quá.",
-        "Lễ vật miền Trung không quá cầu kỳ về số lượng nhưng phải trang trọng."
+        "🕯️ **Cặp Nến Tơ Hồng (Quan Trọng):**\n- Phải ướm thử nến vào chân nến trên bàn thờ nhà gái trước ngày lễ. Rất nhiều trường hợp mang nến sang nhưng chân nến nhà gái quá nhỏ hoặc quá to không cắm vừa, gây lúng túng.\n- Chọn người thắp nến phải là người có gia đình êm ấm, 'mát tay'.",
+        "🎁 **Lễ Vật Miền Trung:**\n- Không quá cầu kỳ số lượng tráp (thường 5 tráp) nhưng chất lượng phải tốt. Bánh phu thê gói lá dừa là đặc trưng đẹp mắt.\n- Có thể thêm 'Heo quay' nếu muốn long trọng hơn."
       ],
       scriptSuggestion: "Mời người cao tuổi nhất trong họ thắp cặp nến tơ hồng lên bàn thờ, khấn vái tổ tiên chứng giám.",
       tasks: [
@@ -197,7 +196,10 @@ export const WEDDING_PROCEDURES: Record<WeddingRegion, ProcedureStep[]> = {
       participants: "Hai họ.",
       offerings: [],
       taboos: ["Mẹ chồng không đi đón dâu (để tránh xung khắc mẹ chồng nàng dâu sau này - quan niệm cũ)."],
-      tips: ["Nếu rước dâu đi bộ, cần sắp xếp đội hình đẹp để chụp ảnh."],
+      tips: [
+        "🚶 **Rước dâu đi bộ:** Nếu hai nhà gần nhau, rước dâu đi bộ là một nét đẹp rất riêng. Hãy chuẩn bị đội hình: Người cầm lọng (dù) đỏ đi đầu, đến CDCR, rồi đến bố mẹ và họ hàng. Chụp ảnh sẽ rất đẹp và tình cảm.",
+        "💍 **Trao nhẫn & Nữ trang:**\n- Miền Trung thường trao vàng ngay trong lễ rước dâu tại nhà gái. Mẹ chồng đeo bông tai cho con dâu là nghi thức 'Nhận dâu' không thể thiếu."
+      ],
       scriptSuggestion: "Xin dâu, bái tổ đường, rước dâu về.",
       tasks: [
         { itemName: "Thuê xe hoa đón dâu", category: "Lễ Cưới", estimatedCost: 4000000, assignee: "Nhà Trai", side: "GROOM" },
@@ -230,9 +232,8 @@ export const WEDDING_PROCEDURES: Record<WeddingRegion, ProcedureStep[]> = {
         "Người bưng quả không được làm rớt quả."
       ],
       tips: [
-        "Lễ Lên Đèn cần sự tập trung cao độ, hai người thắp nến phải châm lửa cùng lúc.",
-        "Chủ hôn đóng vai trò rất quan trọng, phải chọn người hoạt ngôn, vui vẻ.",
-        "Nhà trai nên chuẩn bị dư 1-2 hộp nến dự phòng."
+        "🕯️ **Lễ Lên Đèn:**\n- Đây là nghi thức quan trọng nhất miền Nam. Hai ngọn nến phải cháy đều, sáng tỏ. Nhà trai nên chuẩn bị dư 1 cặp nến dự phòng để tránh rủi ro gãy/tắt.\n- Chủ hôn phải hô to: 'Lên đèn!', hai người đại diện châm lửa dứt khoát.",
+        "🐷 **Heo quay & Lễ vật:**\n- Heo quay thường là nguyên con. Khi nhà gái 'lại quả' (trả lễ), sẽ cắt 1/2 con heo (phần đầu và đuôi) trả lại nhà trai. Nhớ chuẩn bị dao sắc và giấy gói bạc/túi nilon sạch để chia lễ nhanh gọn."
       ],
       scriptSuggestion: "Trưởng tộc nhà trai: 'Hôm nay chúng tôi xin dâng cặp đèn cầy long phụng để bái yết gia tiên...'. Hai bên cùng thắp nến.",
       tasks: [
@@ -256,8 +257,8 @@ export const WEDDING_PROCEDURES: Record<WeddingRegion, ProcedureStep[]> = {
         "Kỵ đổ vỡ ly tách trong tiệc."
       ],
       tips: [
-        "Nghi thức trao vàng thường diễn ra khá lâu và rôm rả, MC cần khuấy động không khí.",
-        "Cô dâu chú rể nên tươi cười suốt buổi lễ."
+        "💰 **Vàng Cưới & Trang Sức:**\n- Người miền Nam rất trọng việc trao vàng. Nếu ngân sách hạn hẹp, có thể thuê bộ trang sức cưới (vàng 10k/14k) chỉ để làm lễ cho đẹp mặt, sau đó trả lại.\n- Nếu được tặng nhiều vàng, hãy chuẩn bị một túi nhỏ có khóa kéo, giao cho người tin cẩn giữ ngay sau khi làm lễ xong.",
+        "🎤 **MC & Không khí:**\n- Đám cưới miền Nam cần vui. Hãy thuê MC biết tấu hài, khuấy động phong trào. Ban nhạc sống (Bolero/Pop) là đặc sản không thể thiếu."
       ],
       scriptSuggestion: "Mời mẹ chồng lên trao tặng đôi bông tai cho cô dâu, mong con dâu ngoan hiền, biết lắng nghe...",
       tasks: [

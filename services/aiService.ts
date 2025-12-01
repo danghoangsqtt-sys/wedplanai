@@ -1,63 +1,60 @@
 import { UserProfile } from "../types";
 import { useStore } from "../store/useStore";
-// Đảm bảo bạn đang dùng thư viện chuẩn: npm install @google/generative-ai
+// SỬA: Import đúng thư viện đã cài trong package.json
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// --- CẤU HÌNH GEMINI (Hỗ trợ Admin & User) ---
+// --- CẤU HÌNH GEMINI ---
 const callGeminiDirect = async (systemPrompt: string, userMessage: string, isJson: boolean = false, customApiKey?: string) => {
-  // Logic chọn Key:
-  // 1. Nếu có customApiKey (từ User), dùng nó.
-  // 2. Nếu không (User là Admin), dùng Key hệ thống từ biến môi trường.
   // @ts-ignore
-  const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const envKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = customApiKey || envKey;
 
   if (!apiKey) {
-    throw new Error("Thiếu API Key Gemini. Vui lòng nhập Key trong Cài đặt hoặc kiểm tra file .env");
+    throw new Error("Thiếu API Key Gemini. Vui lòng kiểm tra Cài đặt hoặc file .env.local");
   }
 
   try {
-    const ai = new GoogleGenerativeAI(apiKey);
+    // SỬA: Khởi tạo đúng class GoogleGenerativeAI
+    const genAI = new GoogleGenerativeAI(apiKey);
 
+    // Cấu hình generation config
     const generationConfig: any = {};
     if (isJson) {
       generationConfig.responseMimeType = "application/json";
     }
 
-    // Sử dụng model Flash cho tốc độ nhanh và tối ưu chi phí (Free tier ok)
-    // Bạn có thể đổi thành "gemini-2.0-flash-exp" nếu muốn thử nghiệm bản mới nhất
-    const model = ai.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    // SỬA: Lấy model trước rồi mới gọi generateContent
+    // Lưu ý: Tên model chuẩn hiện tại thường là 'gemini-1.5-flash' hoặc 'gemini-2.0-flash-exp'
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash", // Hoặc 'gemini-2.0-flash-exp' nếu bạn có quyền truy cập
+      systemInstruction: systemPrompt, // System prompt được đưa vào cấu hình model
       generationConfig
     });
 
-    const finalPrompt = `${systemPrompt}\n\nUser Question: ${userMessage}`;
-
-    const result = await model.generateContent(finalPrompt);
+    const result = await model.generateContent(userMessage);
     const response = await result.response;
+
     return response.text();
 
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    // Xử lý lỗi cụ thể để hiển thị thông báo thân thiện
-    if (error.message?.includes('API key not valid') || error.status === 400) {
-      throw new Error("API Key không hợp lệ. Vui lòng kiểm tra lại trên Google AI Studio.");
-    }
-    throw new Error(`Lỗi kết nối AI (Code ${error.status || 'Unknown'}): ${error.message}`);
+    // Xử lý thông báo lỗi thân thiện hơn
+    let errorMsg = error.message || 'Lỗi không xác định';
+    if (errorMsg.includes('API key')) errorMsg = 'API Key không hợp lệ.';
+
+    throw new Error(`Lỗi kết nối AI: ${errorMsg}`);
   }
 };
 
-// --- HÀM KIỂM TRA KEY (Thay thế validateOpenAIKey cũ) ---
 export const validateGeminiKey = async (apiKey: string): Promise<boolean> => {
   try {
-    // Gọi thử một request đơn giản để kiểm tra Key có hoạt động không
-    await callGeminiDirect("Test connection", "Hello", false, apiKey);
+    await callGeminiDirect("You are a helper.", "Hello", false, apiKey);
     return true;
   } catch (error) {
     throw error;
   }
 };
 
-// --- HÀM CHÍNH: ĐIỀU HƯỚNG YÊU CẦU ---
 export const generateAIContent = async (
   user: UserProfile | null,
   systemPrompt: string,
@@ -65,23 +62,23 @@ export const generateAIContent = async (
   isJson: boolean = false
 ) => {
   if (!user) throw new Error("Vui lòng đăng nhập.");
-  if (user.role === 'GUEST') throw new Error("Khách không có quyền dùng AI.");
 
-  // 1. ADMIN: Dùng Key hệ thống (không truyền customApiKey vào hàm gọi)
-  if (user.role === 'ADMIN') {
+  // 1. ADMIN, GUEST hoặc USER chưa active: Dùng System Key
+  if (
+    user.role === 'ADMIN' ||
+    user.role === 'GUEST' ||
+    (user.role === 'USER' && !user.isActive)
+  ) {
     return await callGeminiDirect(systemPrompt, userMessage, isJson);
   }
 
-  // 2. USER: Dùng Key cá nhân Gemini
-  if (user.role === 'USER') {
-    if (!user.allowCustomApiKey) throw new Error("Tài khoản chưa được kích hoạt tính năng AI.");
+  // 2. USER đã kích hoạt (Active): Dùng Key cá nhân
+  if (user.role === 'USER' && user.isActive) {
+    if (!user.allowCustomApiKey) throw new Error("Tài khoản chưa được cấp quyền sử dụng AI.");
 
-    // Lấy key từ store (Đảm bảo bạn đã sửa store/useStore.ts để có biến geminiApiKey)
     const userKey = useStore.getState().settings.geminiApiKey;
+    if (!userKey) throw new Error("Vui lòng nhập Gemini API Key trong phần Cài đặt để sử dụng.");
 
-    if (!userKey) throw new Error("Vui lòng nhập Gemini API Key trong phần Cài đặt.");
-
-    // Gọi Gemini với key riêng của user
     return await callGeminiDirect(systemPrompt, userMessage, isJson, userKey);
   }
 

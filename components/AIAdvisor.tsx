@@ -1,11 +1,14 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, Sparkles, RefreshCw, Trash2, ChevronRight, MessageSquare, Check } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, RefreshCw, Trash2, ChevronRight, MessageSquare, Check, Lock } from 'lucide-react';
 import { DashboardStats } from '../types';
 import { getFinancialAdvice } from '../services/geminiService';
 import { useStore } from '../store/useStore';
+import { checkGuestIPLimit, incrementGuestIPUsage } from '../services/cloudService';
 
 interface AIAdvisorProps {
   stats: DashboardStats;
+  isRestricted?: boolean;
 }
 
 interface Message {
@@ -22,8 +25,10 @@ const SUGGESTED_QUESTIONS = [
   "🎶 List nhạc đám cưới lãng mạn"
 ];
 
-const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
-  const { user, settings } = useStore();
+const MAX_GUEST_CHATS = 5;
+
+const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats, isRestricted = false }) => {
+  const { user, settings, guestUsage, incrementGuestAiChat } = useStore();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'model',
@@ -46,6 +51,23 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
     const textToSend = textOverride || input;
     if (!textToSend.trim() || isLoading) return;
 
+    // --- LOGIC KIỂM TRA GIỚI HẠN (IP-BASED) ---
+    if (isRestricted) {
+      const limitReached = await checkGuestIPLimit('aiChatCount', MAX_GUEST_CHATS);
+      if (limitReached) {
+        setMessages(prev => [
+          ...prev,
+          { role: 'user', content: textToSend }, // Vẫn hiện tin nhắn user chat để tự nhiên
+          {
+            role: 'model',
+            content: "💎 Hết lượt dùng thử!\nTôi đã giúp bạn 5 câu hỏi rồi. Để tôi tiếp tục làm cố vấn riêng cho đám cưới của bạn trọn đời, hãy kích hoạt tài khoản ngay nhé! \n👉 Liên hệ Admin: 0343019101 hoặc danghoang.sqtt@gmail.com"
+          }
+        ]);
+        setInput('');
+        return; // Dừng lại, không gọi API
+      }
+    }
+
     // UI Updates
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: textToSend }]);
@@ -54,6 +76,12 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
     try {
       const responseText = await getFinancialAdvice(stats, messages, textToSend);
       setMessages(prev => [...prev, { role: 'model', content: responseText }]);
+
+      // Tăng biến đếm IP sau khi thành công
+      if (isRestricted) {
+        await incrementGuestIPUsage('aiChatCount');
+        incrementGuestAiChat(); // Update local state for UI sync
+      }
     } catch (error: any) {
       console.error(error);
       setMessages(prev => [...prev, { role: 'model', content: error.message || "Xin lỗi, tôi đang gặp sự cố kết nối. Vui lòng kiểm tra lại API Key hoặc thử lại sau." }]);
@@ -71,16 +99,22 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
     }
   };
 
-  // Logic: Phải là ADMIN hoặc (USER có quyền + đã Active + có Key)
-  const isConfigured = user?.role === 'ADMIN' || (user?.role === 'USER' && user.isActive && !!settings.geminiApiKey);
-  const isRestricted = user?.role === 'USER' && !user.isActive;
+  // Logic: Phải là ADMIN hoặc (USER có quyền + đã Active + có Key) HOẶC là chế độ Restricted (Guest/Inactive)
+  // isRestricted = true (Guest/Inactive) -> isConfigured = true -> Cho phép render input
+  const isConfigured = user?.role === 'ADMIN' || (user?.role === 'USER' && user.isActive && !!settings.geminiApiKey) || isRestricted;
 
-  // Placeholder logic
+  // Logic hiển thị Placeholder & Disable (Local Store Fallback for UI)
+  const isLimitReached = isRestricted && guestUsage.aiChatCount >= MAX_GUEST_CHATS;
+
   let placeholderText = "Nhập câu hỏi của bạn...";
-  if (isRestricted) {
-    placeholderText = "Tính năng bị khóa...";
-  } else if (!isConfigured) {
+  if (!isConfigured) {
     placeholderText = "Vui lòng nhập Gemini API Key trong Cài đặt...";
+  } else if (isRestricted) {
+    if (isLimitReached) {
+      placeholderText = "Đã hết lượt miễn phí. Vui lòng mở khóa.";
+    } else {
+      placeholderText = `Nhập câu hỏi... (Còn ${MAX_GUEST_CHATS - guestUsage.aiChatCount}/${MAX_GUEST_CHATS} lượt miễn phí)`;
+    }
   }
 
   return (
@@ -117,19 +151,6 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
 
       {/* 2. Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50 scroll-smooth relative">
-        {/* RESTRICTED OVERLAY */}
-        {isRestricted && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 text-center">
-            <div className="bg-rose-100 p-4 rounded-full mb-4">
-              <Bot className="w-12 h-12 text-rose-500" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Tính năng bị khóa</h3>
-            <p className="text-gray-500 mb-4 max-w-sm">
-              Tài khoản chưa kích hoạt không thể sử dụng Cố Vấn AI. Vui lòng liên hệ Admin để mở khóa tính năng này.
-            </p>
-          </div>
-        )}
-
         {messages.map((msg, idx) => {
           const isUser = msg.role === 'user';
           return (
@@ -189,8 +210,8 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
       {/* 3. Suggestions & Input Area */}
       <div className="bg-white border-t border-rose-50 p-4 pt-2">
 
-        {/* Quick Suggestions */}
-        {!isLoading && messages.length < 5 && isConfigured && !isRestricted && (
+        {/* Quick Suggestions (Ẩn nếu hết lượt) */}
+        {!isLoading && messages.length < 5 && isConfigured && !isLimitReached && (
           <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar pb-1 mask-linear-fade">
             {SUGGESTED_QUESTIONS.map((q, i) => (
               <button
@@ -205,9 +226,9 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
         )}
 
         {/* Input Bar */}
-        <div className="relative flex items-end gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-100 transition-all">
+        <div className={`relative flex items-end gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-100 transition-all ${isLimitReached ? 'opacity-70 grayscale-[50%]' : ''}`}>
           <textarea
-            className="flex-1 max-h-32 min-h-[44px] p-2.5 bg-transparent border-none focus:ring-0 text-sm text-gray-800 placeholder-gray-400 resize-none outline-none overflow-y-auto"
+            className="flex-1 max-h-32 min-h-[44px] p-2.5 bg-transparent border-none focus:ring-0 text-sm text-gray-800 placeholder-gray-400 resize-none outline-none overflow-y-auto disabled:cursor-not-allowed"
             placeholder={placeholderText}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -217,18 +238,18 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats }) => {
                 handleSend();
               }
             }}
-            disabled={isLoading || !isConfigured || isRestricted}
+            disabled={isLoading || !isConfigured || isLimitReached}
             rows={1}
           />
           <button
             onClick={() => handleSend()}
-            disabled={isLoading || !input.trim() || !isConfigured || isRestricted}
-            className={`p-2.5 rounded-lg mb-0.5 transition-all flex-shrink-0 ${!input.trim() || isLoading || !isConfigured || isRestricted
+            disabled={isLoading || !input.trim() || !isConfigured || isLimitReached}
+            className={`p-2.5 rounded-lg mb-0.5 transition-all flex-shrink-0 ${!input.trim() || isLoading || !isConfigured || isLimitReached
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-rose-600 text-white hover:bg-rose-700 shadow-md active:scale-95'
               }`}
           >
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+            {isLimitReached ? <Lock className="w-5 h-5" /> : (isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />)}
           </button>
         </div>
 

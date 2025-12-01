@@ -1,17 +1,21 @@
+
 import { generateAIContent } from "./aiService";
 import { useStore } from "../store/useStore";
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from "../types/fengshui";
 import { getCanChi, getCungMenh, getNguHanhNapAm, getZodiacSign, getLifePathNumber } from "../utils/fengShuiUtils";
 
 const FENG_SHUI_SYSTEM_PROMPT = `
-Bạn là "Thầy Phong Thủy WedPlan" - chuyên gia đầu ngành về Tử Vi, Tướng Số & Hôn Nhân gia đình với 30 năm kinh nghiệm.
-Phong cách: Uyên bác, cổ điển nhưng ân cần. Viết lời bình thật SÂU SẮC, CHI TIẾT, DÀI và CÓ TÂM (như đang tư vấn trực tiếp).
+Bạn là "Thầy Phong Thủy WedPlan" - đại sư đầu ngành về Tử Vi, Tướng Số & Hôn Nhân gia đình với 30 năm kinh nghiệm.
+Phong cách: Uyên bác, cổ điển, trang trọng nhưng ân cần, thấu đáo.
 Nhiệm vụ: Luận giải hôn nhân dựa trên sự kết hợp Tinh Hoa Đông - Tây.
 
-Yêu cầu kỹ thuật tuyệt đối:
-1. Trả về JSON thuần túy (Raw JSON).
-2. Tuyệt đối KHÔNG dùng Markdown code block (\`\`\`json).
-3. Các chuỗi văn bản dài KHÔNG được xuống dòng thực sự (Enter). Nếu muốn xuống dòng, BẮT BUỘC dùng ký tự "\\n".
+QUY TẮC TRÌNH BÀY BẮT BUỘC (CRITICAL):
+1. Trả về JSON thuần túy (Raw JSON). Tuyệt đối KHÔNG dùng Markdown code block (\`\`\`json).
+2. ĐỊNH DẠNG VĂN BẢN (RẤT QUAN TRỌNG):
+   - Giữa các đoạn văn BẮT BUỘC phải dùng ký tự xuống dòng kép (\\n\\n) để tách đoạn.
+   - Tuyệt đối KHÔNG viết thành một khối văn bản đặc quánh.
+   - Sử dụng Markdown (**đậm**, ### tiêu đề) để trang trí bài viết.
+3. Hãy đảm bảo nội dung JSON hợp lệ (escape dấu ngoặc kép " thành \\" nếu có trong nội dung văn bản).
 `;
 
 /**
@@ -33,9 +37,10 @@ const cleanAndParseJSON = (text: string): any => {
     console.warn("JSON Parse lần 1 thất bại, đang thử sửa lỗi format...", error);
     try {
       // Cơ chế cứu lỗi xuống dòng và các ký tự đặc biệt
+      // Thay thế các ký tự xuống dòng thực tế bằng \n để JSON hợp lệ
       const fixed = cleaned
         .replace(/(?:\r\n|\r|\n)/g, '\\n')
-        .replace(/\\n\s+/g, '\\n');
+        .replace(/\\n\s+/g, '\\n'); // Gộp nhiều khoảng trắng sau \n
       return JSON.parse(fixed);
     } catch (err2) {
       // Cố gắng cứu vớt lần cuối nếu là mảng bị cắt
@@ -79,7 +84,8 @@ export const analyzeCompatibility = async (profile: CoupleProfile): Promise<Harm
     🤵 CHỒNG: ${groomYear} (${groomLunar}), Mệnh ${groomMenh}, Cung ${groomCung.cung}. (Tây: ${groomZodiac}, Số ${groomLifePath})
     👰 VỢ: ${brideYear} (${brideLunar}), Mệnh ${brideMenh}, Cung ${brideCung.cung}. (Tây: ${brideZodiac}, Số ${brideLifePath})
 
-    Hãy xuất ra JSON theo định dạng sau (Lưu ý quan trọng: trường detailedAnalysis và synthesis phải viết thật DÀI, SÂU SẮC và CHI TIẾT):
+    Hãy xuất ra JSON theo định dạng sau. 
+    LƯU Ý QUAN TRỌNG: Tại các trường "detailedAnalysis" và "synthesis", hãy sử dụng \\n\\n (hai dấu xuống dòng) để tách biệt rõ ràng các đoạn văn, giúp văn bản thoáng và dễ đọc.
 
     {
       "score": number, // Thang 100, số nguyên.
@@ -92,12 +98,12 @@ export const analyzeCompatibility = async (profile: CoupleProfile): Promise<Harm
       
       "conflictStatus": "SINH" | "KHAC" | "BINH", 
 
-      "detailedAnalysis": "Viết một bài luận giải Tử Vi thật chi tiết (tối thiểu 300 từ), chia làm 4 phần rõ ràng bằng các tiêu đề Markdown:\\n\\n### 1. Ngũ Hành Nạp Âm\\nPhân tích sự tương sinh tương khắc của mệnh chồng (${groomMenh}) và vợ (${brideMenh})...\\n\\n### 2. Thiên Can & Địa Chi\\nPhân tích sự xung hợp của Can (${groomLunar.split(' ')[0]} - ${brideLunar.split(' ')[0]}) và Chi (${groomLunar.split(' ')[1]} - ${brideLunar.split(' ')[1]})...\\n\\n### 3. Cung Phi Bát Trạch\\nPhân tích sự kết hợp của cung ${groomCung.cung} và ${brideCung.cung}...\\n\\n### 4. Lời Khuyên & Hóa Giải\\nTổng kết và đưa ra vật phẩm hoặc cách hóa giải nếu có xung khắc...",
+      "detailedAnalysis": "Viết bài luận giải Tử Vi chi tiết (khoảng 400 từ). Cấu trúc:\\n\\n### 1. Ngũ Hành Nạp Âm\\n[Phân tích...]\\n\\n### 2. Thiên Can & Địa Chi\\n[Phân tích...]\\n\\n### 3. Cung Phi Bát Trạch\\n[Phân tích...]\\n\\n### 4. Lời Khuyên & Hóa Giải\\n[Tổng kết...]",
       
       "combinedAnalysis": {
           "groomZodiac": "${groomZodiac}", "brideZodiac": "${brideZodiac}",
           "groomLifePath": ${groomLifePath}, "brideLifePath": ${brideLifePath},
-          "synthesis": "Viết bài phân tích tâm lý & tính cách Đông Tây kết hợp (khoảng 250 từ), trình bày đẹp:\\n\\n### 🧩 Mảnh Ghép Tính Cách (Hoàng Đạo & Thần Số)\\nPhân tích sự kết hợp giữa cung ${groomZodiac} và ${brideZodiac}, cùng sự bổ trợ của con số đường đời...\\n\\n### ⚖️ Điểm Mạnh & Điểm Yếu\\n* **Điểm mạnh:** ...\\n* **Thách thức:** ...\\n\\n### 💡 Chìa Khóa Hạnh Phúc\\nLời khuyên cụ thể về cách ứng xử..."
+          "synthesis": "Viết bài phân tích tâm lý Đông Tây (khoảng 300 từ). Cấu trúc:\\n\\n### 🧩 Mảnh Ghép Tính Cách\\n[Phân tích...]\\n\\n### ⚖️ Điểm Mạnh & Yếu\\n* **Hòa hợp:** ...\\n* **Mâu thuẫn:** ...\\n\\n### 💡 Chìa Khóa Hạnh Phúc\\n[Lời khuyên...]"
       }
     }
   `;
@@ -118,7 +124,7 @@ export const findAuspiciousDates = async (profile: CoupleProfile): Promise<Auspi
     
     YÊU CẦU:
     1. Trả về Mảng JSON Objects.
-    2. Trường "reason" viết ngắn gọn (dưới 40 từ) để tránh lỗi JSON.
+    2. Trường "reason" viết ngắn gọn (dưới 40 từ).
     3. Trường "timeSlots" chỉ ghi giờ (ví dụ: "Tỵ (9-11h)").
 
     Output JSON Array: 

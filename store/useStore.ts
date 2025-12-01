@@ -1,16 +1,23 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType } from '../types';
+import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { saveUserDataToCloud, loadUserDataFromCloud, syncUserProfile, getUserPublicProfile } from '../services/cloudService';
 import { fetchAllProfiles, fetchAnalyticsData, AdminAnalytics } from '../services/adminService';
 import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS } from '../data/initialData';
+import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
 import { db } from '../lib/firebase';
 import * as Firestore from 'firebase/firestore';
 
 // Destructure from namespace import to avoid "no exported member" errors in strict environments
 const { doc, updateDoc, deleteDoc, setDoc } = Firestore;
+
+export interface GuestUsage {
+  fengShuiCount: number;
+  aiChatCount: number;
+  speechCount: number;
+}
 
 interface AppState {
   user: UserProfile | null;
@@ -25,6 +32,7 @@ interface AppState {
   // App Data (Now in Store)
   guests: Guest[];
   budgetItems: BudgetItem[];
+  procedures: Record<WeddingRegion, ProcedureStep[]>; // Dynamic Procedures
   isSyncing: boolean;
 
   // Feng Shui Data
@@ -36,6 +44,9 @@ interface AppState {
 
   // User Management
   users: UserProfile[];
+
+  // Guest Usage Tracking
+  guestUsage: GuestUsage;
 
   // Actions
   login: (user: UserProfile) => Promise<void>;
@@ -60,6 +71,12 @@ interface AppState {
   deleteBudgetItem: (id: string) => void;
   setBudgetItems: (items: BudgetItem[]) => void;
 
+  // Procedure Actions
+  updateProcedure: (region: WeddingRegion, step: ProcedureStep) => void;
+  addProcedure: (region: WeddingRegion, step: ProcedureStep) => void;
+  deleteProcedure: (region: WeddingRegion, id: string) => void;
+  resetProcedures: () => void;
+
   // Advanced Actions
   recalculateDeadlines: (weddingDateStr: string) => void;
   resetData: () => void;
@@ -69,6 +86,12 @@ interface AppState {
   updateFengShuiProfile: (profile: CoupleProfile) => void;
   setFengShuiResults: (harmony: HarmonyResult | null, dates: AuspiciousDate[]) => void;
 
+  // Usage Actions
+  incrementGuestFengShui: () => void;
+  incrementGuestAiChat: () => void;
+  incrementGuestSpeech: () => void;
+  resetGuestUsage: () => void;
+
   // Notification Actions
   addNotification: (type: NotificationType, message: string, duration?: number) => void;
   removeNotification: (id: string) => void;
@@ -77,13 +100,14 @@ interface AppState {
 let syncTimeout: ReturnType<typeof setTimeout>;
 
 const triggerCloudSync = (get: () => AppState) => {
-  const { user, guests, budgetItems, fengShuiProfile, fengShuiResults } = get();
+  const { user, guests, budgetItems, fengShuiProfile, fengShuiResults, procedures } = get();
   if (user?.enableCloudStorage) {
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
       saveUserDataToCloud(user.uid, {
         guests,
         budgetItems,
+        procedures, // Sync procedures as well if user customized them
         fengShuiProfile: fengShuiProfile || undefined,
         fengShuiResults: fengShuiResults || undefined
       });
@@ -106,11 +130,13 @@ export const useStore = create<AppState>()(
       adminStats: null,
       guests: INITIAL_GUESTS,
       budgetItems: INITIAL_BUDGET_ITEMS,
+      procedures: WEDDING_PROCEDURES, // Initialize from static data
       isSyncing: false,
       fengShuiProfile: null,
       fengShuiResults: { harmony: null, dates: [] },
       notifications: [],
       users: INITIAL_USERS,
+      guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
 
       login: async (user) => {
         set({ user, isSyncing: true });
@@ -127,6 +153,8 @@ export const useStore = create<AppState>()(
             set({
               guests: cloudData.guests,
               budgetItems: cloudData.budgetItems,
+              // Only load procedures if they exist in cloud, else keep default/local
+              procedures: cloudData.procedures || WEDDING_PROCEDURES,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
               isSyncing: false
@@ -144,8 +172,11 @@ export const useStore = create<AppState>()(
           user: DEFAULT_GUEST_USER,
           guests: INITIAL_GUESTS,
           budgetItems: INITIAL_BUDGET_ITEMS,
+          // Reset procedures to default on logout to avoid mix-up
+          procedures: WEDDING_PROCEDURES,
           fengShuiProfile: null,
-          fengShuiResults: { harmony: null, dates: [] }
+          fengShuiResults: { harmony: null, dates: [] },
+          guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 }
         });
         get().addNotification('INFO', 'Đã đăng xuất thành công.');
       },
@@ -162,9 +193,7 @@ export const useStore = create<AppState>()(
       },
 
       addUser: async (newUser) => {
-        // In real app, create via Admin SDK. Here we just add to public_profiles
         await syncUserProfile(newUser);
-        // Refresh list
         const users = await fetchAllProfiles();
         set((state) => ({
           adminUsers: users,
@@ -174,27 +203,21 @@ export const useStore = create<AppState>()(
       },
 
       updateUser: async (uid, data) => {
-        // 1. Update Firestore FIRST. If this fails, throw error so UI knows.
         if (db) {
           try {
             const userRef = doc(db, "public_profiles", uid);
-            // Use setDoc with merge: true. 
-            // This is safer than updateDoc because it creates the document if it doesn't exist (e.g. initial sync failed).
             await setDoc(userRef, data, { merge: true });
           } catch (e: any) {
             console.error("Update User Error (Firestore):", e);
-            // Re-throw to allow component to handle alert
             throw new Error("Lỗi cập nhật quyền trên Cloud: " + e.message);
           }
         }
 
-        // 2. Optimistic update for local state (Only if Firestore didn't throw)
         const currentUser = get().user;
         if (currentUser && currentUser.uid === uid) {
           set({ user: { ...currentUser, ...data } });
         }
 
-        // Refresh list in state
         const updatedAdminUsers = get().adminUsers.map(u => u.uid === uid ? { ...u, ...data } : u);
         const updatedUsers = get().users.map(u => u.uid === uid ? { ...u, ...data } : u);
         set({ adminUsers: updatedAdminUsers, users: updatedUsers });
@@ -204,7 +227,7 @@ export const useStore = create<AppState>()(
         if (db) {
           try {
             await deleteDoc(doc(db, "public_profiles", uid));
-            await deleteDoc(doc(db, "userData", uid)); // Delete actual data
+            await deleteDoc(doc(db, "userData", uid));
           } catch (e) { console.error(e); }
         }
         set((state) => ({
@@ -221,11 +244,10 @@ export const useStore = create<AppState>()(
         try {
           const cloudProfile = await getUserPublicProfile(currentUser.uid);
           if (cloudProfile) {
-            // Update local status with cloud status
             set((state) => ({
               user: {
-                ...state.user!, // Keep existing local fields
-                isActive: cloudProfile.isActive, // Sync these important fields
+                ...state.user!,
+                isActive: cloudProfile.isActive,
                 allowCustomApiKey: cloudProfile.allowCustomApiKey,
                 enableCloudStorage: cloudProfile.enableCloudStorage,
                 role: cloudProfile.role
@@ -282,6 +304,56 @@ export const useStore = create<AppState>()(
         triggerCloudSync(get);
       },
 
+      // --- Procedure Actions ---
+      updateProcedure: (region, step) => {
+        set((state) => {
+          const regionProcedures = state.procedures[region] || [];
+          const newProcedures = regionProcedures.map(p => p.id === step.id ? step : p);
+          return {
+            procedures: {
+              ...state.procedures,
+              [region]: newProcedures
+            }
+          };
+        });
+        get().addNotification('SUCCESS', 'Đã cập nhật quy trình.');
+        triggerCloudSync(get);
+      },
+
+      addProcedure: (region, step) => {
+        set((state) => {
+          const regionProcedures = state.procedures[region] || [];
+          return {
+            procedures: {
+              ...state.procedures,
+              [region]: [...regionProcedures, step]
+            }
+          };
+        });
+        get().addNotification('SUCCESS', 'Đã thêm quy trình mới.');
+        triggerCloudSync(get);
+      },
+
+      deleteProcedure: (region, id) => {
+        set((state) => {
+          const regionProcedures = state.procedures[region] || [];
+          return {
+            procedures: {
+              ...state.procedures,
+              [region]: regionProcedures.filter(p => p.id !== id)
+            }
+          };
+        });
+        get().addNotification('INFO', 'Đã xóa quy trình.');
+        triggerCloudSync(get);
+      },
+
+      resetProcedures: () => {
+        set({ procedures: WEDDING_PROCEDURES });
+        get().addNotification('WARNING', 'Đã khôi phục quy trình mặc định.');
+        triggerCloudSync(get);
+      },
+
       recalculateDeadlines: (weddingDateStr) => {
         if (!weddingDateStr) return;
         const weddingDate = new Date(weddingDateStr);
@@ -335,6 +407,8 @@ export const useStore = create<AppState>()(
         set({
           guests: INITIAL_GUESTS,
           budgetItems: INITIAL_BUDGET_ITEMS,
+          // also reset procedures
+          procedures: WEDDING_PROCEDURES,
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] }
         });
@@ -345,6 +419,7 @@ export const useStore = create<AppState>()(
         set({
           guests: data.guests || [],
           budgetItems: data.budgetItems || [],
+          procedures: data.procedures || WEDDING_PROCEDURES,
           fengShuiProfile: data.fengShuiProfile || null,
           fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] }
         });
@@ -361,6 +436,21 @@ export const useStore = create<AppState>()(
         set({ fengShuiResults: { harmony, dates } });
         triggerCloudSync(get);
       },
+
+      // --- Usage Actions ---
+      incrementGuestFengShui: () => set((state) => ({
+        guestUsage: { ...state.guestUsage, fengShuiCount: state.guestUsage.fengShuiCount + 1 }
+      })),
+
+      incrementGuestAiChat: () => set((state) => ({
+        guestUsage: { ...state.guestUsage, aiChatCount: state.guestUsage.aiChatCount + 1 }
+      })),
+
+      incrementGuestSpeech: () => set((state) => ({
+        guestUsage: { ...state.guestUsage, speechCount: state.guestUsage.speechCount + 1 }
+      })),
+
+      resetGuestUsage: () => set({ guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 } }),
 
       // --- Notification Implementation ---
       addNotification: (type, message, duration = 3000) => {
@@ -385,9 +475,11 @@ export const useStore = create<AppState>()(
         user: state.user,
         guests: state.guests,
         budgetItems: state.budgetItems,
+        procedures: state.procedures,
         fengShuiProfile: state.fengShuiProfile,
         fengShuiResults: state.fengShuiResults,
-        users: state.users
+        users: state.users,
+        guestUsage: state.guestUsage
       }),
     }
   )

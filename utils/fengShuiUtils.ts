@@ -1,3 +1,4 @@
+
 // Dữ liệu Thiên Can
 const CAN = ["Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ"];
 // Dữ liệu Địa Chi
@@ -85,6 +86,24 @@ export const getZodiacSign = (day: number, month: number): string => {
     if ((month == 10 && day >= 24) || (month == 11 && day <= 21)) return "Bọ Cạp";
     if ((month == 11 && day >= 22) || (month == 12 && day <= 21)) return "Nhân Mã";
     return "Không rõ";
+};
+
+export const getZodiacSymbol = (zodiacName: string): string => {
+    switch (zodiacName) {
+        case "Bạch Dương": return "♈";
+        case "Kim Ngưu": return "♉";
+        case "Song Tử": return "♊";
+        case "Cự Giải": return "♋";
+        case "Sư Tử": return "♌";
+        case "Xử Nữ": return "♍";
+        case "Thiên Bình": return "♎";
+        case "Bọ Cạp": return "♏";
+        case "Nhân Mã": return "♐";
+        case "Ma Kết": return "♑";
+        case "Bảo Bình": return "♒";
+        case "Song Ngư": return "♓";
+        default: return "🌟";
+    }
 };
 
 export const getLifePathNumber = (dateStr: string): number => {

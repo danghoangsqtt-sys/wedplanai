@@ -113,6 +113,7 @@ export interface ProcedureStep {
   meaning: string;
   participants: string;
   offerings: string[]; // Sính lễ
+  customImages?: Record<string, string>; // Map tên sính lễ -> URL ảnh tùy chỉnh
   taboos?: string[]; // Điều kiêng kỵ
   tips?: string[];   // Mẹo hay
   scriptSuggestion: string; // Basic topic for speech
