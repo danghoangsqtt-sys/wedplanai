@@ -109,7 +109,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
          // Path: wedplanai/${user.uid}/${fileName}
          const storageRef = ref(storage, `wedplanai/${user!.uid}/${file.name}`);
 
-         const snapshot = await uploadBytes(storageRef, file);
+         // --- QUAN TRỌNG: Thêm Metadata để khớp với Rules ---
+         const metadata = {
+            contentType: file.type, // Ví dụ: 'image/jpeg'
+         };
+
+         // Truyền metadata vào hàm uploadBytes
+         const snapshot = await uploadBytes(storageRef, file, metadata);
+
          const downloadURL = await getDownloadURL(snapshot.ref);
 
          updateUser(user!.uid, { photoURL: downloadURL });
