@@ -64,7 +64,8 @@ const InvitationBuilder: React.FC = () => {
         setIsUploading(true);
         try {
             const storageRef = ref(storage, `invitations/${user!.uid}/${file.name}_${Date.now()}`);
-            const snapshot = await uploadBytes(storageRef, file);
+            const metadata = { contentType: file.type }; // Thêm dòng này
+            const snapshot = await uploadBytes(storageRef, file, metadata); // Truyền metadata vào
             const url = await getDownloadURL(snapshot.ref);
             updateInvitation({ coverImage: url });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');

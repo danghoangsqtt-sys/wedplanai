@@ -5,8 +5,8 @@ import { useStore } from '../store/useStore';
 import {
    Users, Cloud, CloudOff,
    Calendar, ArrowRight, DollarSign,
-   Clock, Sparkles, Check, Gift, Heart, Quote, RefreshCw,
-   Plus, ListTodo, UserPlus, TrendingUp
+   Clock, Sparkles, Check, Gift, Heart, RefreshCw,
+   Plus, ListTodo, UserPlus, TrendingUp, AlertCircle, Briefcase
 } from 'lucide-react';
 import {
    PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
@@ -38,12 +38,12 @@ const LOVE_QUOTES = [
 const CustomTooltip = ({ active, payload, label }: any) => {
    if (active && payload && payload.length) {
       return (
-         <div className="bg-white/95 backdrop-blur-md p-3 border border-gray-100 rounded-xl shadow-xl z-50">
-            {label && <p className="text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">{label}</p>}
+         <div className="bg-white/95 backdrop-blur-md p-3 border border-gray-100 rounded-xl shadow-xl z-50 text-sm">
+            {label && <p className="font-bold text-gray-400 uppercase mb-2 tracking-wider text-[10px]">{label}</p>}
             {payload.map((entry: any, index: number) => (
                <div key={index} className="flex items-center gap-2 mb-1 last:mb-0">
-                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
-                  <p className="text-sm font-semibold text-gray-700">
+                  <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color || entry.payload.fill }} />
+                  <p className="font-semibold text-gray-700">
                      {entry.name}: <span className="font-mono font-bold text-gray-900">{new Intl.NumberFormat('vi-VN').format(entry.value || 0)}</span>
                      {entry.name === 'Tỉ lệ' ? '%' : ''}
                   </p>
@@ -133,301 +133,290 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, user, isSyncing, setActive
       return amount.toLocaleString('vi-VN');
    };
 
+   const getDayGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) return "Chào buổi sáng";
+      if (hour < 18) return "Chào buổi chiều";
+      return "Buổi tối an lành";
+   };
+
    // --- 2. Render Components ---
 
    return (
-      <div className="space-y-6 md:space-y-8 pb-24 animate-fadeIn w-full overflow-x-hidden">
+      <div className="pb-24 animate-fadeIn w-full">
 
-         {/* HEADER ROW - Optimized for Mobile */}
-         <div className="flex justify-between items-end gap-2 px-1">
-            <div className="flex-1">
-               <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-1.5">
-                  <span>Xin chào, {user.displayName?.split(' ').pop()}</span> <span className="animate-wave origin-bottom-right inline-block">👋</span>
+         {/* HEADER ROW - Optimized for Desktop */}
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 md:mb-8">
+            <div>
+               <div className="text-gray-500 font-medium text-sm flex items-center gap-2 mb-1">
+                  <span className="bg-white px-2 py-0.5 rounded text-xs font-bold shadow-sm border border-gray-100 uppercase tracking-wide">
+                     {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })}
+                  </span>
+                  <span>{getDayGreeting()}</span>
+               </div>
+               <h1 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight flex items-center gap-2 font-serif-display">
+                  {user.displayName} <span className="animate-wave origin-bottom-right inline-block">👋</span>
                </h1>
-               <p className="text-gray-500 font-medium text-xs sm:text-base mt-1">Mọi thứ đã sẵn sàng chưa?</p>
             </div>
 
-            {/* Cloud Status - Minimal on Mobile */}
+            {/* Cloud Status */}
             <div className={`
-            flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full sm:rounded-xl 
-            border transition-all shadow-sm
-            ${user.enableCloudStorage ? 'bg-sky-50 text-sky-600 border-sky-100' : 'bg-gray-50 text-gray-400 border-gray-200'}
+            flex items-center justify-center px-4 py-2 rounded-xl border transition-all shadow-sm bg-white
+            ${user.enableCloudStorage ? 'border-sky-200 text-sky-700' : 'border-gray-200 text-gray-600'}
         `}>
-               {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : (user.enableCloudStorage ? <Cloud className="w-4 h-4" /> : <CloudOff className="w-4 h-4" />)}
-               <span className="hidden sm:inline ml-2 text-xs font-bold">{user.enableCloudStorage ? "Đã đồng bộ" : "Lưu máy"}</span>
+               {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : (user.enableCloudStorage ? <Cloud className="w-4 h-4 mr-2 text-sky-500" /> : <CloudOff className="w-4 h-4 mr-2 text-gray-400" />)}
+               <div className="flex flex-col items-start leading-none">
+                  <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Trạng thái</span>
+                  <span className="text-xs font-bold">{user.enableCloudStorage ? "Đã đồng bộ Cloud" : "Lưu trữ cục bộ"}</span>
+               </div>
             </div>
          </div>
 
-         {/* 1. HERO CARD (Countdown) - Polished */}
-         <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-rose-500 via-rose-600 to-pink-700 text-white shadow-xl shadow-rose-200/50 group">
-            {/* Dynamic Background Pattern */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none">
-               <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  <circle cx="90" cy="10" r="40" fill="white" />
-                  <circle cx="10" cy="90" r="30" fill="white" />
-               </svg>
-            </div>
+         {/* MAIN GRID LAYOUT (BENTO GRID STYLE) */}
+         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            <div className="relative z-10 p-5 sm:p-8 flex flex-col justify-between h-full min-h-[160px] sm:min-h-[260px]">
-               {/* Top Row */}
-               <div className="flex justify-between items-start">
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 border border-white/20 shadow-sm">
-                     <Heart className="w-3 h-3 fill-current" />
-                     {countdownData ? 'Ngày Chung Đôi' : 'Xin Chào'}
-                  </div>
-                  <button
-                     onClick={handleNewQuote}
-                     className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full backdrop-blur-sm active:scale-90"
-                     title="Đổi câu nói khác"
-                  >
-                     <RefreshCw className="w-3.5 h-3.5" />
-                  </button>
-               </div>
+            {/* LEFT COLUMN (8 cols) */}
+            <div className="lg:col-span-8 space-y-6">
 
-               {/* Middle: Number */}
-               <div className="flex flex-col items-center justify-center py-2 sm:py-4">
-                  {countdownData ? (
-                     <div className="flex flex-col items-center">
-                        <h2 className="text-6xl sm:text-8xl font-black tracking-tighter leading-none drop-shadow-md">
-                           {Math.abs(countdownData.days)}
-                        </h2>
-                        <p className="text-rose-100 font-medium text-sm sm:text-xl mt-1 tracking-wide opacity-90">
-                           Ngày nữa
-                        </p>
-                     </div>
-                  ) : (
-                     <div className="text-center">
+               {/* 1. HERO CARD (Countdown) */}
+               <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-rose-500 via-rose-600 to-pink-700 text-white shadow-xl shadow-rose-200/50 group h-[280px] flex flex-col justify-center">
+                  {/* Dynamic Background Pattern */}
+                  <div className="absolute inset-0 opacity-10 pointer-events-none mix-blend-overlay"
+                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}
+                  ></div>
+                  <div className="absolute top-[-50px] right-[-50px] w-64 h-64 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+                  <div className="absolute bottom-[-30px] left-[-30px] w-48 h-48 bg-rose-300 opacity-20 rounded-full blur-3xl pointer-events-none"></div>
+
+                  <div className="relative z-10 px-8 py-6 h-full flex flex-col justify-between">
+                     <div className="flex justify-between items-start">
+                        <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 border border-white/20 shadow-sm">
+                           <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
+                           {countdownData ? 'Ngày Chung Đôi' : 'Xin Chào'}
+                        </div>
                         <button
-                           onClick={() => setActiveTab('settings')}
-                           className="bg-white text-rose-700 px-5 py-2.5 rounded-xl font-bold hover:bg-rose-50 transition-all shadow-lg active:scale-95 inline-flex items-center gap-2 text-xs sm:text-sm"
+                           onClick={handleNewQuote}
+                           className="text-white/70 hover:text-white transition-colors bg-black/10 hover:bg-black/20 p-2 rounded-full backdrop-blur-sm active:scale-90"
+                           title="Đổi câu nói khác"
                         >
-                           <Calendar className="w-4 h-4" /> Chọn ngày cưới ngay
+                           <RefreshCw className="w-4 h-4" />
                         </button>
                      </div>
-                  )}
+
+                     <div className="flex-1 flex flex-col items-center justify-center text-center">
+                        {countdownData ? (
+                           <>
+                              <h2 className="text-7xl md:text-8xl font-black tracking-tighter leading-none drop-shadow-sm font-serif-display">
+                                 {Math.abs(countdownData.days)}
+                              </h2>
+                              <p className="text-rose-100 font-medium text-lg md:text-xl mt-1 tracking-wide opacity-90 uppercase">
+                                 Ngày nữa về chung một nhà
+                              </p>
+                              <p className="text-white/60 text-sm font-mono mt-2">{countdownData.dateStr}</p>
+                           </>
+                        ) : (
+                           <div className="text-center">
+                              <h2 className="text-3xl font-bold mb-4 font-serif-display">Hãy bắt đầu kế hoạch của bạn</h2>
+                              <button
+                                 onClick={() => setActiveTab('settings')}
+                                 className="bg-white text-rose-700 px-6 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all shadow-lg active:scale-95 inline-flex items-center gap-2"
+                              >
+                                 <Calendar className="w-5 h-5" /> Chọn ngày cưới ngay
+                              </button>
+                           </div>
+                        )}
+                     </div>
+
+                     <div className="text-center px-4">
+                        <p className="text-sm md:text-base text-rose-50 font-serif italic line-clamp-1 opacity-90">
+                           "{quote}"
+                        </p>
+                     </div>
+                  </div>
                </div>
 
-               {/* Bottom: Quote */}
-               <div className="relative text-center px-2 sm:px-4">
-                  <p className="text-xs sm:text-base text-rose-50/90 font-serif italic line-clamp-1 leading-relaxed">
-                     "{quote}"
-                  </p>
-               </div>
-            </div>
-         </div>
-
-         {/* 2. QUICK ACTIONS - Soft UI (No Borders) */}
-         <div className="grid grid-cols-4 gap-3 sm:hidden">
-            <button onClick={() => setActiveTab('budget')} className="flex flex-col items-center gap-2 group active:scale-95 transition-transform">
-               <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm group-hover:bg-emerald-100 transition-colors">
-                  <Plus className="w-6 h-6" />
-               </div>
-               <span className="text-[11px] font-bold text-gray-600 text-center leading-tight">Chi tiêu</span>
-            </button>
-
-            <button onClick={() => setActiveTab('guests')} className="flex flex-col items-center gap-2 group active:scale-95 transition-transform">
-               <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm group-hover:bg-blue-100 transition-colors">
-                  <UserPlus className="w-6 h-6" />
-               </div>
-               <span className="text-[11px] font-bold text-gray-600 text-center leading-tight">Khách mời</span>
-            </button>
-
-            <button onClick={() => setActiveTab('process')} className="flex flex-col items-center gap-2 group active:scale-95 transition-transform">
-               <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 shadow-sm group-hover:bg-orange-100 transition-colors">
-                  <ListTodo className="w-6 h-6" />
-               </div>
-               <span className="text-[11px] font-bold text-gray-600 text-center leading-tight">Việc cần</span>
-            </button>
-
-            <button onClick={() => setActiveTab('ai')} className="flex flex-col items-center gap-2 group active:scale-95 transition-transform">
-               <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 shadow-sm group-hover:bg-purple-100 transition-colors">
-                  <Sparkles className="w-6 h-6" />
-               </div>
-               <span className="text-[11px] font-bold text-gray-600 text-center leading-tight">Hỏi AI</span>
-            </button>
-         </div>
-
-         {/* 3. MAIN CONTENT GRID */}
-         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
-
-            {/* LEFT COLUMN: STATS & CHARTS */}
-            <div className="xl:col-span-8 space-y-6">
-
-               {/* STATS CARDS: Horizontal Scroll on Mobile (Wider cards for peek effect) */}
-               <style>{`
-               .hide-scrollbar::-webkit-scrollbar {
-                 display: none;
-               }
-               .hide-scrollbar {
-                 -ms-overflow-style: none;
-                 scrollbar-width: none;
-               }
-             `}</style>
-               <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-4 px-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 hide-scrollbar">
+               {/* 2. STATS ROW (Budget & Guest Summary) */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                   {/* Budget Card */}
-                  <div onClick={() => setActiveTab('budget')} className="snap-center w-[80vw] sm:w-auto flex-shrink-0 bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-center min-h-[150px]">
-                     <div className="absolute right-0 top-0 p-6 opacity-[0.03] pointer-events-none">
+                  <div onClick={() => setActiveTab('budget')} className="group bg-white p-6 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
+                     <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
                         <DollarSign className="w-32 h-32 text-gray-900" />
                      </div>
-                     <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                           <div className="flex items-center gap-2">
-                              <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><DollarSign className="w-4 h-4" /></div>
-                              <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">NGÂN SÁCH</span>
+
+                     <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+                           <DollarSign className="w-5 h-5" />
+                        </div>
+                        <div>
+                           <h3 className="font-bold text-gray-800 text-lg">Ngân Sách</h3>
+                           <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Tài chính</p>
+                        </div>
+                     </div>
+
+                     <div className="space-y-4 relative z-10">
+                        <div>
+                           <div className="flex justify-between items-baseline mb-1">
+                              <span className="text-3xl font-black text-gray-900 tracking-tight">{fmtShortMoney(stats.totalBudget)}</span>
+                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${stats.totalActual > stats.totalBudget ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                 {stats.totalBudget > 0 ? ((stats.totalActual / stats.totalBudget) * 100).toFixed(0) : 0}% đã dùng
+                              </span>
                            </div>
-                           <span className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full ${stats.totalActual > stats.totalBudget ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                              {stats.totalBudget > 0 ? ((stats.totalActual / stats.totalBudget) * 100).toFixed(0) : 0}%
-                           </span>
+                           <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                 className={`h-full rounded-full transition-all duration-1000 ease-out ${stats.totalActual > stats.totalBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                 style={{ width: `${stats.totalBudget > 0 ? Math.min((stats.totalActual / stats.totalBudget) * 100, 100) : 0}%` }}
+                              ></div>
+                           </div>
                         </div>
 
-                        <h3 className="text-3xl font-black text-gray-900 tracking-tight mb-0.5">{fmtShortMoney(stats.totalBudget)}</h3>
-                        <p className="text-[10px] sm:text-xs text-gray-400 font-bold mb-4">TỔNG DỰ TRÙ</p>
-
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
-                           <div
-                              className={`h-full rounded-full transition-all duration-700 ${stats.totalActual > stats.totalBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
-                              style={{ width: `${stats.totalBudget > 0 ? Math.min((stats.totalActual / stats.totalBudget) * 100, 100) : 0}%` }}
-                           ></div>
-                        </div>
-                        <div className="flex justify-between text-[11px] sm:text-xs font-medium text-gray-500">
-                           <span>Đã chi: <span className="font-bold text-gray-900">{fmtShortMoney(stats.totalActual)}</span></span>
-                           <span>Còn: <span className="font-bold text-gray-900">{fmtShortMoney(stats.totalBudget - stats.totalActual)}</span></span>
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                           <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Thực tế chi</p>
+                              <p className={`font-bold text-lg ${stats.totalActual > stats.totalBudget ? 'text-red-600' : 'text-emerald-600'}`}>{fmtShortMoney(stats.totalActual)}</p>
+                           </div>
+                           <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Còn lại</p>
+                              <p className="font-bold text-lg text-gray-800">{fmtShortMoney(stats.totalBudget - stats.totalActual)}</p>
+                           </div>
                         </div>
                      </div>
                   </div>
 
-                  {/* Guests Card */}
-                  <div onClick={() => setActiveTab('guests')} className="snap-center w-[80vw] sm:w-auto flex-shrink-0 bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-center min-h-[150px]">
-                     <div className="absolute right-0 top-0 p-6 opacity-[0.03] pointer-events-none">
+                  {/* Guest Card */}
+                  <div onClick={() => setActiveTab('guests')} className="group bg-white p-6 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
+                     <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
                         <Users className="w-32 h-32 text-blue-900" />
                      </div>
-                     <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                           <div className="flex items-center gap-2">
-                              <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Users className="w-4 h-4" /></div>
-                              <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">KHÁCH MỜI</span>
+
+                     <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                           <Users className="w-5 h-5" />
+                        </div>
+                        <div>
+                           <h3 className="font-bold text-gray-800 text-lg">Khách Mời</h3>
+                           <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Danh sách</p>
+                        </div>
+                     </div>
+
+                     <div className="flex items-baseline gap-2 mb-6">
+                        <span className="text-4xl font-black text-gray-900 tracking-tight">{stats.totalGuests}</span>
+                        <span className="text-sm font-bold text-gray-400 uppercase">Người</span>
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-3 relative z-10">
+                        <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                           <div className="bg-green-100 p-1.5 rounded-lg text-green-600"><Check className="w-4 h-4" /></div>
+                           <div>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase">Xác nhận</p>
+                              <p className="font-bold text-gray-800">{stats.confirmedGuests}</p>
                            </div>
                         </div>
-
-                        <div className="flex items-baseline gap-2 mb-4">
-                           <h3 className="text-3xl font-black text-gray-900 tracking-tight">{stats.totalGuests}</h3>
-                           <span className="text-xs font-bold text-gray-400 uppercase">Người</span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                           <div className="bg-gray-50 p-2.5 rounded-xl flex flex-col items-start justify-center pl-3 border border-gray-100">
-                              <span className="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Xác nhận</span>
-                              <span className="text-green-600 font-black text-sm flex items-center gap-1">
-                                 {stats.confirmedGuests} <Check className="w-3 h-3" />
-                              </span>
-                           </div>
-                           <div className="bg-gray-50 p-2.5 rounded-xl flex flex-col items-start justify-center pl-3 border border-gray-100">
-                              <span className="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Tiền mừng</span>
-                              <span className="text-amber-600 font-black text-sm flex items-center gap-1">
-                                 {fmtShortMoney(stats.expectedGiftMoney)} <Gift className="w-3 h-3" />
-                              </span>
+                        <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                           <div className="bg-amber-100 p-1.5 rounded-lg text-amber-600"><Gift className="w-4 h-4" /></div>
+                           <div>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase">Tiền mừng</p>
+                              <p className="font-bold text-gray-800 text-xs md:text-sm">{fmtShortMoney(stats.expectedGiftMoney)}</p>
                            </div>
                         </div>
                      </div>
                   </div>
                </div>
 
-               {/* CHARTS */}
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
-                  {/* Pie Chart */}
-                  <div className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm flex flex-col min-h-[240px]">
-                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
-                           <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500"><Users className="w-3.5 h-3.5" /></div>
-                           Cơ Cấu Khách
-                        </h3>
-                     </div>
-                     <div className="h-[180px] w-full relative flex-1">
-                        <ResponsiveContainer width="99%" height="100%">
-                           <PieChart>
-                              <Pie
-                                 data={pieData}
-                                 cx="50%"
-                                 cy="50%"
-                                 innerRadius={45}
-                                 outerRadius={65}
-                                 paddingAngle={5}
-                                 dataKey="value"
-                                 cornerRadius={4}
-                                 stroke="none"
-                              >
-                                 {pieData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                 ))}
-                              </Pie>
-                              <Tooltip content={<CustomTooltip />} />
-                              <Legend iconType="circle" iconSize={8} layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF' }} />
-                           </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none -ml-20">
-                           <span className="text-2xl font-black text-gray-800">{stats.totalGuests}</span>
+               {/* 3. EXPENSE CHART (Bar Chart) */}
+               <div className="bg-white p-6 rounded-[1.5rem] border border-gray-100 shadow-sm h-[320px] flex flex-col">
+                  <div className="flex justify-between items-center mb-6">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500">
+                           <TrendingUp className="w-5 h-5" />
                         </div>
+                        <h3 className="font-bold text-gray-800 text-lg">Chi Tiêu Top 5</h3>
                      </div>
                   </div>
-
-                  {/* Bar Chart */}
-                  <div className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm flex flex-col min-h-[240px]">
-                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
-                           <div className="w-6 h-6 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500"><TrendingUp className="w-3.5 h-3.5" /></div>
-                           Chi Tiêu Top 5
-                        </h3>
-                     </div>
-                     <div className="h-[180px] w-full flex-1">
-                        <ResponsiveContainer width="99%" height="100%">
-                           <BarChart data={barData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }} barGap={2} barCategoryGap="20%">
-                              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
-                              <XAxis type="number" hide />
-                              <YAxis
-                                 dataKey="name"
-                                 type="category"
-                                 width={70}
-                                 tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 600 }}
-                                 axisLine={false}
-                                 tickLine={false}
-                              />
-                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#FFF1F2', radius: 4 }} />
-                              <Bar
-                                 dataKey="duKien"
-                                 name="Dự kiến"
-                                 fill="#E5E7EB"
-                                 radius={[0, 4, 4, 0]}
-                                 barSize={8}
-                              />
-                              <Bar
-                                 dataKey="thucTe"
-                                 name="Thực tế"
-                                 fill="#F43F5E"
-                                 radius={[0, 4, 4, 0]}
-                                 barSize={8}
-                              />
-                           </BarChart>
-                        </ResponsiveContainer>
-                     </div>
+                  <div className="flex-1 w-full text-xs">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={barData} layout="vertical" margin={{ top: 0, right: 30, left: 20, bottom: 0 }} barGap={4} barCategoryGap="20%">
+                           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
+                           <XAxis type="number" hide />
+                           <YAxis
+                              dataKey="name"
+                              type="category"
+                              width={100}
+                              tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 600 }}
+                              axisLine={false}
+                              tickLine={false}
+                           />
+                           <Tooltip content={<CustomTooltip />} cursor={{ fill: '#FFF1F2', radius: 8 }} />
+                           <Bar
+                              dataKey="duKien"
+                              name="Dự kiến"
+                              fill="#E5E7EB"
+                              radius={[0, 4, 4, 0]}
+                              barSize={12}
+                           />
+                           <Bar
+                              dataKey="thucTe"
+                              name="Thực tế"
+                              fill="#F43F5E"
+                              radius={[0, 4, 4, 0]}
+                              barSize={12}
+                           />
+                        </BarChart>
+                     </ResponsiveContainer>
                   </div>
                </div>
             </div>
 
-            {/* RIGHT COLUMN: TASKS & PROMO */}
-            <div className="xl:col-span-4 flex flex-col gap-6">
+            {/* RIGHT COLUMN (4 cols) */}
+            <div className="lg:col-span-4 space-y-6">
 
-               {/* Task List */}
-               <div className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm flex flex-col h-full min-h-[350px]">
+               {/* 4. GUEST CHART (Pie) */}
+               <div className="bg-white p-6 rounded-[1.5rem] border border-gray-100 shadow-sm flex flex-col h-[300px]">
+                  <div className="flex items-center gap-3 mb-2">
+                     <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+                        <Users className="w-4 h-4" />
+                     </div>
+                     <h3 className="font-bold text-gray-800 text-base">Cơ Cấu Khách</h3>
+                  </div>
+                  <div className="flex-1 relative">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                           <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={75}
+                              paddingAngle={5}
+                              dataKey="value"
+                              cornerRadius={6}
+                              stroke="none"
+                           >
+                              {pieData.map((entry, index) => (
+                                 <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                           </Pie>
+                           <Tooltip content={<CustomTooltip />} />
+                           <Legend iconType="circle" iconSize={8} layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', paddingTop: '10px' }} />
+                        </PieChart>
+                     </ResponsiveContainer>
+                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
+                        <span className="text-3xl font-black text-gray-800 leading-none">{stats.totalGuests}</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">Tổng</span>
+                     </div>
+                  </div>
+               </div>
+
+               {/* 5. URGENT TASKS */}
+               <div className="bg-white p-6 rounded-[1.5rem] border border-gray-100 shadow-sm flex flex-col min-h-[350px]">
                   <div className="flex justify-between items-center mb-4">
-                     <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
-                        <div className="w-6 h-6 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
-                           <Clock className="w-3.5 h-3.5" />
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
+                           <AlertCircle className="w-4 h-4" />
                         </div>
-                        Cần Làm Gấp
-                     </h3>
-                     <button onClick={() => setActiveTab('budget')} className="text-[10px] font-bold text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full transition-colors uppercase tracking-wide">
-                        Xem tất cả
+                        <h3 className="font-bold text-gray-800 text-base">Cần Làm Gấp</h3>
+                     </div>
+                     <button onClick={() => setActiveTab('budget')} className="text-xs font-bold text-rose-500 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors">
+                        Xem hết
                      </button>
                   </div>
 
@@ -436,64 +425,68 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, user, isSyncing, setActive
                         urgentTasks.map(task => (
                            <div
                               key={task.id}
-                              className="group bg-white p-3.5 rounded-2xl border border-gray-100 hover:border-rose-200 hover:shadow-sm transition-all cursor-pointer relative flex gap-3 items-center"
-                              onClick={() => setActiveTab('budget')}
+                              className="group bg-gray-50 hover:bg-white p-3 rounded-xl border border-transparent hover:border-rose-200 hover:shadow-sm transition-all cursor-pointer relative flex gap-3 items-start"
                            >
                               <button
                                  onClick={(e) => handleQuickComplete(e, task.id)}
-                                 className="w-5 h-5 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-300 hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-all flex-shrink-0"
+                                 className="mt-0.5 w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center text-transparent hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-all flex-shrink-0"
                                  title="Hoàn thành"
                               >
                                  <Check className="w-3 h-3" />
                               </button>
-                              <div className="flex-1 min-w-0">
-                                 <h4 className="text-sm font-bold text-gray-700 truncate group-hover:text-rose-600 transition-colors">{task.itemName}</h4>
-                                 <div className="flex items-center gap-2 mt-1">
+                              <div className="flex-1 min-w-0" onClick={() => setActiveTab('budget')}>
+                                 <h4 className="text-sm font-bold text-gray-700 truncate group-hover:text-rose-600 transition-colors leading-tight mb-1">{task.itemName}</h4>
+                                 <div className="flex items-center gap-2">
                                     {task.deadline && (
-                                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${new Date(task.deadline) < new Date() ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
+                                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${new Date(task.deadline) < new Date() ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                                          <Clock className="w-3 h-3" />
                                           {new Date(task.deadline).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric' })}
                                        </span>
                                     )}
-                                    <span className="text-[10px] text-gray-400 font-medium truncate bg-gray-50 px-1.5 py-0.5 rounded max-w-[80px] block">{task.category}</span>
+                                    <span className="text-[10px] text-gray-500 font-medium bg-white border border-gray-200 px-1.5 py-0.5 rounded truncate max-w-[80px]">{task.category}</span>
                                  </div>
                               </div>
                               <div className="text-right">
-                                 <span className="text-xs font-black text-gray-900 block">{fmtShortMoney(task.estimatedCost)}</span>
+                                 <span className="text-xs font-bold text-gray-900 block">{fmtShortMoney(task.estimatedCost)}</span>
                               </div>
                            </div>
                         ))
                      ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center py-8">
-                           <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mb-3">
+                           <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-2">
                               <Sparkles className="w-6 h-6 text-green-500" />
                            </div>
-                           <p className="text-gray-800 font-bold text-base">Tuyệt vời!</p>
-                           <p className="text-xs text-gray-400 mt-1">Không có việc quá hạn.</p>
+                           <p className="text-gray-800 font-bold text-sm">Tuyệt vời!</p>
+                           <p className="text-xs text-gray-400">Không có việc quá hạn.</p>
                         </div>
                      )}
                   </div>
                </div>
 
-               {/* AI Promo Card */}
-               <div onClick={() => setActiveTab('ai')} className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-[24px] p-6 text-white shadow-lg shadow-indigo-200 cursor-pointer hover:scale-[1.02] transition-transform relative overflow-hidden group">
-                  <div className="absolute right-0 top-0 opacity-10 p-4 pointer-events-none group-hover:scale-125 transition-transform duration-700">
-                     <Sparkles className="w-24 h-24" />
+               {/* 6. AI PROMO CARD */}
+               <div onClick={() => setActiveTab('ai')} className="bg-gradient-to-r from-violet-600 to-indigo-700 rounded-[1.5rem] p-6 text-white shadow-lg shadow-indigo-200 cursor-pointer hover:scale-[1.02] transition-transform relative overflow-hidden group">
+                  <div className="absolute -right-4 -top-4 opacity-20 p-4 pointer-events-none group-hover:rotate-12 transition-transform duration-700">
+                     <Sparkles className="w-32 h-32" />
                   </div>
-                  <div className="relative z-10 flex items-center justify-between">
-                     <div className="flex items-center gap-4">
-                        <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm shadow-inner hidden sm:block">
-                           <Sparkles className="w-6 h-6" />
+                  <div className="relative z-10 flex flex-col gap-4">
+                     <div className="flex items-center justify-between">
+                        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm shadow-inner">
+                           <Sparkles className="w-5 h-5" />
                         </div>
-                        <div>
-                           <p className="text-[10px] font-bold opacity-80 uppercase tracking-wider mb-1">Trợ lý AI</p>
-                           <p className="text-lg font-bold leading-tight">Bạn cần lời khuyên<br />về kế hoạch?</p>
-                        </div>
+                        <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded text-white/90">BETA</span>
                      </div>
-                     <div className="bg-white/20 p-2.5 rounded-full hover:bg-white/30 transition-colors">
-                        <ArrowRight className="w-5 h-5" />
+
+                     <div>
+                        <p className="text-xs font-bold opacity-80 uppercase tracking-wider mb-1">Trợ lý AI</p>
+                        <p className="text-xl font-bold leading-tight">Bạn cần lời khuyên<br />về kế hoạch cưới?</p>
+                     </div>
+
+                     <div className="flex items-center gap-2 text-xs font-bold bg-white/10 w-fit px-3 py-2 rounded-lg hover:bg-white/20 transition-colors">
+                        Hỏi ngay <ArrowRight className="w-3 h-3" />
                      </div>
                   </div>
                </div>
+
             </div>
          </div>
       </div>
