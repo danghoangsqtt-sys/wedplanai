@@ -52,7 +52,7 @@ const InvitationBuilder: React.FC = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // 1. Kiểm tra dung lượng
+        // 1. Validate size < 5MB
         if (file.size > 5 * 1024 * 1024) {
             alert("Ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhỏ hơn.");
             return;
@@ -65,43 +65,48 @@ const InvitationBuilder: React.FC = () => {
 
         setIsUploading(true);
         try {
-            // 2. Đặt tên file an toàn (tránh ký tự đặc biệt gây lỗi đường dẫn)
+            // 2. Tạo tên file an toàn (Loại bỏ ký tự đặc biệt)
             const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
             const storageRef = ref(storage, `invitations/${user!.uid}/${safeName}_${Date.now()}`);
 
-            // 3. Tự động xác định Content-Type nếu trình duyệt không nhận diện được
-            let mimeType = file.type;
-            if (!mimeType || mimeType === '') {
-                const ext = file.name.split('.').pop()?.toLowerCase();
-                if (ext === 'png') mimeType = 'image/png';
-                else if (ext === 'webp') mimeType = 'image/webp';
-                else if (ext === 'gif') mimeType = 'image/gif';
-                else mimeType = 'image/jpeg'; // Fallback mặc định là JPG
+            // 3. --- FIX LỖI 403 (QUAN TRỌNG NHẤT) ---
+            // Tự động đoán định dạng ảnh dựa trên đuôi file
+            const ext = file.name.split('.').pop()?.toLowerCase();
+            let mimeType = 'image/jpeg'; // Mặc định là JPEG để luôn qua được Rules
+
+            if (ext === 'png') mimeType = 'image/png';
+            else if (ext === 'gif') mimeType = 'image/gif';
+            else if (ext === 'webp') mimeType = 'image/webp';
+            else if (ext === 'svg') mimeType = 'image/svg+xml';
+
+            // Nếu trình duyệt nhận diện được đây là ảnh, thì dùng type của trình duyệt
+            // Nếu trình duyệt không nhận ra (file.type rỗng) thì dùng mimeType mặc định ở trên
+            if (file.type && file.type.startsWith('image/')) {
+                mimeType = file.type;
             }
 
-            // 4. Tạo Metadata chuẩn
+            // Tạo metadata bắt buộc
             const metadata = {
-                contentType: mimeType
+                contentType: mimeType,
             };
+            // ----------------------------------------
 
-            // 5. Gửi Metadata kèm file để vượt qua Security Rules
+            // 4. Upload kèm Metadata
             const snapshot = await uploadBytes(storageRef, file, metadata);
 
-            // 6. Lấy URL tải xuống
             const url = await getDownloadURL(snapshot.ref);
-
             updateInvitation({ coverImage: url });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
         } catch (error: any) {
             console.error("Upload failed", error);
             if (error.code === 'storage/unauthorized') {
-                alert("Lỗi quyền truy cập (403). Vui lòng thử đổi sang ảnh JPG hoặc PNG khác.");
+                alert("Lỗi quyền truy cập (403). Vui lòng thử đổi tên file ảnh hoặc chuyển sang định dạng JPG/PNG chuẩn.");
             } else {
                 alert("Lỗi upload: " + error.message);
             }
         } finally {
             setIsUploading(false);
-            // Reset input để cho phép chọn lại cùng file
+            // Reset input để cho phép chọn lại
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
