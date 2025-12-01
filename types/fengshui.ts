@@ -1,51 +1,38 @@
+
+export type ElementKey = 'KIM' | 'MOC' | 'THUY' | 'HOA' | 'THO';
+
 export interface CoupleProfile {
   groomName: string;
-  groomDob: string;
-  groomTime: string;
+  groomDob: string; // YYYY-MM-DD
+  groomTime: string; // HH:mm
   brideName: string;
-  brideDob: string;
-  brideTime: string;
-  desiredPeriod: string;
+  brideDob: string; // YYYY-MM-DD
+  brideTime: string; // HH:mm
+  desiredPeriod: string; // e.g. "Tháng 10 năm 2024"
 }
 
-// Cập nhật Interface mới cho đẹp hơn
 export interface HarmonyResult {
-  score: number;
-  summary: string;
-  groomInfo: {
-    lunarYear: string;
-    menh: string;
-    cung: string;
-    thienCan: string;
-    diaChi: string;
-  };
-  brideInfo: {
-    lunarYear: string;
-    menh: string;
-    cung: string;
-    thienCan: string;
-    diaChi: string;
-  };
-  analysis: {
-    menh: string;
-    thienCan: string;
-    diaChi: string;
-    cungMenh: string;
-  };
-  conclusion: string;
-  // Giữ lại các trường cũ để tránh lỗi legacy code nếu cần, nhưng optional
-  groomLunar?: string;
-  brideLunar?: string;
-  groomElement?: string;
-  brideElement?: string;
-  detailedAnalysis?: string;
+  score: number; // 0-100
+  summary: string; // e.g., "Tam Hợp - Rất Tốt"
+  groomLunar: string; // e.g., "Giáp Tý"
+  brideLunar: string; // e.g., "Ất Sửu"
+  
+  groomElement: string; // e.g., "Hải Trung Kim"
+  groomElementKey: ElementKey; // NEW: For UI styling
+  
+  brideElement: string; // e.g., "Lư Trung Hỏa"
+  brideElementKey: ElementKey; // NEW: For UI styling
+
+  conflictStatus: 'SINH' | 'KHAC' | 'BINH'; // Tương Sinh, Tương Khắc, Bình Hòa
+  
+  detailedAnalysis: string; // Markdown text
 }
 
 export interface AuspiciousDate {
-  solarDate: string;
-  lunarDate: string;
-  dayName: string;
-  timeSlots: string;
+  solarDate: string; // YYYY-MM-DD
+  lunarDate: string; // e.g., "15/08 (Giáp Thân)"
+  dayName: string; // e.g., "Ngày Hoàng Đạo"
+  timeSlots: string; // e.g., "Giờ đẹp: Tỵ (9-11h), Mùi (13-15h)"
   reason: string;
   suitability: 'VERY_HIGH' | 'HIGH' | 'MODERATE';
 }
