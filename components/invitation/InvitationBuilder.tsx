@@ -8,7 +8,7 @@ import {
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { BankInfo } from '../../types';
-import { storage, auth } from '../../lib/firebase'; // Thêm auth để kiểm tra thực tế
+import { storage, auth } from '../../lib/firebase'; // Thêm auth để kiểm tra session
 import * as Storage from 'firebase/storage';
 import { generateWeddingSticker } from '../../services/aiService';
 
@@ -43,7 +43,6 @@ const InvitationBuilder: React.FC = () => {
         if (!invitation.groomName && user?.displayName) {
             updateInvitation({ groomName: user.displayName });
         }
-        // Ensure default stickers exist
         if (!invitation.sticker) {
             updateInvitation({ sticker: { groom: "Felix", bride: "Aneka", mode: 'BASIC' } });
         }
@@ -93,31 +92,36 @@ const InvitationBuilder: React.FC = () => {
         }
     };
 
-    // --- AI AVATAR LOGIC ---
+    // --- AI AVATAR LOGIC (ĐÃ NÂNG CẤP) ---
 
     const handleFaceUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'groom' | 'bride') => {
         const file = e.target.files?.[0];
-        // Kiểm tra user từ store
+
+        // 1. Kiểm tra File & User Local
         if (!file || !user) return;
 
-        // [FIX QUAN TRỌNG] Kiểm tra Auth thực tế từ Firebase SDK
-        // Điều này đảm bảo request gửi đi có kèm Token xác thực
+        // 2. [FIX CRITICAL] Kiểm tra kết nối Firebase thực tế
         if (!auth.currentUser) {
-            alert("Phiên đăng nhập đã hết hạn hoặc chưa sẵn sàng. Vui lòng tải lại trang hoặc đăng nhập lại.");
+            alert("⚠️ Lỗi phiên đăng nhập: Kết nối đến server bị ngắt quãng.\n\nHãy tải lại trang (F5) hoặc Đăng xuất rồi Đăng nhập lại để khắc phục.");
             return;
         }
 
         try {
-            // Sử dụng auth.currentUser.uid để đảm bảo trùng khớp 100% với Security Rules
+            // [FIX EXTENSION] Lấy đuôi file (ví dụ .png, .jpg) để tránh lỗi định dạng
+            const fileExt = file.name.split('.').pop() || 'png';
+            const fileName = `${type}_${Date.now()}.${fileExt}`;
+
+            // Sử dụng auth.currentUser.uid để đảm bảo trùng khớp với Rules
             const currentUserId = auth.currentUser.uid;
+            const storageRef = Storage.ref(storage, `ai_faces/${currentUserId}/${fileName}`);
 
-            const storageRef = Storage.ref(storage, `ai_faces/${currentUserId}/${type}_${Date.now()}`);
-
-            // [FIX] Thêm Metadata contentType để tránh bị chặn bởi một số rules ngầm định
+            // Thêm metadata để server nhận diện đúng loại file
             const metadata = {
                 contentType: file.type,
             };
 
+            // Thực hiện Upload
+            addNotification('INFO', 'Đang tải ảnh lên...');
             const snapshot = await Storage.uploadBytes(storageRef, file, metadata);
             const url = await Storage.getDownloadURL(snapshot.ref);
 
@@ -127,22 +131,25 @@ const InvitationBuilder: React.FC = () => {
                     [`${type}FaceUrl`]: url
                 }
             });
-            addNotification('SUCCESS', `Đã tải ảnh khuôn mặt ${type === 'groom' ? 'Chú Rể' : 'Cô Dâu'}`);
+            addNotification('SUCCESS', `Đã tải ảnh ${type === 'groom' ? 'Chú Rể' : 'Cô Dâu'} thành công!`);
+
         } catch (err: any) {
-            console.error("Upload Error:", err);
-            // Hiển thị lỗi chi tiết hơn
+            console.error("Upload Failed:", err);
+
+            // Xử lý thông báo lỗi thân thiện
             if (err.code === 'storage/unauthorized') {
-                alert("Lỗi quyền truy cập (403): Bạn không có quyền ghi vào thư mục này. Hãy đảm bảo bạn đã đăng nhập đúng tài khoản.");
+                alert(`⛔ Lỗi quyền truy cập (403 Forbidden)\n\nNguyên nhân: Server từ chối bạn ghi vào thư mục này.\nGiải pháp: Hãy Đăng xuất và Đăng nhập lại tài khoản Google của bạn.`);
+            } else if (err.code === 'storage/canceled') {
+                addNotification('WARNING', 'Đã hủy tải lên.');
             } else {
-                alert(`Lỗi upload ảnh: ${err.message}`);
+                alert(`Lỗi không xác định: ${err.message}`);
             }
         } finally {
-            // Reset input file để cho phép chọn lại cùng 1 file nếu lỗi
+            // Reset input để cho phép chọn lại cùng 1 file nếu cần
             if (e.target) e.target.value = '';
         }
     };
 
-    // Convert Image URL to Base64 for Gemini (Proxy fetch if needed or just handle CORS)
     const urlToBase64 = async (url: string): Promise<string | undefined> => {
         try {
             const response = await fetch(url);
@@ -153,30 +160,22 @@ const InvitationBuilder: React.FC = () => {
                 reader.readAsDataURL(blob);
             });
         } catch (e) {
-            console.error("Error converting image for AI:", e);
+            console.error("Error converting image:", e);
             return undefined;
         }
     };
 
     const handleGenerateSticker = async (action: string, actionKey: string) => {
-        if (!user) {
-            alert("Vui lòng đăng nhập để sử dụng tính năng này.");
-            return;
-        }
-
-        // [FIX] Kiểm tra Auth thực tế
-        if (!auth.currentUser) {
-            alert("Vui lòng đăng nhập lại để xác thực với hệ thống AI.");
+        if (!user || !auth.currentUser) {
+            alert("Vui lòng đăng nhập lại để sử dụng tính năng AI.");
             return;
         }
 
         setGeneratingAction(actionKey);
         try {
-            // 1. Prepare Inputs
             const groomRef = invitation.sticker.groomFaceUrl ? await urlToBase64(invitation.sticker.groomFaceUrl) : undefined;
             const brideRef = invitation.sticker.brideFaceUrl ? await urlToBase64(invitation.sticker.brideFaceUrl) : undefined;
 
-            // 2. Call AI
             const base64Image = await generateWeddingSticker(
                 user,
                 promptDesc,
@@ -184,19 +183,18 @@ const InvitationBuilder: React.FC = () => {
                 { groom: groomRef, bride: brideRef }
             );
 
-            // 3. Upload Result to Firebase Storage (Permanent Link)
-            // Convert base64 back to blob
+            // Upload kết quả sticker lên Storage
             const res = await fetch(base64Image);
             const blob = await res.blob();
 
-            // [FIX] Dùng auth.currentUser.uid
-            const storageRef = Storage.ref(storage, `ai_stickers/${auth.currentUser.uid}/${actionKey}_${Date.now()}.png`);
+            const currentUserId = auth.currentUser.uid;
+            // [FIX EXTENSION] Sticker AI luôn là PNG
+            const storageRef = Storage.ref(storage, `ai_stickers/${currentUserId}/${actionKey}_${Date.now()}.png`);
 
-            const metadata = { contentType: 'image/png' }; // Metadata chuẩn
+            const metadata = { contentType: 'image/png' };
             const snapshot = await Storage.uploadBytes(storageRef, blob, metadata);
             const downloadUrl = await Storage.getDownloadURL(snapshot.ref);
 
-            // 4. Update State
             updateInvitation({
                 sticker: {
                     ...invitation.sticker,
@@ -205,7 +203,6 @@ const InvitationBuilder: React.FC = () => {
                     stickerPack: {
                         ...invitation.sticker.stickerPack,
                         [actionKey]: downloadUrl,
-                        // If generating 'main', ensure it is set as main
                         ...(actionKey === 'main' ? { main: downloadUrl } : {})
                     }
                 }
@@ -221,7 +218,6 @@ const InvitationBuilder: React.FC = () => {
     };
 
     const publicLink = `${window.location.origin}/?view=invitation&uid=${user?.uid || 'guest'}`;
-
     const getAvatarUrl = (seed: string) => `https://api.dicebear.com/9.x/notionists/svg?seed=${seed}&scale=120&backgroundColor=transparent`;
 
     return (
