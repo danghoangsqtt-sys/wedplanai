@@ -52,44 +52,38 @@ const InvitationBuilder: React.FC = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Bỏ qua check size tạm thời để test logic upload trước
-        // if (file.size > 5 * 1024 * 1024) { ... }
+        // 1. Validate size < 5MB
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhỏ hơn.");
+            return;
+        }
 
         if (!storage || !user) {
-            alert("Lỗi hệ thống: Chưa đăng nhập hoặc thiếu cấu hình Storage.");
+            alert("Lỗi: Vui lòng đăng nhập lại để thực hiện thao tác này.");
             return;
         }
 
         setIsUploading(true);
         try {
-            // Tạo tên file đơn giản để tránh lỗi ký tự lạ
-            const safeName = `upload_${Date.now()}.jpg`;
+            // Tạo tên file đơn giản .jpg để tránh mọi rắc rối về định dạng
+            const safeName = `card_cover_${Date.now()}.jpg`;
             const storageRef = ref(storage, `invitations/${user.uid}/${safeName}`);
 
-            // --- BẮT BUỘC: Metadata chuẩn ---
-            // Dù file gốc là gì, ta cứ khai báo nó là image/jpeg để qua mặt Rules
-            // (Lưu ý: Cách này chỉ để fix lỗi permission, file vẫn hiển thị bình thường)
+            // Metadata "ép" kiểu JPEG để vượt qua mọi bộ lọc
             const metadata = {
                 contentType: 'image/jpeg',
             };
 
-            console.log("Đang upload với metadata:", metadata); // Debug log
+            console.log("Bắt đầu upload:", safeName);
 
-            // Upload
             const snapshot = await uploadBytes(storageRef, file, metadata);
-            console.log("Upload thành công!", snapshot);
-
             const url = await getDownloadURL(snapshot.ref);
+
             updateInvitation({ coverImage: url });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
-
         } catch (error: any) {
-            console.error("Chi tiết lỗi upload:", error);
-            if (error.code === 'storage/unauthorized') {
-                alert(`Lỗi 403: Bạn không có quyền ghi vào thư mục của user ${user.uid}. Hãy kiểm tra lại Rules.`);
-            } else {
-                alert("Lỗi upload: " + error.message);
-            }
+            console.error("Lỗi Upload:", error);
+            alert("Không thể tải ảnh: " + error.message);
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
