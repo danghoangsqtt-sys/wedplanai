@@ -1,4 +1,3 @@
-
 export type ElementKey = 'KIM' | 'MOC' | 'THUY' | 'HOA' | 'THO';
 
 export interface CoupleProfile {
@@ -18,10 +17,10 @@ export interface HarmonyResult {
   brideLunar: string; // e.g., "Ất Sửu"
 
   groomElement: string; // e.g., "Hải Trung Kim"
-  groomElementKey: ElementKey; // NEW: For UI styling
+  groomElementKey: ElementKey; // For UI styling
 
   brideElement: string; // e.g., "Lư Trung Hỏa"
-  brideElementKey: ElementKey; // NEW: For UI styling
+  brideElementKey: ElementKey; // For UI styling
 
   conflictStatus: 'SINH' | 'KHAC' | 'BINH'; // Tương Sinh, Tương Khắc, Bình Hòa
 
