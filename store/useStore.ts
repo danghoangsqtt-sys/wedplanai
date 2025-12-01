@@ -119,7 +119,8 @@ const DEFAULT_INVITATION: InvitationData = {
     template: 'qr_code'
   },
   wishes: 'Trân trọng kính mời bạn đến chung vui cùng gia đình chúng tôi.',
-  coverImage: null,
+  galleryImages: [], // Initialize empty gallery
+  inputFaces: { groom: null, bride: null },
   imageConfig: { scale: 1, x: 0, y: 0 },
   themeColor: '#e11d48'
 };
@@ -467,7 +468,7 @@ export const useStore = create<AppState>()(
       }
     }),
     {
-      name: 'wedplan-storage-v7', // Increment version
+      name: 'wedplan-storage-v9', // Increment version
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,

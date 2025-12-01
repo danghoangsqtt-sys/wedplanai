@@ -1,15 +1,17 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import {
-    Heart, Calendar, MapPin, CreditCard, Image as ImageIcon,
-    Share2, Download, Eye, QrCode, Upload, Save, Check, Info,
-    ZoomIn, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCcw
+    Heart, Download, Eye, Upload, Sparkles,
+    Loader2, Info, Image as ImageIcon,
+    ZoomIn, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
-import { storage } from '../../lib/firebase';
+import { storage, auth } from '../../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { BankInfo } from '../../types';
+import { generateWeddingImages } from '../../services/aiService';
 
 // Danh sách ngân hàng phổ biến cho VietQR
 const BANKS = [
@@ -24,20 +26,23 @@ const BANKS = [
 ];
 
 const InvitationBuilder: React.FC = () => {
-    const { invitation, updateInvitation, user, addNotification } = useStore();
+    const { invitation, updateInvitation, user, addNotification, settings } = useStore();
     const [activeTab, setActiveTab] = useState<'INFO' | 'BANK' | 'DESIGN'>('INFO');
-    const [isUploading, setIsUploading] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
     const marketingCardRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Default image config if not exists
-    const imgConfig = invitation.imageConfig || { scale: 1, x: 0, y: 0 };
+    // Inputs for AI
+    const [groomFile, setGroomFile] = useState<File | null>(null);
+    const [brideFile, setBrideFile] = useState<File | null>(null);
+
+    // Previews for inputs
+    const [groomPreview, setGroomPreview] = useState<string | null>(invitation.inputFaces?.groom || null);
+    const [bridePreview, setBridePreview] = useState<string | null>(invitation.inputFaces?.bride || null);
 
     // Initial load check
     useEffect(() => {
         if (!invitation.groomName && user?.displayName) {
-            // Pre-fill if empty
-            updateInvitation({ groomName: user.displayName }); // Just a guess, user can change
+            updateInvitation({ groomName: user.displayName });
         }
     }, []);
 
@@ -51,45 +56,86 @@ const InvitationBuilder: React.FC = () => {
         });
     };
 
-    const handleImageConfigChange = (field: 'scale' | 'x' | 'y', value: number) => {
-        updateInvitation({
-            imageConfig: { ...imgConfig, [field]: value }
-        });
+    // Helper: Base64 to Blob
+    const base64ToBlob = (base64: string, type = 'image/png') => {
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type });
     };
 
-    const handleResetImageConfig = () => {
-        updateInvitation({
-            imageConfig: { scale: 1, x: 0, y: 0 }
-        });
-    };
-
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (file.size > 5 * 1024 * 1024) {
-            alert("Ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhỏ hơn.");
-            return;
-        }
-
-        if (!storage) {
-            alert("Chưa cấu hình Storage. Vui lòng liên hệ Admin.");
-            return;
-        }
-
-        setIsUploading(true);
+    const handleUploadInputFace = async (file: File, type: 'groom' | 'bride') => {
+        if (!auth.currentUser || !storage) return;
         try {
-            const storageRef = ref(storage, `invitations/${user!.uid}/${file.name}_${Date.now()}`);
-            const metadata = { contentType: file.type }; // Thêm dòng này
-            const snapshot = await uploadBytes(storageRef, file, metadata); // Truyền metadata vào
+            // Upload input face to storage for persistence
+            const fileName = `input_${type}_${Date.now()}.jpg`;
+            const storageRef = ref(storage, `invitations/faces/${user!.uid}/${fileName}`);
+            const snapshot = await uploadBytes(storageRef, file);
             const url = await getDownloadURL(snapshot.ref);
-            updateInvitation({ coverImage: url, imageConfig: { scale: 1, x: 0, y: 0 } });
-            addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
+
+            updateInvitation({
+                inputFaces: {
+                    ...invitation.inputFaces,
+                    [type]: url
+                }
+            });
+        } catch (e) {
+            console.error("Upload face error:", e);
+        }
+    };
+
+    const handleGenerateAIPhotos = async () => {
+        if (!groomFile || !brideFile) {
+            alert("Vui lòng tải lên ảnh chân dung Chú Rể và Cô Dâu để AI có thể tạo hình!");
+            return;
+        }
+
+        if (!settings.geminiApiKey) {
+            alert("Vui lòng nhập Gemini API Key trong phần Cài Đặt để sử dụng tính năng này.");
+            return;
+        }
+
+        if (!auth.currentUser) {
+            alert("Vui lòng đăng nhập để lưu ảnh.");
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            // 1. Upload input faces first if strictly needed, but we use local files for AI generation
+            await handleUploadInputFace(groomFile, 'groom');
+            await handleUploadInputFace(brideFile, 'bride');
+
+            // 2. Generate Images
+            const generatedB64s = await generateWeddingImages(groomFile, brideFile, settings.geminiApiKey);
+
+            // 3. Upload Generated Images to Firebase
+            if (!storage) throw new Error("Storage not configured");
+            const newGalleryUrls: string[] = [];
+
+            for (let i = 0; i < generatedB64s.length; i++) {
+                const blob = base64ToBlob(generatedB64s[i], 'image/png');
+                const fileName = `generated_${Date.now()}_${i}.png`;
+                const storageRef = ref(storage, `invitations/generated/${user!.uid}/${fileName}`);
+                const snapshot = await uploadBytes(storageRef, blob, { contentType: 'image/png' });
+                const url = await getDownloadURL(snapshot.ref);
+                newGalleryUrls.push(url);
+            }
+
+            // 4. Update State
+            updateInvitation({
+                galleryImages: newGalleryUrls
+            });
+            addNotification('SUCCESS', 'Đã tạo xong 5 ảnh cưới tuyệt đẹp!');
+
         } catch (error: any) {
-            console.error("Upload failed", error);
-            alert("Lỗi upload: " + error.message);
+            console.error("AI Gen Error:", error);
+            alert("Lỗi khi tạo ảnh: " + (error.message || "Vui lòng thử lại sau."));
         } finally {
-            setIsUploading(false);
+            setIsGenerating(false);
         }
     };
 
@@ -97,8 +143,9 @@ const InvitationBuilder: React.FC = () => {
         if (!marketingCardRef.current) return;
         try {
             const canvas = await html2canvas(marketingCardRef.current, {
-                useCORS: true, // Quan trọng để load ảnh từ domain khác (firebase)
-                scale: 2 // High resolution
+                useCORS: true,
+                scale: 2,
+                backgroundColor: null
             });
             const link = document.createElement('a');
             link.download = `thiep-cuoi-${user!.uid}.png`;
@@ -111,11 +158,12 @@ const InvitationBuilder: React.FC = () => {
         }
     };
 
-    // Public Link
     const publicLink = `${window.location.origin}/?view=invitation&uid=${user?.uid}`;
 
-    // Bank QR URL (VietQR API)
-    const bankQrUrl = `https://img.vietqr.io/image/${invitation.bankInfo.bankId}-${invitation.bankInfo.accountNumber}-${invitation.bankInfo.template}.png?accountName=${encodeURIComponent(invitation.bankInfo.accountName)}`;
+    // Gallery for preview (Generated or Placeholders)
+    const gallery = invitation.galleryImages && invitation.galleryImages.length > 0
+        ? invitation.galleryImages
+        : [];
 
     return (
         <div className="h-full flex flex-col bg-[#FDF2F8]">
@@ -126,7 +174,7 @@ const InvitationBuilder: React.FC = () => {
                         <Heart className="w-6 h-6 text-rose-500 fill-current animate-pulse" />
                         Thiệp Mời Online
                     </h1>
-                    <p className="text-xs text-gray-500 mt-1">Tạo thiệp, QR mừng cưới & chia sẻ ngay.</p>
+                    <p className="text-xs text-gray-500 mt-1">Tạo thiệp, QR mừng cưới & bộ ảnh AI.</p>
                 </div>
                 <div className="flex gap-2">
                     <a
@@ -135,13 +183,13 @@ const InvitationBuilder: React.FC = () => {
                         rel="noreferrer"
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-bold hover:bg-rose-50 transition-colors"
                     >
-                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem thử</span>
+                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem trang khách</span>
                     </a>
                     <button
                         onClick={downloadMarketingCard}
                         className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md transition-colors"
                     >
-                        <Download className="w-4 h-4" /> <span className="hidden sm:inline">Tải ảnh Marketing</span>
+                        <Download className="w-4 h-4" /> <span className="hidden sm:inline">Tải ảnh thiệp</span>
                     </button>
                 </div>
             </div>
@@ -153,7 +201,7 @@ const InvitationBuilder: React.FC = () => {
                     <div className="flex border-b border-gray-100">
                         <button onClick={() => setActiveTab('INFO')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'INFO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Thông Tin</button>
                         <button onClick={() => setActiveTab('BANK')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'BANK' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Ngân Hàng</button>
-                        <button onClick={() => setActiveTab('DESIGN')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'DESIGN' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Hình Ảnh</button>
+                        <button onClick={() => setActiveTab('DESIGN')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'DESIGN' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>HÌNH ẢNH</button>
                     </div>
 
                     {/* Scrollable Form Area */}
@@ -237,98 +285,90 @@ const InvitationBuilder: React.FC = () => {
                         )}
 
                         {activeTab === 'DESIGN' && (
-                            <div className="space-y-4 animate-fadeIn">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Ảnh Cưới / Ảnh Bìa</label>
-                                    <div
-                                        className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-rose-400 hover:bg-rose-50 transition-all"
-                                        onClick={() => fileInputRef.current?.click()}
-                                    >
-                                        {invitation.coverImage ? (
-                                            <div className="relative aspect-[3/4] w-full max-w-[150px] mx-auto rounded-lg overflow-hidden shadow-sm">
-                                                <img src={invitation.coverImage} className="w-full h-full object-cover" alt="Cover" />
-                                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                    <Upload className="w-6 h-6 text-white" />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="py-8 text-gray-400">
-                                                <ImageIcon className="w-10 h-10 mx-auto mb-2" />
-                                                <p className="text-sm">Nhấn để tải ảnh lên</p>
-                                            </div>
-                                        )}
-                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-                                        {isUploading && <p className="text-xs text-rose-500 mt-2 font-bold animate-pulse">Đang tải lên...</p>}
+                            <div className="space-y-6 animate-fadeIn">
+                                <div className="bg-gradient-to-r from-violet-50 to-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <h3 className="font-bold text-indigo-900 text-sm flex items-center gap-2 mb-3">
+                                        <Sparkles className="w-4 h-4 text-indigo-500" />
+                                        Studio Ảnh Cưới AI
+                                    </h3>
+
+                                    <p className="text-xs text-gray-500 mb-3">Tải lên ảnh chân dung rõ mặt của 2 bạn để AI tạo ra 5 bức ảnh cưới lung linh theo nhiều phong cách.</p>
+
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <div className="text-center">
+                                            <label className="block w-full aspect-square bg-white border-2 border-dashed border-indigo-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 overflow-hidden relative shadow-sm">
+                                                {groomPreview ? (
+                                                    <img src={groomPreview} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="text-gray-400 text-xs p-2">
+                                                        <Upload className="w-6 h-6 mx-auto mb-1" />
+                                                        Ảnh Chú Rể
+                                                    </div>
+                                                )}
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                    const f = e.target.files?.[0];
+                                                    if (f) {
+                                                        setGroomFile(f);
+                                                        setGroomPreview(URL.createObjectURL(f));
+                                                    }
+                                                }} />
+                                            </label>
+                                        </div>
+                                        <div className="text-center">
+                                            <label className="block w-full aspect-square bg-white border-2 border-dashed border-indigo-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 overflow-hidden relative shadow-sm">
+                                                {bridePreview ? (
+                                                    <img src={bridePreview} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="text-gray-400 text-xs p-2">
+                                                        <Upload className="w-6 h-6 mx-auto mb-1" />
+                                                        Ảnh Cô Dâu
+                                                    </div>
+                                                )}
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                    const f = e.target.files?.[0];
+                                                    if (f) {
+                                                        setBrideFile(f);
+                                                        setBridePreview(URL.createObjectURL(f));
+                                                    }
+                                                }} />
+                                            </label>
+                                        </div>
                                     </div>
+
+                                    <button
+                                        onClick={handleGenerateAIPhotos}
+                                        disabled={isGenerating || !groomFile || !brideFile}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+                                    >
+                                        {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-yellow-300" />}
+                                        {isGenerating ? "Đang xử lý (30s)..." : "✨ AI Tạo Ảnh Cưới (5 Styles)"}
+                                    </button>
                                 </div>
 
-                                {/* IMAGE ADJUSTMENT CONTROLS */}
-                                {invitation.coverImage && (
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
-                                                <Move className="w-3 h-3" /> Căn chỉnh ảnh
-                                            </label>
-                                            <button
-                                                onClick={handleResetImageConfig}
-                                                className="text-[10px] text-gray-500 hover:text-rose-500 flex items-center gap-1 bg-white border border-gray-300 px-2 py-1 rounded transition-colors"
-                                            >
-                                                <RotateCcw className="w-3 h-3" /> Mặc định
-                                            </button>
+                                {/* Gallery Grid Result */}
+                                {invitation.galleryImages.length > 0 ? (
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Kết quả (5 Ảnh)</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {invitation.galleryImages.map((url, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="aspect-[3/4] rounded-lg overflow-hidden border border-gray-100 shadow-sm relative group"
+                                                >
+                                                    <img src={url} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="Generated" />
+                                                </div>
+                                            ))}
                                         </div>
-
-                                        {/* Zoom */}
-                                        <div className="mb-3">
-                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                                                <span>Thu nhỏ</span>
-                                                <span className="font-bold flex items-center gap-1"><ZoomIn className="w-3 h-3" /> {imgConfig.scale.toFixed(1)}x</span>
-                                                <span>Phóng to</span>
-                                            </div>
-                                            <input
-                                                type="range"
-                                                min="1" max="3" step="0.1"
-                                                value={imgConfig.scale}
-                                                onChange={(e) => handleImageConfigChange('scale', parseFloat(e.target.value))}
-                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                                            />
-                                        </div>
-
-                                        {/* Position Y */}
-                                        <div className="mb-3">
-                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                                                <span className="flex items-center gap-1"><ArrowUp className="w-3 h-3" /> Lên</span>
-                                                <span className="font-bold">Dọc ({imgConfig.y}%)</span>
-                                                <span className="flex items-center gap-1">Xuống <ArrowDown className="w-3 h-3" /></span>
-                                            </div>
-                                            <input
-                                                type="range"
-                                                min="-100" max="100" step="1"
-                                                value={imgConfig.y}
-                                                onChange={(e) => handleImageConfigChange('y', parseFloat(e.target.value))}
-                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                                            />
-                                        </div>
-
-                                        {/* Position X */}
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                                                <span className="flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> Trái</span>
-                                                <span className="font-bold">Ngang ({imgConfig.x}%)</span>
-                                                <span className="flex items-center gap-1">Phải <ArrowRight className="w-3 h-3" /></span>
-                                            </div>
-                                            <input
-                                                type="range"
-                                                min="-100" max="100" step="1"
-                                                value={imgConfig.x}
-                                                onChange={(e) => handleImageConfigChange('x', parseFloat(e.target.value))}
-                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                                            />
-                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-400 text-xs italic">
+                                        Chưa có ảnh nào được tạo.
                                     </div>
                                 )}
 
+                                {/* Color Picker */}
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Màu chủ đạo</label>
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Màu chủ đạo thiệp</label>
                                     <div className="flex gap-2">
                                         {['#e11d48', '#db2777', '#7c3aed', '#059669', '#d97706'].map(color => (
                                             <button
@@ -348,42 +388,50 @@ const InvitationBuilder: React.FC = () => {
                 {/* RIGHT: Preview & Marketing Card */}
                 <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[500px]">
                     <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
-                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2 text-center">Xem trước Card Marketing</h3>
+                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2 text-center">Card Marketing (Ảnh tải về)</h3>
 
                         {/* MARKETING CARD NODE - Captured by html2canvas */}
                         <div
                             ref={marketingCardRef}
-                            className="w-[320px] sm:w-[350px] bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col"
-                            style={{ minHeight: '550px' }}
+                            className="w-[350px] bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col border border-gray-100"
+                            style={{ minHeight: '600px' }}
                         >
-                            {/* Background Image Area */}
-                            <div className="h-[350px] relative bg-gray-200 overflow-hidden">
-                                {invitation.coverImage ? (
-                                    <img
-                                        src={invitation.coverImage}
-                                        className="w-full h-full object-cover origin-center transition-transform"
-                                        alt="Wedding"
-                                        crossOrigin="anonymous"
-                                        style={{
-                                            transform: `scale(${imgConfig.scale}) translate(${imgConfig.x}%, ${imgConfig.y}%)`
-                                        }}
-                                    />
+                            {/* Collage Header (Instead of single image) */}
+                            <div className="h-[380px] relative bg-gray-100 overflow-hidden">
+                                {gallery.length > 0 ? (
+                                    gallery.length >= 3 ? (
+                                        <div className="grid grid-cols-2 gap-0.5 h-full">
+                                            <div className="relative h-full">
+                                                <img src={gallery[0]} className="w-full h-full object-cover" crossOrigin="anonymous" />
+                                            </div>
+                                            <div className="grid grid-rows-2 gap-0.5 h-full">
+                                                <div className="relative h-full">
+                                                    <img src={gallery[1]} className="w-full h-full object-cover" crossOrigin="anonymous" />
+                                                </div>
+                                                <div className="relative h-full">
+                                                    <img src={gallery[2]} className="w-full h-full object-cover" crossOrigin="anonymous" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <img src={gallery[0]} className="w-full h-full object-cover" crossOrigin="anonymous" />
+                                    )
                                 ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100">
-                                        <ImageIcon className="w-12 h-12 mb-2" />
-                                        <span>Chưa có ảnh bìa</span>
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-200">
+                                        <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
+                                        <span className="text-xs">Chưa có ảnh AI</span>
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none"></div>
 
-                                <div className="absolute bottom-4 left-0 w-full text-center text-white px-4">
-                                    <p className="font-serif-display italic text-lg opacity-90 mb-1">Save the Date</p>
-                                    <h2 className="font-serif-display text-3xl font-bold leading-tight">
+                                {/* Overlay Text */}
+                                <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
+                                    <p className="font-serif-display italic text-sm opacity-90 mb-1">Save the Date</p>
+                                    <h2 className="font-serif-display text-2xl font-bold leading-tight">
                                         {invitation.groomName || 'Chú Rể'}
                                         <span className="text-rose-400 mx-2">&</span>
                                         {invitation.brideName || 'Cô Dâu'}
                                     </h2>
-                                    <p className="mt-2 text-sm font-medium uppercase tracking-widest opacity-80">
+                                    <p className="mt-1 text-xs font-medium uppercase tracking-widest opacity-80">
                                         {invitation.date ? new Date(invitation.date).toLocaleDateString('vi-VN') : 'DD/MM/YYYY'}
                                     </p>
                                 </div>
@@ -391,7 +439,6 @@ const InvitationBuilder: React.FC = () => {
 
                             {/* Info & QR Area */}
                             <div className="flex-1 bg-white p-5 flex flex-col items-center justify-between text-center relative">
-                                {/* Decorative Circles */}
                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm z-10">
                                     <Heart className="w-6 h-6 text-rose-500 fill-current" />
                                 </div>
@@ -413,7 +460,7 @@ const InvitationBuilder: React.FC = () => {
                                     />
                                 </div>
 
-                                <p className="text-xs text-gray-400 font-medium">Quét mã để xem thiệp & bản đồ</p>
+                                <p className="text-[10px] text-gray-400 font-medium">Quét mã để xem Album & Mừng cưới</p>
 
                                 <div className="w-full border-t border-gray-100 mt-4 pt-3 flex items-center justify-between">
                                     <span className="font-serif-display font-bold text-rose-600 text-lg">WedPlan AI</span>
@@ -422,10 +469,6 @@ const InvitationBuilder: React.FC = () => {
                             </div>
                         </div>
                     </div>
-
-                    <p className="text-xs text-gray-400 max-w-xs text-center mt-2">
-                        * Mẹo: Tải ảnh này về và đăng lên Story Facebook/Instagram hoặc gửi Zalo cho bạn bè.
-                    </p>
                 </div>
             </div>
         </div>

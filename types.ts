@@ -145,7 +145,12 @@ export interface InvitationData {
   mapLink: string;
   bankInfo: BankInfo;
   wishes: string;
-  coverImage: string | null;
+  // coverImage: string | null; // REMOVED
+  galleryImages: string[]; // NEW: List of 5 generated images
+  inputFaces: { // NEW: Store user uploaded faces
+    groom: string | null;
+    bride: string | null;
+  };
   imageConfig?: ImageConfig; // Config for zoom/pan
   themeColor: string;
 }

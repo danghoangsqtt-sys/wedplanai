@@ -1,10 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
-import { useStore } from '../../store/useStore'; // Just for types, actual fetch is separated
 import { loadPublicInvitation } from '../../services/cloudService';
 import { InvitationData } from '../../types';
 import {
-    Calendar, MapPin, Clock, Heart, ArrowRight, Check,
-    Navigation, Gift, Copy
+    Calendar, MapPin, Clock, Heart, Check,
+    Navigation, Gift, Copy, Image as ImageIcon, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface Props {
@@ -15,6 +15,9 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
     const [invitation, setInvitation] = useState<InvitationData | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
+
+    // Slider state
+    const [currentSlide, setCurrentSlide] = useState(0);
 
     useEffect(() => {
         const fetchInv = async () => {
@@ -31,6 +34,15 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
         fetchInv();
     }, [uid]);
 
+    // Auto-advance slider
+    useEffect(() => {
+        if (!invitation?.galleryImages?.length) return;
+        const interval = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % invitation.galleryImages.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [invitation?.galleryImages]);
+
     if (loading) {
         return <div className="h-screen flex items-center justify-center bg-rose-50 text-rose-500"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current"></div></div>;
     }
@@ -39,11 +51,8 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
         return <div className="h-screen flex items-center justify-center bg-gray-50 text-gray-500">Thiệp mời chưa được tạo hoặc không tồn tại.</div>;
     }
 
-    // Colors derived from themeColor or defaults
     const primaryColor = invitation.themeColor || '#e11d48';
-    const imgConfig = invitation.imageConfig || { scale: 1, x: 0, y: 0 };
 
-    // Bank QR
     const bankQrUrl = invitation.bankInfo.bankId
         ? `https://img.vietqr.io/image/${invitation.bankInfo.bankId}-${invitation.bankInfo.accountNumber}-compact.png?accountName=${encodeURIComponent(invitation.bankInfo.accountName)}`
         : null;
@@ -54,30 +63,49 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    return (
-        <div className="min-h-screen bg-[#FDF2F8] font-serif-display pb-10">
-            {/* 1. Cover / Hero Section */}
-            <div className="relative h-[60vh] md:h-[70vh] bg-gray-900 overflow-hidden">
-                {invitation.coverImage ? (
-                    <img
-                        src={invitation.coverImage}
-                        className="w-full h-full object-cover opacity-80 origin-center transition-transform duration-1000"
-                        alt="Cover"
-                        style={{
-                            transform: `scale(${imgConfig.scale}) translate(${imgConfig.x}%, ${imgConfig.y}%)`
-                        }}
-                    />
-                ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-rose-400 to-pink-600"></div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+    const gallery = invitation.galleryImages || [];
 
-                <div className="absolute bottom-0 w-full p-8 md:p-12 text-center text-white animate-fade-in-up pointer-events-none">
-                    <p className="text-lg md:text-xl uppercase tracking-[0.3em] font-light mb-4 opacity-90">Save The Date</p>
-                    <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
+    return (
+        <div className="min-h-screen bg-[#FDF2F8] font-serif-display pb-20">
+            {/* 1. HERO SLIDER SECTION */}
+            <div className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden bg-gray-900">
+                {gallery.length > 0 ? (
+                    <>
+                        {/* Slides */}
+                        {gallery.map((img, idx) => (
+                            <div
+                                key={idx}
+                                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                            >
+                                <img src={img} className="w-full h-full object-cover" alt={`Slide ${idx}`} />
+                                <div className="absolute inset-0 bg-black/30"></div>
+                            </div>
+                        ))}
+
+                        {/* Dots */}
+                        <div className="absolute bottom-24 left-0 w-full flex justify-center gap-2 z-20">
+                            {gallery.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setCurrentSlide(idx)}
+                                    className={`w-2 h-2 rounded-full transition-all ${idx === currentSlide ? 'bg-white w-6' : 'bg-white/50'}`}
+                                />
+                            ))}
+                        </div>
+                    </>
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center">
+                        <ImageIcon className="w-20 h-20 text-white/50" />
+                    </div>
+                )}
+
+                {/* Content Overlay */}
+                <div className="absolute bottom-0 w-full p-8 pb-12 text-center text-white z-20 animate-fade-in-up">
+                    <p className="text-lg md:text-xl uppercase tracking-[0.3em] font-light mb-2 opacity-90 drop-shadow-md">Save The Date</p>
+                    <h1 className="text-4xl md:text-7xl font-bold mb-4 leading-tight drop-shadow-lg">
                         {invitation.groomName} <span className="text-rose-500">&</span> {invitation.brideName}
                     </h1>
-                    <div className="flex items-center justify-center gap-4 text-sm md:text-base font-sans tracking-widest uppercase opacity-90">
+                    <div className="flex items-center justify-center gap-4 text-sm md:text-lg font-sans tracking-widest uppercase opacity-90 drop-shadow-md">
                         <span>{new Date(invitation.date).toLocaleDateString('vi-VN', { weekday: 'long' })}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                         <span>{new Date(invitation.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
@@ -85,14 +113,14 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto px-4 -mt-10 relative z-10 space-y-6">
+            <div className="max-w-3xl mx-auto px-4 -mt-10 relative z-30 space-y-6">
 
                 {/* 2. Invitation Card */}
                 <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 text-center border-t-4" style={{ borderColor: primaryColor }}>
                     <Heart className="w-10 h-10 mx-auto mb-4 fill-current" style={{ color: primaryColor }} />
                     <p className="text-gray-500 font-sans text-sm md:text-base uppercase tracking-wider mb-6">Trân trọng kính mời quý khách đến dự Lễ Thành Hôn</p>
 
-                    <p className="font-sans italic text-gray-600 mb-8 px-4 leading-relaxed">"{invitation.wishes}"</p>
+                    <p className="font-sans italic text-gray-600 mb-8 px-4 leading-relaxed text-lg">"{invitation.wishes}"</p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 py-6 border-y border-gray-100">
                         <div className="flex flex-col items-center">
