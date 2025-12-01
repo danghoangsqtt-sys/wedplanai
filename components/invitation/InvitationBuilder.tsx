@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import {
@@ -9,7 +8,7 @@ import {
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { BankInfo } from '../../types';
-import { storage } from '../../lib/firebase';
+import { storage, auth } from '../../lib/firebase'; // Thêm auth để kiểm tra thực tế
 import * as Storage from 'firebase/storage';
 import { generateWeddingSticker } from '../../services/aiService';
 
@@ -98,11 +97,28 @@ const InvitationBuilder: React.FC = () => {
 
     const handleFaceUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'groom' | 'bride') => {
         const file = e.target.files?.[0];
+        // Kiểm tra user từ store
         if (!file || !user) return;
 
+        // [FIX QUAN TRỌNG] Kiểm tra Auth thực tế từ Firebase SDK
+        // Điều này đảm bảo request gửi đi có kèm Token xác thực
+        if (!auth.currentUser) {
+            alert("Phiên đăng nhập đã hết hạn hoặc chưa sẵn sàng. Vui lòng tải lại trang hoặc đăng nhập lại.");
+            return;
+        }
+
         try {
-            const storageRef = Storage.ref(storage, `ai_faces/${user.uid}/${type}_${Date.now()}`);
-            const snapshot = await Storage.uploadBytes(storageRef, file);
+            // Sử dụng auth.currentUser.uid để đảm bảo trùng khớp 100% với Security Rules
+            const currentUserId = auth.currentUser.uid;
+
+            const storageRef = Storage.ref(storage, `ai_faces/${currentUserId}/${type}_${Date.now()}`);
+
+            // [FIX] Thêm Metadata contentType để tránh bị chặn bởi một số rules ngầm định
+            const metadata = {
+                contentType: file.type,
+            };
+
+            const snapshot = await Storage.uploadBytes(storageRef, file, metadata);
             const url = await Storage.getDownloadURL(snapshot.ref);
 
             updateInvitation({
@@ -112,8 +128,17 @@ const InvitationBuilder: React.FC = () => {
                 }
             });
             addNotification('SUCCESS', `Đã tải ảnh khuôn mặt ${type === 'groom' ? 'Chú Rể' : 'Cô Dâu'}`);
-        } catch (err) {
-            alert("Lỗi upload ảnh.");
+        } catch (err: any) {
+            console.error("Upload Error:", err);
+            // Hiển thị lỗi chi tiết hơn
+            if (err.code === 'storage/unauthorized') {
+                alert("Lỗi quyền truy cập (403): Bạn không có quyền ghi vào thư mục này. Hãy đảm bảo bạn đã đăng nhập đúng tài khoản.");
+            } else {
+                alert(`Lỗi upload ảnh: ${err.message}`);
+            }
+        } finally {
+            // Reset input file để cho phép chọn lại cùng 1 file nếu lỗi
+            if (e.target) e.target.value = '';
         }
     };
 
@@ -139,6 +164,12 @@ const InvitationBuilder: React.FC = () => {
             return;
         }
 
+        // [FIX] Kiểm tra Auth thực tế
+        if (!auth.currentUser) {
+            alert("Vui lòng đăng nhập lại để xác thực với hệ thống AI.");
+            return;
+        }
+
         setGeneratingAction(actionKey);
         try {
             // 1. Prepare Inputs
@@ -157,8 +188,12 @@ const InvitationBuilder: React.FC = () => {
             // Convert base64 back to blob
             const res = await fetch(base64Image);
             const blob = await res.blob();
-            const storageRef = Storage.ref(storage, `ai_stickers/${user.uid}/${actionKey}_${Date.now()}.png`);
-            const snapshot = await Storage.uploadBytes(storageRef, blob);
+
+            // [FIX] Dùng auth.currentUser.uid
+            const storageRef = Storage.ref(storage, `ai_stickers/${auth.currentUser.uid}/${actionKey}_${Date.now()}.png`);
+
+            const metadata = { contentType: 'image/png' }; // Metadata chuẩn
+            const snapshot = await Storage.uploadBytes(storageRef, blob, metadata);
             const downloadUrl = await Storage.getDownloadURL(snapshot.ref);
 
             // 4. Update State
@@ -507,11 +542,11 @@ const InvitationBuilder: React.FC = () => {
                                 ) : (
                                     <div className="flex items-center gap-4 transform scale-125">
                                         <div className="relative z-10 w-24 h-24 drop-shadow-xl animate-float-slow">
-                                            <img src={getAvatarUrl(invitation.sticker?.groom || 'Felix')} className="w-full h-full object-contain" crossOrigin="anonymous" />
+                                            <img src={getAvatarUrl(invitation.sticker?.groom || 'Felix')} className="w-full h-full object-cover" crossOrigin="anonymous" />
                                         </div>
                                         <Heart className="w-8 h-8 fill-current animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 opacity-50" style={{ color: invitation.themeColor }} />
                                         <div className="relative z-10 w-24 h-24 drop-shadow-xl animate-float-delayed">
-                                            <img src={getAvatarUrl(invitation.sticker?.bride || 'Aneka')} className="w-full h-full object-contain" crossOrigin="anonymous" />
+                                            <img src={getAvatarUrl(invitation.sticker?.bride || 'Aneka')} className="w-full h-full object-cover" crossOrigin="anonymous" />
                                         </div>
                                     </div>
                                 )}
