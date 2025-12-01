@@ -5,7 +5,7 @@ import { analyzeCompatibility, findAuspiciousDates } from '../../services/fengSh
 import { CoupleProfile } from '../../types/fengshui';
 import { 
   Heart, Calendar, Moon, Sun, Sparkles, 
-  ArrowRight, Loader2, CheckCircle2, Info, Star, Copy, Share2, Check, Clock 
+  ArrowRight, Loader2, Check, Share2, Star, Clock, Info 
 } from 'lucide-react';
 
 const FengShuiConsultant: React.FC = () => {
@@ -231,10 +231,19 @@ ${fengShuiResults.harmony.detailedAnalysis}
                 <button 
                   onClick={handleAnalyze}
                   disabled={loading}
-                  className="w-full md:w-auto mx-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-70"
+                  className="w-full md:w-auto mx-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed group"
                 >
-                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-yellow-300" />}
-                   Luận Giải Tình Duyên
+                   {loading ? (
+                     <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Thầy đang gieo quẻ...</span>
+                     </>
+                   ) : (
+                     <>
+                        <Sparkles className="w-5 h-5 text-yellow-300 group-hover:scale-125 transition-transform" />
+                        <span>Luận Giải Tình Duyên</span>
+                     </>
+                   )}
                 </button>
              </div>
           </div>
@@ -305,10 +314,19 @@ ${fengShuiResults.harmony.detailedAnalysis}
                       <button 
                         onClick={handleFindDates}
                         disabled={loading}
-                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-md flex items-center gap-2 whitespace-nowrap disabled:opacity-70"
+                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-md flex items-center gap-2 whitespace-nowrap disabled:opacity-70 group"
                       >
-                         {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : <Calendar className="w-4 h-4" />}
-                         Xem Ngày Tốt
+                         {loading ? (
+                            <>
+                               <Loader2 className="w-4 h-4 animate-spin"/>
+                               <span>Đang tra sổ...</span>
+                            </>
+                         ) : (
+                            <>
+                               <Calendar className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                               <span>Xem Ngày Tốt</span>
+                            </>
+                         )}
                       </button>
                    </div>
                 </div>
