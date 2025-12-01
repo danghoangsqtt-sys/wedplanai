@@ -11,27 +11,36 @@ export interface CoupleProfile {
 }
 
 export interface HarmonyResult {
-  score: number; // 0-100
-  summary: string; // e.g., "Tam Hợp - Rất Tốt"
-  groomLunar: string; // e.g., "Giáp Tý"
-  brideLunar: string; // e.g., "Ất Sửu"
+  score: number;
+  summary: string;
+  groomLunar: string;
+  brideLunar: string;
 
-  groomElement: string; // e.g., "Hải Trung Kim"
-  groomElementKey: ElementKey; // For UI styling
+  groomElement: string;
+  groomElementKey: ElementKey;
 
-  brideElement: string; // e.g., "Lư Trung Hỏa"
-  brideElementKey: ElementKey; // For UI styling
+  brideElement: string;
+  brideElementKey: ElementKey;
 
-  conflictStatus: 'SINH' | 'KHAC' | 'BINH'; // Tương Sinh, Tương Khắc, Bình Hòa
+  conflictStatus: 'SINH' | 'KHAC' | 'BINH';
 
-  detailedAnalysis: string; // Markdown text
+  detailedAnalysis: string;
+
+  // MỚI: Phần mở rộng đa chiều
+  combinedAnalysis?: {
+    groomZodiac: string; // Cung Hoàng Đạo
+    brideZodiac: string;
+    groomLifePath: number; // Thần số học
+    brideLifePath: number;
+    synthesis: string; // Lời bình tổng hợp từ AI
+  };
 }
 
 export interface AuspiciousDate {
-  solarDate: string; // YYYY-MM-DD
-  lunarDate: string; // e.g., "15/08 (Giáp Thân)"
-  dayName: string; // e.g., "Ngày Hoàng Đạo"
-  timeSlots: string; // e.g., "Giờ đẹp: Tỵ (9-11h), Mùi (13-15h)"
+  solarDate: string;
+  lunarDate: string;
+  dayName: string;
+  timeSlots: string;
   reason: string;
   suitability: 'VERY_HIGH' | 'HIGH' | 'MODERATE';
 }
