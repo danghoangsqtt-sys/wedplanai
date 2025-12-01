@@ -9,7 +9,7 @@ import {
    Key, Shield, Cloud, Download, Upload, Trash2,
    Save, Eye, EyeOff, Info, CheckCircle2, AlertTriangle,
    Heart, Camera, X, Zap, Mail, Phone, MessageCircle, Server,
-   Loader2, ExternalLink, BookOpen, CreditCard, MousePointerClick
+   Loader2, BookOpen, MousePointerClick
 } from 'lucide-react';
 
 const { ref, uploadBytes, getDownloadURL } = Storage;
@@ -23,10 +23,6 @@ interface SettingsPageProps {
 const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) => {
    const { user, updateUser, settings, updateSettings, setGeminiApiKey, resetData, importData, recalculateDeadlines, guests, budgetItems, fengShuiProfile, fengShuiResults, users } = useStore();
    const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab);
-
-   // --- CẤU HÌNH LINK VIDEO HƯỚNG DẪN TẠI ĐÂY ---
-   const YOUTUBE_GUIDE_LINK = "https://aistudio.google.com/app/apikey";
-   // ---------------------------------------------
 
    // Local states for inputs
    const [tempApiKey, setTempApiKey] = useState(settings.geminiApiKey || '');
@@ -173,7 +169,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
    if (!user) return null;
 
    return (
-      <div className="flex flex-col md:flex-row h-full bg-[#FDF2F8] gap-4 md:gap-6 lg:overflow-hidden rounded-xl lg:rounded-none">
+      <div className="flex flex-col md:flex-row h-full bg-[#FDF2F8] gap-3 md:gap-6 lg:overflow-hidden rounded-xl lg:rounded-none">
 
          {/* --- SIDEBAR NAVIGATION (Mobile Horizontal Scroll / Desktop Vertical) --- */}
          <div className="w-full md:w-64 bg-white rounded-2xl border border-rose-100 shadow-sm flex-shrink-0 flex flex-col md:overflow-hidden">
@@ -183,29 +179,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                   Cài Đặt
                </h2>
             </div>
-            <div className="flex-1 overflow-x-auto md:overflow-y-auto p-2 flex md:flex-col gap-2 md:space-y-1 scrollbar-hide">
+            <div className="flex-1 overflow-x-auto md:overflow-y-auto p-2 flex md:flex-col gap-2 md:space-y-1 scrollbar-hide snap-x">
                <button
                   onClick={() => setActiveTab('ACCOUNT')}
-                  className={`flex-shrink-0 w-auto md:w-full text-left px-4 py-3 rounded-xl flex items-center gap-2 md:gap-3 transition-colors whitespace-nowrap ${activeTab === 'ACCOUNT' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                  className={`flex-shrink-0 snap-start w-auto md:w-full text-left px-3 py-2.5 md:px-4 md:py-3 rounded-xl flex items-center gap-2 md:gap-3 transition-colors whitespace-nowrap text-xs md:text-sm font-medium ${activeTab === 'ACCOUNT' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
                >
                   <User className="w-4 h-4" /> Chung <span className="hidden md:inline">& Hồ Sơ</span>
                </button>
                <button
                   onClick={() => setActiveTab('DATA')}
-                  className={`flex-shrink-0 w-auto md:w-full text-left px-4 py-3 rounded-xl flex items-center gap-2 md:gap-3 transition-colors whitespace-nowrap ${activeTab === 'DATA' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                  className={`flex-shrink-0 snap-start w-auto md:w-full text-left px-3 py-2.5 md:px-4 md:py-3 rounded-xl flex items-center gap-2 md:gap-3 transition-colors whitespace-nowrap text-xs md:text-sm font-medium ${activeTab === 'DATA' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
                >
                   <Database className="w-4 h-4" /> Dữ Liệu <span className="hidden md:inline">& Sao Lưu</span>
                </button>
                <button
                   onClick={() => setActiveTab('SYSTEM')}
-                  className={`flex-shrink-0 w-auto md:w-full text-left px-4 py-3 rounded-xl flex items-center gap-2 md:gap-3 transition-colors whitespace-nowrap ${activeTab === 'SYSTEM' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                  className={`flex-shrink-0 snap-start w-auto md:w-full text-left px-3 py-2.5 md:px-4 md:py-3 rounded-xl flex items-center gap-2 md:gap-3 transition-colors whitespace-nowrap text-xs md:text-sm font-medium ${activeTab === 'SYSTEM' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
                >
                   <Key className="w-4 h-4" /> Kết Nối <span className="hidden md:inline">& API</span>
                </button>
                <div className="hidden md:block pt-4 mt-4 border-t border-gray-100">
                   <button
                      onClick={() => setActiveTab('ABOUT')}
-                     className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-colors ${activeTab === 'ABOUT' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                     className={`w-full text-left px-3 py-2.5 md:px-4 md:py-3 rounded-xl flex items-center gap-3 transition-colors text-xs md:text-sm font-medium ${activeTab === 'ABOUT' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
                   >
                      <Info className="w-4 h-4" /> Thông tin ứng dụng
                   </button>
@@ -213,7 +209,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                {/* Mobile Only About Button */}
                <button
                   onClick={() => setActiveTab('ABOUT')}
-                  className={`md:hidden flex-shrink-0 w-auto text-left px-4 py-3 rounded-xl flex items-center gap-2 transition-colors whitespace-nowrap ${activeTab === 'ABOUT' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                  className={`md:hidden flex-shrink-0 snap-start w-auto text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-colors whitespace-nowrap text-xs font-medium ${activeTab === 'ABOUT' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
                >
                   <Info className="w-4 h-4" /> Thông tin
                </button>
@@ -225,8 +221,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
             {/* TAB: ACCOUNT */}
             {activeTab === 'ACCOUNT' && (
-               <div className="p-4 md:p-8 space-y-8 animate-fadeIn">
-                  <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-6">
+               <div className="p-3 md:p-8 space-y-6 md:space-y-8 animate-fadeIn">
+                  <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-4 md:mb-6">
                      <div
                         className={`relative group cursor-pointer ${isUploading ? 'pointer-events-none' : ''}`}
                         onClick={() => avatarInputRef.current?.click()}
@@ -286,25 +282,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
                   {/* Section: Basic Info */}
                   <section className="space-y-4">
-                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Thông tin cặp đôi</h4>
+                     <h4 className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Thông tin cặp đôi</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-1">Tên bạn (Hiển thị)</label>
+                           <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Tên bạn (Hiển thị)</label>
                            <div className="relative">
                               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                               <input
-                                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-rose-500 outline-none transition-all bg-gray-50 focus:bg-white"
+                                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-rose-500 outline-none transition-all bg-gray-50 focus:bg-white text-base md:text-sm"
                                  value={user.displayName || ''}
                                  onChange={(e) => updateUser(user.uid, { displayName: e.target.value })}
                               />
                            </div>
                         </div>
                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-1">Tên bạn đời</label>
+                           <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Tên bạn đời</label>
                            <div className="relative">
                               <Heart className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-400" />
                               <input
-                                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-rose-500 outline-none transition-all bg-gray-50 focus:bg-white placeholder-gray-400"
+                                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-rose-500 outline-none transition-all bg-gray-50 focus:bg-white placeholder-gray-400 text-base md:text-sm"
                                  placeholder="Nhập tên vợ/chồng..."
                                  value={user.partnerName || ''}
                                  onChange={(e) => updateUser(user.uid, { partnerName: e.target.value })}
@@ -312,11 +308,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                            </div>
                         </div>
                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại liên hệ</label>
+                           <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Số điện thoại liên hệ</label>
                            <div className="relative">
                               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                               <input
-                                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-rose-500 outline-none transition-all bg-gray-50 focus:bg-white placeholder-gray-400 font-mono"
+                                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-rose-500 outline-none transition-all bg-gray-50 focus:bg-white placeholder-gray-400 font-mono text-base md:text-sm"
                                  placeholder="Nhập số điện thoại..."
                                  value={user.phoneNumber || ''}
                                  onChange={(e) => updateUser(user.uid, { phoneNumber: e.target.value })}
@@ -328,16 +324,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
                   {/* Section: Wedding Date */}
                   <section className="space-y-4 pt-4">
-                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Ngày Trọng Đại</h4>
+                     <h4 className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Ngày Trọng Đại</h4>
                      <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-100">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Ngày tổ chức hôn lễ</label>
+                              <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Ngày tổ chức hôn lễ</label>
                               <div className="relative">
                                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-500" />
                                  <input
                                     type="date"
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-rose-200 focus:border-rose-500 outline-none transition-all bg-white"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-rose-200 focus:border-rose-500 outline-none transition-all bg-white text-base md:text-sm"
                                     value={user.weddingDate || ''}
                                     onChange={handleDateChange}
                                  />
@@ -369,16 +365,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
             {/* TAB: DATA */}
             {activeTab === 'DATA' && (
-               <div className="p-4 md:p-8 space-y-8 animate-fadeIn">
+               <div className="p-3 md:p-8 space-y-6 md:space-y-8 animate-fadeIn">
 
                   {/* Cloud Sync */}
-                  <section className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 shadow-sm relative overflow-hidden">
-                     <div className="absolute right-0 top-0 opacity-10 p-6 pointer-events-none">
-                        <Cloud className="w-32 h-32 text-blue-600" />
+                  <section className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm relative overflow-hidden">
+                     <div className="absolute right-0 top-0 opacity-10 p-4 md:p-6 pointer-events-none">
+                        <Cloud className="w-24 h-24 md:w-32 md:h-32 text-blue-600" />
                      </div>
 
                      <div className="flex items-start gap-4 relative z-10">
-                        <div className="p-3 bg-white text-blue-600 rounded-xl shadow-sm">
+                        <div className="p-3 bg-white text-blue-600 rounded-xl shadow-sm hidden md:block">
                            <Server className="w-6 h-6" />
                         </div>
                         <div className="flex-1">
@@ -421,16 +417,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
                   {/* Backup & Restore */}
                   <section className="space-y-4">
-                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Sao lưu thủ công (Local)</h4>
+                     <h4 className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Sao lưu thủ công (Local)</h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                         {/* Export */}
-                        <div className="p-5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all group">
+                        <div className="p-4 md:p-5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all group">
                            <div className="flex items-center gap-3 mb-3">
                               <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-gray-200 transition-colors">
                                  <Download className="w-5 h-5 text-gray-600" />
                               </div>
-                              <h5 className="font-bold text-gray-800">Xuất file Backup</h5>
+                              <h5 className="font-bold text-gray-800 text-sm md:text-base">Xuất file Backup</h5>
                            </div>
                            <p className="text-xs text-gray-500 mb-4 h-8 leading-tight">Tải về máy toàn bộ dữ liệu dưới dạng file .JSON để lưu trữ riêng.</p>
                            <button
@@ -442,12 +438,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                         </div>
 
                         {/* Import */}
-                        <div className="p-5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all group">
+                        <div className="p-4 md:p-5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all group">
                            <div className="flex items-center gap-3 mb-3">
                               <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-gray-200 transition-colors">
                                  <Upload className="w-5 h-5 text-gray-600" />
                               </div>
-                              <h5 className="font-bold text-gray-800">Khôi phục dữ liệu</h5>
+                              <h5 className="font-bold text-gray-800 text-sm md:text-base">Khôi phục dữ liệu</h5>
                            </div>
                            <p className="text-xs text-gray-500 mb-4 h-8 leading-tight">Khôi phục từ file .JSON đã sao lưu trước đó. Dữ liệu hiện tại sẽ bị thay thế.</p>
                            <input
@@ -469,9 +465,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
                   {/* Danger Zone */}
                   <section className="pt-4">
-                     <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                     <div className="bg-red-50 border border-red-200 rounded-xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div>
-                           <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1">
+                           <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1 text-sm md:text-base">
                               <AlertTriangle className="w-5 h-5" /> Vùng Nguy Hiểm
                            </h4>
                            <p className="text-xs text-red-600 max-w-md">
@@ -480,7 +476,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                         </div>
                         <button
                            onClick={handleResetData}
-                           className="px-5 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition-colors text-sm flex items-center gap-2 whitespace-nowrap shadow-sm"
+                           className="w-full md:w-auto px-5 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap shadow-sm"
                         >
                            <Trash2 className="w-4 h-4" /> Reset Dữ Liệu
                         </button>
@@ -491,18 +487,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
             {/* TAB: SYSTEM & API */}
             {activeTab === 'SYSTEM' && (
-               <div className="p-4 md:p-8 space-y-8 animate-fadeIn">
+               <div className="p-3 md:p-8 space-y-6 md:space-y-8 animate-fadeIn">
 
                   {/* Hero Section */}
-                  <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
-                     <div className="absolute right-0 top-0 p-8 opacity-10 pointer-events-none">
-                        <Zap className="w-40 h-40 text-yellow-400" />
+                  <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 md:p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                     <div className="absolute right-0 top-0 p-4 md:p-8 opacity-10 pointer-events-none">
+                        <Zap className="w-24 h-24 md:w-40 md:h-40 text-yellow-400" />
                      </div>
                      <div className="relative z-10">
-                        <h3 className="text-2xl font-bold flex items-center gap-2 mb-2">
-                           <Shield className="w-6 h-6 text-emerald-400" /> Kích Hoạt Tính Năng Cao Cấp
+                        <h3 className="text-xl md:text-2xl font-bold flex items-center gap-2 mb-2">
+                           <Shield className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" /> Kích Hoạt Tính Năng Cao Cấp
                         </h3>
-                        <p className="text-slate-300 text-sm max-w-xl leading-relaxed">
+                        <p className="text-slate-300 text-xs md:text-sm max-w-xl leading-relaxed">
                            WedPlan AI sử dụng Google Gemini (AI thông minh nhất của Google) để tư vấn phong thủy, lập ngân sách và viết lời hay.
                            Để sử dụng trọn vẹn, bạn cần kích hoạt tài khoản Pro.
                         </p>
@@ -526,14 +522,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                      </div>
                   )}
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
 
                      {/* Left Col: Status & API Key */}
                      <div className="space-y-6">
-                        <h4 className="font-bold text-gray-700 uppercase text-xs tracking-wider border-b border-gray-100 pb-2">Trạng thái kết nối</h4>
+                        <h4 className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2">Trạng thái kết nối</h4>
 
                         {user.role === 'ADMIN' ? (
-                           <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 flex items-start gap-4">
+                           <div className="bg-purple-50 p-4 md:p-5 rounded-xl border border-purple-100 flex items-start gap-4">
                               <div className="bg-purple-100 p-2 rounded-lg text-purple-600">
                                  <CheckCircle2 className="w-6 h-6" />
                               </div>
@@ -552,7 +548,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     {user.allowCustomApiKey && user.isActive ? <Zap className="w-5 h-5" /> : <Key className="w-5 h-5" />}
                                  </div>
                                  <div>
-                                    <p className="font-bold text-gray-800">
+                                    <p className="font-bold text-gray-800 text-sm md:text-base">
                                        {user.allowCustomApiKey && user.isActive ? "Tài khoản Pro (Đã kích hoạt)" : "Tài khoản Giới hạn"}
                                     </p>
                                     <p className="text-xs text-gray-500">
@@ -563,12 +559,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
                               {/* API Key Input (Only if allowed AND active) */}
                               {user.allowCustomApiKey && user.isActive && (
-                                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                 <div className="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm">
                                     <div className="flex justify-between items-center mb-2">
-                                       <label className="block text-sm font-bold text-gray-700">Google Gemini API Key Cá Nhân</label>
+                                       <label className="block text-xs md:text-sm font-bold text-gray-700">Google Gemini API Key Cá Nhân</label>
                                        <button
                                           onClick={() => setShowApiGuide(!showApiGuide)}
-                                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-md transition-colors"
+                                          className="text-[10px] md:text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-md transition-colors"
                                        >
                                           <BookOpen className="w-3 h-3" /> Hướng dẫn lấy Key (Miễn phí)
                                        </button>
@@ -576,7 +572,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
                                     {/* Guide Box - Toggleable */}
                                     {showApiGuide && (
-                                       <div className="mb-4 bg-indigo-50/70 border border-indigo-100 rounded-lg p-4 text-sm text-gray-700 animate-fadeIn">
+                                       <div className="mb-4 bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 md:p-4 text-xs md:text-sm text-gray-700 animate-fadeIn">
                                           <div className="flex justify-between items-start mb-3">
                                              <h5 className="font-bold text-indigo-900 flex items-center gap-2">
                                                 <MousePointerClick className="w-4 h-4" /> Cách lấy Key nhanh:
@@ -617,7 +613,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     <div className="relative mb-2">
                                        <input
                                           type={showApiKey ? "text" : "password"}
-                                          className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none transition-all font-mono text-sm ${!tempApiKey ? 'border-gray-300' : 'border-gray-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
+                                          className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none transition-all font-mono text-base md:text-sm ${!tempApiKey ? 'border-gray-300' : 'border-gray-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
                                              }`}
                                           placeholder="AIzaSy..."
                                           value={tempApiKey}
@@ -643,7 +639,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     <button
                                        onClick={handleSaveApiKey}
                                        disabled={isValidatingKey || !tempApiKey.trim()}
-                                       className="w-full px-4 py-2.5 bg-gray-900 hover:bg-black text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                       className="w-full px-4 py-2.5 bg-gray-900 hover:bg-black text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
                                     >
                                        {isValidatingKey ? (
                                           <>
@@ -663,14 +659,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
                      {/* Right Col: Contact Admin */}
                      <div className="space-y-6">
-                        <h4 className="font-bold text-gray-700 uppercase text-xs tracking-wider border-b border-gray-100 pb-2">Hỗ trợ & Nâng cấp</h4>
+                        <h4 className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2">Hỗ trợ & Nâng cấp</h4>
 
-                        <div className="bg-white border border-rose-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
+                        <div className="bg-white border border-rose-100 rounded-2xl shadow-sm p-4 md:p-6 relative overflow-hidden">
                            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
 
                            <div className="relative z-10">
-                              <h5 className="font-bold text-rose-600 text-lg mb-4">Liên hệ Admin để kích hoạt</h5>
-                              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                              <h5 className="font-bold text-rose-600 text-base md:text-lg mb-4">Liên hệ Admin để kích hoạt</h5>
+                              <p className="text-xs md:text-sm text-gray-600 mb-6 leading-relaxed">
                                  Để mở khóa toàn bộ sức mạnh của WedPlan AI (Tự động hóa ngân sách, Cố vấn phong thủy, Viết lời hay...), vui lòng liên hệ Admin để tạo tài khoản Pro hoặc nhận mã kích hoạt.
                               </p>
 
@@ -681,7 +677,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     </div>
                                     <div>
                                        <p className="text-xs font-bold text-gray-400 uppercase">Admin</p>
-                                       <p className="font-bold text-gray-800">{adminContact.displayName}</p>
+                                       <p className="font-bold text-gray-800 text-sm">{adminContact.displayName}</p>
                                     </div>
                                  </div>
 
@@ -691,7 +687,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     </div>
                                     <div>
                                        <p className="text-xs font-bold text-gray-400 uppercase">Email hỗ trợ</p>
-                                       <p className="font-bold text-gray-800">{adminContact.email}</p>
+                                       <p className="font-bold text-gray-800 text-sm break-all">{adminContact.email}</p>
                                     </div>
                                  </div>
 
@@ -701,7 +697,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     </div>
                                     <div>
                                        <p className="text-xs font-bold text-gray-400 uppercase">Zalo / Phone</p>
-                                       <p className="font-bold text-gray-800">{adminContact.phoneNumber || '0343019101'} (Liên hệ trực tiếp)</p>
+                                       <p className="font-bold text-gray-800 text-sm">{adminContact.phoneNumber || '0343019101'} (Liên hệ trực tiếp)</p>
                                     </div>
                                  </div>
                               </div>
@@ -716,19 +712,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
             {/* TAB: ABOUT */}
             {activeTab === 'ABOUT' && (
                <div className="p-6 md:p-8 text-center space-y-6 animate-fadeIn h-full flex flex-col justify-center items-center">
-                  <div className="w-24 h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                     <Heart className="w-12 h-12 text-rose-500 fill-current" />
+                  <div className="w-20 h-20 md:w-24 md:h-24 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                     <Heart className="w-10 h-10 md:w-12 md:h-12 text-rose-500 fill-current" />
                   </div>
-                  <h2 className="text-3xl font-black text-gray-900 tracking-tight">WedPlan AI</h2>
-                  <p className="text-gray-500 max-w-md mx-auto">
+                  <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">WedPlan AI</h2>
+                  <p className="text-gray-500 text-sm md:text-base max-w-md mx-auto">
                      Trợ lý đám cưới thông minh, giúp bạn lên kế hoạch chi tiết, quản lý ngân sách và khách mời một cách hiệu quả nhất.
                   </p>
-                  <div className="flex justify-center gap-4 text-sm font-medium text-gray-600">
+                  <div className="flex justify-center gap-4 text-xs md:text-sm font-medium text-gray-600">
                      <span>Phiên bản: 2.1.0 (Beta)</span>
                      <span>•</span>
                      <span>Xây dựng bởi Đăng Hoàng</span>
                   </div>
-                  <div className="pt-8 text-xs text-gray-400">
+                  <div className="pt-8 text-[10px] md:text-xs text-gray-400">
                      © 2024 WedPlan AI. DHsystem - All rights reserved.
                   </div>
                </div>

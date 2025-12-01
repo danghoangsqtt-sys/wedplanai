@@ -143,14 +143,14 @@ function App() {
           </div>
         )}
 
-        {/* Prominent Floating Login Button (Top Right) */}
+        {/* Prominent Floating Login Button (Top Right) - Hidden on Mobile */}
         {user.role === 'GUEST' && (
-          <div className="absolute top-20 right-5 z-[50] lg:top-5 lg:right-5">
+          <div className="hidden lg:block absolute top-5 right-5 z-[50]">
             <button
               onClick={() => setShowLoginModal(true)}
-              className="bg-rose-600 hover:bg-rose-700 text-white border-2 border-white px-4 py-2 lg:px-6 lg:py-2.5 rounded-full text-xs lg:text-sm font-bold shadow-lg shadow-rose-500/40 transition-all flex items-center gap-2 hover:shadow-xl hover:scale-105 active:scale-95 animate-pulse"
+              className="bg-rose-600 hover:bg-rose-700 text-white border-2 border-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-rose-500/40 transition-all flex items-center gap-2 hover:shadow-xl hover:scale-105 active:scale-95 animate-pulse"
             >
-              <LogIn className="w-4 h-4 lg:w-5 lg:h-5" /> <span className="hidden sm:inline">Đăng nhập ngay</span><span className="sm:hidden">Login</span>
+              <LogIn className="w-5 h-5" /> <span>Đăng nhập ngay</span>
             </button>
           </div>
         )}
