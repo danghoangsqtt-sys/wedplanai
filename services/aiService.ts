@@ -70,104 +70,82 @@ export const generateAIContent = async (
   throw new Error("Role không hợp lệ.");
 };
 
-// --- NEW: GENERATE WEDDING IMAGES ---
-export const generateWeddingImages = async (
-  groomFile: File,
-  brideFile: File,
-  customApiKey?: string
-): Promise<string[]> => {
+// --- IMAGE GENERATION (NEW) ---
+export const generateWeddingSticker = async (
+  user: UserProfile | null,
+  promptDescription: string,
+  action: string,
+  refImages: { groom?: string, bride?: string } // Base64 strings
+) => {
   // @ts-ignore
   const envKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  const apiKey = customApiKey || envKey;
+  let apiKey = envKey;
 
-  if (!apiKey) {
-    throw new Error("Thiếu API Key Gemini.");
+  if (user?.role === 'USER' && user.isActive && user.allowCustomApiKey) {
+    apiKey = useStore.getState().settings.geminiApiKey;
   }
+
+  if (!apiKey) throw new Error("Thiếu API Key để tạo ảnh.");
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Helper to convert file to base64 for Gemini
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = error => reject(error);
+  // Construct Prompt
+  const fullPrompt = `Create a high-quality "Cute Chibi Wedding Sticker".
+  Characters: A Groom and a Bride.
+  Appearance details: ${promptDescription}.
+  Action/Pose: ${action}.
+  Style: Flat 2D vector art, cute, vibrant colors, white background, sticker style with white outline.
+  Expression: Happy, romantic, blushing.
+  IMPORTANT: Make sure the characters look like a cohesive couple.
+  `;
+
+  const parts: any[] = [
+    { text: fullPrompt }
+  ];
+
+  // Add reference images if provided (Image-to-Image / Multimodal)
+  if (refImages.groom) {
+    parts.push({
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: refImages.groom.split(',')[1] // Remove data:image/jpeg;base64, prefix
+      }
     });
-  };
+    parts.push({ text: "Reference image for Groom's face/hair:" });
+  }
+  if (refImages.bride) {
+    parts.push({
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: refImages.bride.split(',')[1]
+      }
+    });
+    parts.push({ text: "Reference image for Bride's face/hair:" });
+  }
 
   try {
-    // 1. Analyze Faces using Gemini Vision
-    const groomB64 = await fileToBase64(groomFile);
-    const brideB64 = await fileToBase64(brideFile);
-
-    const analysisPrompt = "Describe the physical appearance of these two people in detail (gender, hair color, hair style, skin tone, approximate age, facial features). Do not mention their current clothing. Label them as 'Person A (Groom)' and 'Person B (Bride)'.";
-
-    const visionResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: groomFile.type, data: groomB64 } },
-          { inlineData: { mimeType: brideFile.type, data: brideB64 } },
-          { text: analysisPrompt }
-        ]
+    // Prefer Pro model for image gen if available/allowed, otherwise Flash Image
+    // Note: 'gemini-2.5-flash-image' is good for multimodal input
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts },
+      config: {
+        // Only set generation config if supported by model version
       }
     });
 
-    const description = visionResponse.text;
-
-    // 2. Define Styles
-    const styles = [
-      "Traditional Vietnamese Wedding, Ao Dai, Red and Gold, Temple Background",
-      "Cinematic Lighting, Romantic Evening, Formal Suit and White Wedding Dress, Bokeh",
-      "Korean Wedding Studio Style, Soft Pastel Colors, Bright Lighting, Minimalist",
-      "Vintage Film Photography, 1990s Hong Kong Style, Nostalgic Grain",
-      "Outdoor Nature, Garden Wedding, Sunlight, Greenery and Floral Arch"
-    ];
-
-    const generatedImagesB64: string[] = [];
-
-    // 3. Generate Images using Imagen (Simulated Loop)
-    // NOTE: If the key does not support Imagen, this part might fail or need a fallback.
-    // We try to generate.
-
-    for (const style of styles) {
-      const imagePrompt = `A high quality, photorealistic wedding photo of a couple. 
-        Based on these descriptions: ${description}.
-        Style: ${style}. 
-        The groom is wearing a suit or traditional attire matching the style. 
-        The bride is wearing a wedding dress or Ao Dai matching the style.
-        Look at camera, happy expression, 8k resolution.`;
-
-      try {
-        const response = await ai.models.generateImages({
-          model: 'imagen-3.0-generate-001',
-          prompt: imagePrompt,
-          config: {
-            numberOfImages: 1,
-            aspectRatio: '3:4', // Portrait for phone viewing
-          },
-        });
-
-        if (response.generatedImages && response.generatedImages.length > 0) {
-          generatedImagesB64.push(response.generatedImages[0].image.imageBytes);
+    // Extract image
+    if (response.candidates && response.candidates[0].content.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
         }
-      } catch (e) {
-        console.error(`Error generating style ${style}:`, e);
-        // If generation fails (e.g. model not available), push a placeholder based on style
-        // This ensures the app doesn't break if user has a text-only key
-        // In production, you would throw or handle gracefully.
       }
     }
-
-    if (generatedImagesB64.length === 0) {
-      throw new Error("Không thể tạo ảnh. Có thể API Key của bạn chưa được kích hoạt quyền truy cập Imagen (Image Generation).");
-    }
-
-    return generatedImagesB64;
+    throw new Error("Không tìm thấy ảnh trong phản hồi của AI.");
 
   } catch (error: any) {
-    console.error("Generate Wedding Images Error:", error);
-    throw new Error(error.message || "Lỗi khi tạo ảnh cưới.");
+    console.error("Image Gen Error:", error);
+    throw new Error("Lỗi tạo ảnh: " + (error.message || "Unknown error"));
   }
 };

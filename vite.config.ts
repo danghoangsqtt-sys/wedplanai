@@ -18,16 +18,14 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      // Sửa lại biến môi trường cho đúng (bạn đang bị lặp tên biến trong code cũ)
       'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY)
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        // ĐÃ XÓA các dòng alias trỏ về https://esm.sh/...
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
       }
     },
-    // ĐÃ XÓA phần optimizeDeps.exclude
   };
 });

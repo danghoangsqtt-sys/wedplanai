@@ -4,7 +4,7 @@ import { loadPublicInvitation } from '../../services/cloudService';
 import { InvitationData } from '../../types';
 import {
     Calendar, MapPin, Clock, Heart, Check,
-    Navigation, Gift, Copy, Image as ImageIcon, ChevronLeft, ChevronRight
+    Navigation, Gift, Copy, Sparkles
 } from 'lucide-react';
 
 interface Props {
@@ -15,9 +15,6 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
     const [invitation, setInvitation] = useState<InvitationData | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
-
-    // Slider state
-    const [currentSlide, setCurrentSlide] = useState(0);
 
     useEffect(() => {
         const fetchInv = async () => {
@@ -33,15 +30,6 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
         };
         fetchInv();
     }, [uid]);
-
-    // Auto-advance slider
-    useEffect(() => {
-        if (!invitation?.galleryImages?.length) return;
-        const interval = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % invitation.galleryImages.length);
-        }, 4000);
-        return () => clearInterval(interval);
-    }, [invitation?.galleryImages]);
 
     if (loading) {
         return <div className="h-screen flex items-center justify-center bg-rose-50 text-rose-500"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current"></div></div>;
@@ -63,57 +51,57 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const gallery = invitation.galleryImages || [];
+    // Helper for stickers (with fallback for old data)
+    const getAvatarUrl = (seed: string) => `https://api.dicebear.com/9.x/notionists/svg?seed=${seed}&scale=120&backgroundColor=transparent`;
+    const groomSticker = getAvatarUrl(invitation.sticker?.groom || 'Felix');
+    const brideSticker = getAvatarUrl(invitation.sticker?.bride || 'Aneka');
+
+    const isAIMode = invitation.sticker?.mode === 'AI_GEN';
+    const stickerPack = invitation.sticker?.stickerPack;
 
     return (
         <div className="min-h-screen bg-[#FDF2F8] font-serif-display pb-20">
-            {/* 1. HERO SLIDER SECTION */}
-            <div className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden bg-gray-900">
-                {gallery.length > 0 ? (
-                    <>
-                        {/* Slides */}
-                        {gallery.map((img, idx) => (
-                            <div
-                                key={idx}
-                                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-                            >
-                                <img src={img} className="w-full h-full object-cover" alt={`Slide ${idx}`} />
-                                <div className="absolute inset-0 bg-black/30"></div>
-                            </div>
-                        ))}
+            {/* 1. HERO SECTION (STICKERS) */}
+            <div className="relative h-[65vh] md:h-[75vh] w-full bg-gradient-to-b from-white to-[#FDF2F8] flex flex-col items-center justify-center overflow-hidden">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#e11d48 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
 
-                        {/* Dots */}
-                        <div className="absolute bottom-24 left-0 w-full flex justify-center gap-2 z-20">
-                            {gallery.map((_, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => setCurrentSlide(idx)}
-                                    className={`w-2 h-2 rounded-full transition-all ${idx === currentSlide ? 'bg-white w-6' : 'bg-white/50'}`}
-                                />
-                            ))}
+                {/* STICKER DISPLAY: AI vs BASIC */}
+                <div className="relative z-10 flex justify-center w-full mt-[-60px]">
+                    {isAIMode && stickerPack?.main ? (
+                        <div className="relative w-72 h-72 md:w-96 md:h-96 animate-float-slow drop-shadow-2xl">
+                            <img src={stickerPack.main} className="w-full h-full object-contain" alt="Couple" />
                         </div>
-                    </>
-                ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center">
-                        <ImageIcon className="w-20 h-20 text-white/50" />
-                    </div>
-                )}
+                    ) : (
+                        <div className="flex items-center justify-center gap-4 md:gap-10 scale-125 md:scale-150">
+                            <div className="relative w-40 h-40 md:w-56 md:h-56 animate-float-slow drop-shadow-2xl">
+                                <img src={groomSticker} className="w-full h-full object-contain" alt="Groom" />
+                            </div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-0">
+                                <Heart className="w-16 h-16 md:w-24 md:h-24 fill-current animate-pulse opacity-30" style={{ color: primaryColor }} />
+                            </div>
+                            <div className="relative w-40 h-40 md:w-56 md:h-56 animate-float-delayed drop-shadow-2xl">
+                                <img src={brideSticker} className="w-full h-full object-contain" alt="Bride" />
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Content Overlay */}
-                <div className="absolute bottom-0 w-full p-8 pb-12 text-center text-white z-20 animate-fade-in-up">
-                    <p className="text-lg md:text-xl uppercase tracking-[0.3em] font-light mb-2 opacity-90 drop-shadow-md">Save The Date</p>
-                    <h1 className="text-4xl md:text-7xl font-bold mb-4 leading-tight drop-shadow-lg">
-                        {invitation.groomName} <span className="text-rose-500">&</span> {invitation.brideName}
+                <div className="absolute bottom-0 w-full p-8 pb-12 text-center z-20 animate-fade-in-up bg-gradient-to-t from-[#FDF2F8] via-[#FDF2F8]/80 to-transparent pt-24">
+                    <p className="text-lg md:text-xl uppercase tracking-[0.3em] font-light mb-2 text-gray-500 drop-shadow-sm">Save The Date</p>
+                    <h1 className="text-4xl md:text-7xl font-bold mb-4 leading-tight drop-shadow-md text-gray-800">
+                        {invitation.groomName} <span style={{ color: primaryColor }}>&</span> {invitation.brideName}
                     </h1>
-                    <div className="flex items-center justify-center gap-4 text-sm md:text-lg font-sans tracking-widest uppercase opacity-90 drop-shadow-md">
+                    <div className="flex items-center justify-center gap-4 text-sm md:text-lg font-sans tracking-widest uppercase opacity-80 text-gray-600">
                         <span>{new Date(invitation.date).toLocaleDateString('vi-VN', { weekday: 'long' })}</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: primaryColor }}></span>
                         <span>{new Date(invitation.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto px-4 -mt-10 relative z-30 space-y-6">
+            <div className="max-w-3xl mx-auto px-4 relative z-30 space-y-8">
 
                 {/* 2. Invitation Card */}
                 <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 text-center border-t-4" style={{ borderColor: primaryColor }}>
@@ -152,11 +140,34 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
                     </div>
                 </div>
 
-                {/* 3. Gift Box (Banking) */}
+                {/* 3. Sticker Album (Only for AI Mode) */}
+                {isAIMode && stickerPack && Object.keys(stickerPack).length > 1 && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <div className="text-center mb-6">
+                            <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-3 text-purple-500">
+                                <Sparkles className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-bold text-xl text-gray-800 font-sans">Khoảnh Khắc Của Chúng Tôi</h3>
+                            <p className="text-sm text-gray-500 mt-1 font-sans">Bộ sưu tập sticker AI</p>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {Object.entries(stickerPack).map(([key, url]) => (
+                                key !== 'main' && (
+                                    <div key={key} className="bg-gray-50 rounded-xl p-2 flex flex-col items-center border border-gray-100 hover:shadow-md transition-all">
+                                        <img src={url as string} className="w-full h-32 object-contain" alt={key} />
+                                        <span className="text-xs font-bold text-gray-500 uppercase mt-2">{key}</span>
+                                    </div>
+                                )
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. Gift Box (Banking) */}
                 {bankQrUrl && (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                         <div className="text-center mb-6">
-                            <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-3 text-rose-500">
+                            <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-3" style={{ color: primaryColor }}>
                                 <Gift className="w-6 h-6" />
                             </div>
                             <h3 className="font-bold text-xl text-gray-800 font-sans">Hộp Mừng Cưới</h3>
@@ -176,7 +187,7 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
 
                                 <p className="text-sm text-gray-500 mb-1">Số tài khoản</p>
                                 <div className="flex items-center gap-2 justify-center md:justify-start">
-                                    <p className="font-mono font-bold text-lg text-rose-600 tracking-wider">{invitation.bankInfo.accountNumber}</p>
+                                    <p className="font-mono font-bold text-lg tracking-wider" style={{ color: primaryColor }}>{invitation.bankInfo.accountNumber}</p>
                                     <button onClick={handleCopyBank} className="text-gray-400 hover:text-gray-600 transition-colors">
                                         {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                                     </button>
@@ -189,7 +200,7 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
 
                 {/* Footer */}
                 <div className="text-center pt-8 pb-4">
-                    <p className="text-xs text-gray-400 font-sans">Thiệp được tạo miễn phí bởi <span className="font-bold text-rose-400">WedPlan AI</span></p>
+                    <p className="text-xs text-gray-400 font-sans">Thiệp được tạo miễn phí bởi <span className="font-bold" style={{ color: primaryColor }}>WedPlan AI</span></p>
                 </div>
             </div>
 
@@ -200,6 +211,20 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
                 }
                 .animate-fade-in-up {
                     animation: fadeInUp 1s ease-out forwards;
+                }
+                @keyframes floatSlow {
+                    0%, 100% { transform: translateY(0px) rotate(-2deg); }
+                    50% { transform: translateY(-15px) rotate(2deg); }
+                }
+                @keyframes floatDelayed {
+                    0%, 100% { transform: translateY(0px) rotate(2deg); }
+                    50% { transform: translateY(-15px) rotate(-2deg); }
+                }
+                .animate-float-slow {
+                    animation: floatSlow 6s ease-in-out infinite;
+                }
+                .animate-float-delayed {
+                    animation: floatDelayed 6s ease-in-out infinite 1s;
                 }
             `}</style>
         </div>
