@@ -120,6 +120,7 @@ const DEFAULT_INVITATION: InvitationData = {
   },
   wishes: 'Trân trọng kính mời bạn đến chung vui cùng gia đình chúng tôi.',
   coverImage: null,
+  imageConfig: { scale: 1, x: 0, y: 0 },
   themeColor: '#e11d48'
 };
 

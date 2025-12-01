@@ -128,6 +128,12 @@ export interface BankInfo {
   template: 'qr_code' | 'compact';
 }
 
+export interface ImageConfig {
+  scale: number;
+  x: number;
+  y: number;
+}
+
 export interface InvitationData {
   templateId: string;
   groomName: string;
@@ -140,5 +146,6 @@ export interface InvitationData {
   bankInfo: BankInfo;
   wishes: string;
   coverImage: string | null;
+  imageConfig?: ImageConfig; // Config for zoom/pan
   themeColor: string;
 }

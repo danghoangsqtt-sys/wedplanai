@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { UserRole, UserProfile } from '../../types';
@@ -118,7 +117,7 @@ const AdminDashboard: React.FC = () => {
    const PIE_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#64748B'];
 
    // --- MOBILE USER CARD COMPONENT ---
-   const UserCardMobile = ({ u }: { u: UserProfile }) => (
+   const UserCardMobile: React.FC<{ u: UserProfile }> = ({ u }) => (
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative flex flex-col gap-3">
          {/* Header: Avatar, Name, Role */}
          <div className="flex items-start justify-between">

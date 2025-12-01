@@ -1,8 +1,10 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import {
     Heart, Calendar, MapPin, CreditCard, Image as ImageIcon,
-    Share2, Download, Eye, QrCode, Upload, Save, Check, Info
+    Share2, Download, Eye, QrCode, Upload, Save, Check, Info,
+    ZoomIn, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCcw
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
@@ -29,6 +31,9 @@ const InvitationBuilder: React.FC = () => {
     const marketingCardRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Default image config if not exists
+    const imgConfig = invitation.imageConfig || { scale: 1, x: 0, y: 0 };
+
     // Initial load check
     useEffect(() => {
         if (!invitation.groomName && user?.displayName) {
@@ -47,46 +52,45 @@ const InvitationBuilder: React.FC = () => {
         });
     };
 
-    // --- FIX LỖI UPLOAD ẢNH (QUAN TRỌNG) ---
+    const handleImageConfigChange = (field: 'scale' | 'x' | 'y', value: number) => {
+        updateInvitation({
+            imageConfig: { ...imgConfig, [field]: value }
+        });
+    };
+
+    const handleResetImageConfig = () => {
+        updateInvitation({
+            imageConfig: { scale: 1, x: 0, y: 0 }
+        });
+    };
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // 1. Validate size < 5MB
         if (file.size > 5 * 1024 * 1024) {
             alert("Ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhỏ hơn.");
             return;
         }
 
-        if (!storage || !user) {
-            alert("Lỗi: Vui lòng đăng nhập lại để thực hiện thao tác này.");
+        if (!storage) {
+            alert("Chưa cấu hình Storage. Vui lòng liên hệ Admin.");
             return;
         }
 
         setIsUploading(true);
         try {
-            // Tạo tên file đơn giản .jpg để tránh mọi rắc rối về định dạng
-            const safeName = `card_cover_${Date.now()}.jpg`;
-            const storageRef = ref(storage, `invitations/${user.uid}/${safeName}`);
-
-            // Metadata "ép" kiểu JPEG để vượt qua mọi bộ lọc
-            const metadata = {
-                contentType: 'image/jpeg',
-            };
-
-            console.log("Bắt đầu upload:", safeName);
-
-            const snapshot = await uploadBytes(storageRef, file, metadata);
+            const storageRef = ref(storage, `invitations/${user!.uid}/${file.name}_${Date.now()}`);
+            const metadata = { contentType: file.type }; // Thêm dòng này
+            const snapshot = await uploadBytes(storageRef, file, metadata); // Truyền metadata vào
             const url = await getDownloadURL(snapshot.ref);
-
-            updateInvitation({ coverImage: url });
+            updateInvitation({ coverImage: url, imageConfig: { scale: 1, x: 0, y: 0 } });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
         } catch (error: any) {
-            console.error("Lỗi Upload:", error);
-            alert("Không thể tải ảnh: " + error.message);
+            console.error("Upload failed", error);
+            alert("Lỗi upload: " + error.message);
         } finally {
             setIsUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -242,7 +246,7 @@ const InvitationBuilder: React.FC = () => {
                                         onClick={() => fileInputRef.current?.click()}
                                     >
                                         {invitation.coverImage ? (
-                                            <div className="relative aspect-[3/4] w-full max-w-[200px] mx-auto rounded-lg overflow-hidden shadow-sm">
+                                            <div className="relative aspect-[3/4] w-full max-w-[150px] mx-auto rounded-lg overflow-hidden shadow-sm">
                                                 <img src={invitation.coverImage} className="w-full h-full object-cover" alt="Cover" />
                                                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                                     <Upload className="w-6 h-6 text-white" />
@@ -258,6 +262,71 @@ const InvitationBuilder: React.FC = () => {
                                         {isUploading && <p className="text-xs text-rose-500 mt-2 font-bold animate-pulse">Đang tải lên...</p>}
                                     </div>
                                 </div>
+
+                                {/* IMAGE ADJUSTMENT CONTROLS */}
+                                {invitation.coverImage && (
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
+                                                <Move className="w-3 h-3" /> Căn chỉnh ảnh
+                                            </label>
+                                            <button
+                                                onClick={handleResetImageConfig}
+                                                className="text-[10px] text-gray-500 hover:text-rose-500 flex items-center gap-1 bg-white border border-gray-300 px-2 py-1 rounded transition-colors"
+                                            >
+                                                <RotateCcw className="w-3 h-3" /> Mặc định
+                                            </button>
+                                        </div>
+
+                                        {/* Zoom */}
+                                        <div className="mb-3">
+                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                                                <span>Thu nhỏ</span>
+                                                <span className="font-bold flex items-center gap-1"><ZoomIn className="w-3 h-3" /> {imgConfig.scale.toFixed(1)}x</span>
+                                                <span>Phóng to</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="1" max="3" step="0.1"
+                                                value={imgConfig.scale}
+                                                onChange={(e) => handleImageConfigChange('scale', parseFloat(e.target.value))}
+                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                                            />
+                                        </div>
+
+                                        {/* Position Y */}
+                                        <div className="mb-3">
+                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                                                <span className="flex items-center gap-1"><ArrowUp className="w-3 h-3" /> Lên</span>
+                                                <span className="font-bold">Dọc ({imgConfig.y}%)</span>
+                                                <span className="flex items-center gap-1">Xuống <ArrowDown className="w-3 h-3" /></span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="-100" max="100" step="1"
+                                                value={imgConfig.y}
+                                                onChange={(e) => handleImageConfigChange('y', parseFloat(e.target.value))}
+                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                                            />
+                                        </div>
+
+                                        {/* Position X */}
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                                                <span className="flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> Trái</span>
+                                                <span className="font-bold">Ngang ({imgConfig.x}%)</span>
+                                                <span className="flex items-center gap-1">Phải <ArrowRight className="w-3 h-3" /></span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="-100" max="100" step="1"
+                                                value={imgConfig.x}
+                                                onChange={(e) => handleImageConfigChange('x', parseFloat(e.target.value))}
+                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Màu chủ đạo</label>
@@ -289,16 +358,24 @@ const InvitationBuilder: React.FC = () => {
                             style={{ minHeight: '550px' }}
                         >
                             {/* Background Image Area */}
-                            <div className="h-[350px] relative bg-gray-200">
+                            <div className="h-[350px] relative bg-gray-200 overflow-hidden">
                                 {invitation.coverImage ? (
-                                    <img src={invitation.coverImage} className="w-full h-full object-cover" alt="Wedding" crossOrigin="anonymous" />
+                                    <img
+                                        src={invitation.coverImage}
+                                        className="w-full h-full object-cover origin-center transition-transform"
+                                        alt="Wedding"
+                                        crossOrigin="anonymous"
+                                        style={{
+                                            transform: `scale(${imgConfig.scale}) translate(${imgConfig.x}%, ${imgConfig.y}%)`
+                                        }}
+                                    />
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100">
                                         <ImageIcon className="w-12 h-12 mb-2" />
                                         <span>Chưa có ảnh bìa</span>
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none"></div>
 
                                 <div className="absolute bottom-4 left-0 w-full text-center text-white px-4">
                                     <p className="font-serif-display italic text-lg opacity-90 mb-1">Save the Date</p>
