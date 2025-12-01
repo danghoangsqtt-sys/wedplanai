@@ -1,10 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import {
     Heart, Download, Eye,
     Info, Image as ImageIcon,
     ZoomIn, Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
-    Palette, ChevronDown
+    Palette, ChevronDown, Sparkles
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
@@ -387,6 +388,14 @@ const InvitationBuilder: React.FC = () => {
                                 {/* Modern Overlay Gradient */}
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70"></div>
 
+                                {/* BRANDING WATERMARK (Top Right) */}
+                                <div className="absolute top-4 right-4 z-20">
+                                    <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5 shadow-lg">
+                                        <Heart className="w-3 h-3 text-rose-400 fill-current" />
+                                        <span className="text-white text-[10px] font-bold tracking-wide uppercase font-be-vietnam">WedPlan AI</span>
+                                    </div>
+                                </div>
+
                                 {/* Text Overlay on Image */}
                                 <div className="absolute bottom-0 w-full p-6 text-center text-white pb-8">
                                     <p className="font-be-vietnam text-xs tracking-[0.3em] uppercase opacity-90 mb-2 font-bold">Save The Date</p>
@@ -429,18 +438,26 @@ const InvitationBuilder: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* QR Code Compact */}
-                                <div className="mt-auto flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-dashed border-gray-300 w-full justify-center relative z-10">
-                                    <QRCodeCanvas
-                                        value={publicLink}
-                                        size={40}
-                                        bgColor={"#ffffff"}
-                                        fgColor={primaryColor}
-                                        level={"M"}
-                                    />
-                                    <div className="text-left">
-                                        <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Quét mã QR</p>
-                                        <p className="text-[8px] text-gray-500 font-be-vietnam">Xem bản đồ & Mừng cưới</p>
+                                {/* QR Code Compact + BRANDING FOOTER */}
+                                <div className="mt-auto w-full relative z-10 flex flex-col gap-2">
+                                    <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-dashed border-gray-300 w-full justify-center">
+                                        <QRCodeCanvas
+                                            value={publicLink}
+                                            size={40}
+                                            bgColor={"#ffffff"}
+                                            fgColor={primaryColor}
+                                            level={"M"}
+                                        />
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Quét mã QR</p>
+                                            <p className="text-[8px] text-gray-500 font-be-vietnam">Xem bản đồ & Mừng cưới</p>
+                                        </div>
+                                    </div>
+
+                                    {/* BRANDING FOOTER */}
+                                    <div className="flex items-center justify-center gap-1.5 text-[8px] text-gray-400 font-be-vietnam mt-1 uppercase tracking-widest opacity-80">
+                                        <Sparkles className="w-2.5 h-2.5 text-rose-400" />
+                                        Powered by <span className="font-bold text-rose-500">WedPlan AI</span>
                                     </div>
                                 </div>
                             </div>

@@ -4,7 +4,7 @@ import { loadPublicInvitation } from '../../services/cloudService';
 import { InvitationData } from '../../types';
 import {
     MapPin, Clock, Heart, Check,
-    Navigation, Gift, Copy, ChevronDown
+    Navigation, Gift, Copy, ChevronDown, Sparkles
 } from 'lucide-react';
 
 interface Props {
@@ -383,16 +383,44 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
                     </div>
                 )}
 
-                {/* 5. FOOTER */}
-                <div className="bg-[#FAF7F2] py-10 text-center border-t border-stone-200 mt-auto relative z-20">
-                    <div className="flex items-center justify-center gap-2 mb-3 font-handwriting text-3xl text-rose-500">
-                        <span>Thank You</span>
-                        <Heart className="w-5 h-5 fill-current animate-pulse" />
-                    </div>
-                    <p className="text-xs text-gray-400 font-be-vietnam uppercase tracking-widest">
-                        Created with love by <span className="font-bold text-gray-600">WedPlan AI</span>
-                    </p>
+                {/* 5. BRANDING FOOTER */}
+                <div className="bg-[#FAF7F2] py-12 text-center border-t border-stone-200 mt-auto relative z-20">
+                    <ScrollReveal>
+                        <div className="flex flex-col items-center justify-center gap-3">
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-rose-100 mb-2">
+                                <Sparkles className="w-6 h-6 text-rose-400 animate-pulse" />
+                            </div>
+                            <div className="font-handwriting text-3xl text-gray-800">
+                                WedPlan <span className="text-rose-500">AI</span>
+                            </div>
+                            <p className="text-[10px] md:text-xs text-gray-500 font-be-vietnam uppercase tracking-widest max-w-[200px] leading-relaxed">
+                                Professional Wedding Planner & Invitation Creator
+                            </p>
+
+                            <a
+                                href="https://wedplan.ai"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-4 px-6 py-2 bg-white border border-rose-200 rounded-full text-xs font-bold text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm uppercase tracking-wide"
+                            >
+                                Create your own
+                            </a>
+                        </div>
+                    </ScrollReveal>
                 </div>
+            </div>
+
+            {/* FLOATING BADGE (Bottom Right) */}
+            <div className="fixed bottom-4 right-4 z-50 animate-fadeIn delay-1000">
+                <a
+                    href="/"
+                    className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/50 hover:scale-105 transition-transform group"
+                >
+                    <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
+                    <span className="text-[10px] font-bold text-gray-600 group-hover:text-rose-600 uppercase tracking-wider font-be-vietnam">
+                        Made with WedPlan AI
+                    </span>
+                </a>
             </div>
 
             <style>{`
