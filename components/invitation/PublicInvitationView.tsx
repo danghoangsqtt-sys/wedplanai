@@ -1,436 +1,181 @@
-
-import React, { useState, useRef, useEffect } from 'react';
-import { useStore } from '../../store/useStore';
+import React, { useEffect, useState } from 'react';
+import { useStore } from '../../store/useStore'; // Just for types, actual fetch is separated
+import { loadPublicInvitation } from '../../services/cloudService';
+import { InvitationData } from '../../types';
 import {
-    Heart, Calendar, MapPin, CreditCard, Image as ImageIcon,
-    Share2, Download, Eye, QrCode, Upload, Save, Check, Info,
-    ZoomIn, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCcw
+    Calendar, MapPin, Clock, Heart, ArrowRight, Check,
+    Navigation, Gift, Copy
 } from 'lucide-react';
-import { QRCodeCanvas } from 'qrcode.react';
-import html2canvas from 'html2canvas';
-import { storage } from '../../lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { BankInfo } from '../../types';
 
-// Danh sách ngân hàng phổ biến cho VietQR
-const BANKS = [
-    { id: 'MB', name: 'MB Bank' },
-    { id: 'VCB', name: 'Vietcombank' },
-    { id: 'ICB', name: 'VietinBank' },
-    { id: 'BIDV', name: 'BIDV' },
-    { id: 'TCB', name: 'Techcombank' },
-    { id: 'VPB', name: 'VPBank' },
-    { id: 'ACB', name: 'ACB' },
-    { id: 'TPB', name: 'TPBank' },
-];
+interface Props {
+    uid: string;
+}
 
-const InvitationBuilder: React.FC = () => {
-    const { invitation, updateInvitation, user, addNotification } = useStore();
-    const [activeTab, setActiveTab] = useState<'INFO' | 'BANK' | 'DESIGN'>('INFO');
-    const [isUploading, setIsUploading] = useState(false);
-    const marketingCardRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+const PublicInvitationView: React.FC<Props> = ({ uid }) => {
+    const [invitation, setInvitation] = useState<InvitationData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [copied, setCopied] = useState(false);
 
-    // Default image config if not exists
+    useEffect(() => {
+        const fetchInv = async () => {
+            if (!uid) return;
+            try {
+                const data = await loadPublicInvitation(uid);
+                setInvitation(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchInv();
+    }, [uid]);
+
+    if (loading) {
+        return <div className="h-screen flex items-center justify-center bg-rose-50 text-rose-500"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current"></div></div>;
+    }
+
+    if (!invitation || !invitation.groomName) {
+        return <div className="h-screen flex items-center justify-center bg-gray-50 text-gray-500">Thiệp mời chưa được tạo hoặc không tồn tại.</div>;
+    }
+
+    // Colors derived from themeColor or defaults
+    const primaryColor = invitation.themeColor || '#e11d48';
     const imgConfig = invitation.imageConfig || { scale: 1, x: 0, y: 0 };
 
-    // Initial load check
-    useEffect(() => {
-        if (!invitation.groomName && user?.displayName) {
-            // Pre-fill if empty
-            updateInvitation({ groomName: user.displayName }); // Just a guess, user can change
-        }
-    }, []);
+    // Bank QR
+    const bankQrUrl = invitation.bankInfo.bankId
+        ? `https://img.vietqr.io/image/${invitation.bankInfo.bankId}-${invitation.bankInfo.accountNumber}-compact.png?accountName=${encodeURIComponent(invitation.bankInfo.accountName)}`
+        : null;
 
-    const handleInputChange = (field: string, value: any) => {
-        updateInvitation({ [field]: value });
+    const handleCopyBank = () => {
+        navigator.clipboard.writeText(invitation.bankInfo.accountNumber);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
-
-    const handleBankChange = (field: keyof BankInfo, value: any) => {
-        updateInvitation({
-            bankInfo: { ...invitation.bankInfo, [field]: value }
-        });
-    };
-
-    const handleImageConfigChange = (field: 'scale' | 'x' | 'y', value: number) => {
-        updateInvitation({
-            imageConfig: { ...imgConfig, [field]: value }
-        });
-    };
-
-    const handleResetImageConfig = () => {
-        updateInvitation({
-            imageConfig: { scale: 1, x: 0, y: 0 }
-        });
-    };
-
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (file.size > 5 * 1024 * 1024) {
-            alert("Ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhỏ hơn.");
-            return;
-        }
-
-        if (!storage) {
-            alert("Chưa cấu hình Storage. Vui lòng liên hệ Admin.");
-            return;
-        }
-
-        setIsUploading(true);
-        try {
-            const storageRef = ref(storage, `invitations/${user!.uid}/${file.name}_${Date.now()}`);
-            const metadata = { contentType: file.type }; // Thêm dòng này
-            const snapshot = await uploadBytes(storageRef, file, metadata); // Truyền metadata vào
-            const url = await getDownloadURL(snapshot.ref);
-            updateInvitation({ coverImage: url, imageConfig: { scale: 1, x: 0, y: 0 } });
-            addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
-        } catch (error: any) {
-            console.error("Upload failed", error);
-            alert("Lỗi upload: " + error.message);
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const downloadMarketingCard = async () => {
-        if (!marketingCardRef.current) return;
-        try {
-            const canvas = await html2canvas(marketingCardRef.current, {
-                useCORS: true, // Quan trọng để load ảnh từ domain khác (firebase)
-                scale: 2 // High resolution
-            });
-            const link = document.createElement('a');
-            link.download = `thiep-cuoi-${user!.uid}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            addNotification('SUCCESS', 'Đã tải ảnh thiệp về máy!');
-        } catch (err) {
-            console.error(err);
-            alert("Lỗi khi tạo ảnh. Vui lòng thử lại.");
-        }
-    };
-
-    // Public Link
-    const publicLink = `${window.location.origin}/?view=invitation&uid=${user?.uid}`;
-
-    // Bank QR URL (VietQR API)
-    const bankQrUrl = `https://img.vietqr.io/image/${invitation.bankInfo.bankId}-${invitation.bankInfo.accountNumber}-${invitation.bankInfo.template}.png?accountName=${encodeURIComponent(invitation.bankInfo.accountName)}`;
 
     return (
-        <div className="h-full flex flex-col bg-[#FDF2F8]">
-            {/* Header */}
-            <div className="p-4 md:p-6 bg-white border-b border-rose-100 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-                <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <Heart className="w-6 h-6 text-rose-500 fill-current animate-pulse" />
-                        Thiệp Mời Online
+        <div className="min-h-screen bg-[#FDF2F8] font-serif-display pb-10">
+            {/* 1. Cover / Hero Section */}
+            <div className="relative h-[60vh] md:h-[70vh] bg-gray-900 overflow-hidden">
+                {invitation.coverImage ? (
+                    <img
+                        src={invitation.coverImage}
+                        className="w-full h-full object-cover opacity-80 origin-center transition-transform duration-1000"
+                        alt="Cover"
+                        style={{
+                            transform: `scale(${imgConfig.scale}) translate(${imgConfig.x}%, ${imgConfig.y}%)`
+                        }}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-rose-400 to-pink-600"></div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+
+                <div className="absolute bottom-0 w-full p-8 md:p-12 text-center text-white animate-fade-in-up pointer-events-none">
+                    <p className="text-lg md:text-xl uppercase tracking-[0.3em] font-light mb-4 opacity-90">Save The Date</p>
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
+                        {invitation.groomName} <span className="text-rose-500">&</span> {invitation.brideName}
                     </h1>
-                    <p className="text-xs text-gray-500 mt-1">Tạo thiệp, QR mừng cưới & chia sẻ ngay.</p>
-                </div>
-                <div className="flex gap-2">
-                    <a
-                        href={publicLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-bold hover:bg-rose-50 transition-colors"
-                    >
-                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem thử</span>
-                    </a>
-                    <button
-                        onClick={downloadMarketingCard}
-                        className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md transition-colors"
-                    >
-                        <Download className="w-4 h-4" /> <span className="hidden sm:inline">Tải ảnh Marketing</span>
-                    </button>
+                    <div className="flex items-center justify-center gap-4 text-sm md:text-base font-sans tracking-widest uppercase opacity-90">
+                        <span>{new Date(invitation.date).toLocaleDateString('vi-VN', { weekday: 'long' })}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        <span>{new Date(invitation.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-                {/* LEFT: Controls */}
-                <div className="w-full lg:w-[450px] bg-white border-r border-rose-100 flex flex-col h-full overflow-hidden">
-                    {/* Tabs */}
-                    <div className="flex border-b border-gray-100">
-                        <button onClick={() => setActiveTab('INFO')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'INFO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Thông Tin</button>
-                        <button onClick={() => setActiveTab('BANK')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'BANK' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Ngân Hàng</button>
-                        <button onClick={() => setActiveTab('DESIGN')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'DESIGN' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Hình Ảnh</button>
-                    </div>
+            <div className="max-w-3xl mx-auto px-4 -mt-10 relative z-10 space-y-6">
 
-                    {/* Scrollable Form Area */}
-                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+                {/* 2. Invitation Card */}
+                <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 text-center border-t-4" style={{ borderColor: primaryColor }}>
+                    <Heart className="w-10 h-10 mx-auto mb-4 fill-current" style={{ color: primaryColor }} />
+                    <p className="text-gray-500 font-sans text-sm md:text-base uppercase tracking-wider mb-6">Trân trọng kính mời quý khách đến dự Lễ Thành Hôn</p>
 
-                        {activeTab === 'INFO' && (
-                            <div className="space-y-4 animate-fadeIn">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Chú Rể</label>
-                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.groomName} onChange={e => handleInputChange('groomName', e.target.value)} placeholder="Tên Chú Rể" />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Cô Dâu</label>
-                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.brideName} onChange={e => handleInputChange('brideName', e.target.value)} placeholder="Tên Cô Dâu" />
-                                    </div>
-                                </div>
+                    <p className="font-sans italic text-gray-600 mb-8 px-4 leading-relaxed">"{invitation.wishes}"</p>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Ngày Cưới</label>
-                                        <input type="date" className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.date} onChange={e => handleInputChange('date', e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Giờ Đón Khách</label>
-                                        <input type="time" className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.time} onChange={e => handleInputChange('time', e.target.value)} />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Địa điểm (Tên nhà hàng/Tư gia)</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.location} onChange={e => handleInputChange('location', e.target.value)} placeholder="VD: Trung tâm tiệc cưới White Palace" />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Địa chỉ chi tiết</label>
-                                    <textarea rows={2} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none" value={invitation.address} onChange={e => handleInputChange('address', e.target.value)} placeholder="Số 123 Đường ABC, Phường XYZ..." />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Link Google Maps</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.mapLink} onChange={e => handleInputChange('mapLink', e.target.value)} placeholder="https://maps.app.goo.gl/..." />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Lời Nhắn / Lời Mời</label>
-                                    <textarea rows={3} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none" value={invitation.wishes} onChange={e => handleInputChange('wishes', e.target.value)} />
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'BANK' && (
-                            <div className="space-y-4 animate-fadeIn">
-                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-xs text-blue-700">
-                                    <Info className="w-4 h-4 inline mr-1" />
-                                    Thông tin này sẽ tạo mã QR tự động giúp khách mời chuyển khoản dễ dàng.
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Ngân hàng</label>
-                                    <select
-                                        className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm bg-white"
-                                        value={invitation.bankInfo.bankId}
-                                        onChange={e => handleBankChange('bankId', e.target.value)}
-                                    >
-                                        <option value="">-- Chọn ngân hàng --</option>
-                                        {BANKS.map(b => <option key={b.id} value={b.id}>{b.name} ({b.id})</option>)}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Số tài khoản</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-mono" value={invitation.bankInfo.accountNumber} onChange={e => handleBankChange('accountNumber', e.target.value)} placeholder="0123456789" />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Tên chủ tài khoản (Không dấu)</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm uppercase" value={invitation.bankInfo.accountName} onChange={e => handleBankChange('accountName', e.target.value.toUpperCase())} placeholder="NGUYEN VAN A" />
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'DESIGN' && (
-                            <div className="space-y-4 animate-fadeIn">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Ảnh Cưới / Ảnh Bìa</label>
-                                    <div
-                                        className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-rose-400 hover:bg-rose-50 transition-all"
-                                        onClick={() => fileInputRef.current?.click()}
-                                    >
-                                        {invitation.coverImage ? (
-                                            <div className="relative aspect-[3/4] w-full max-w-[150px] mx-auto rounded-lg overflow-hidden shadow-sm">
-                                                <img src={invitation.coverImage} className="w-full h-full object-cover" alt="Cover" />
-                                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                    <Upload className="w-6 h-6 text-white" />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="py-8 text-gray-400">
-                                                <ImageIcon className="w-10 h-10 mx-auto mb-2" />
-                                                <p className="text-sm">Nhấn để tải ảnh lên</p>
-                                            </div>
-                                        )}
-                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-                                        {isUploading && <p className="text-xs text-rose-500 mt-2 font-bold animate-pulse">Đang tải lên...</p>}
-                                    </div>
-                                </div>
-
-                                {/* IMAGE ADJUSTMENT CONTROLS */}
-                                {invitation.coverImage && (
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
-                                                <Move className="w-3 h-3" /> Căn chỉnh ảnh
-                                            </label>
-                                            <button
-                                                onClick={handleResetImageConfig}
-                                                className="text-[10px] text-gray-500 hover:text-rose-500 flex items-center gap-1 bg-white border border-gray-300 px-2 py-1 rounded transition-colors"
-                                            >
-                                                <RotateCcw className="w-3 h-3" /> Mặc định
-                                            </button>
-                                        </div>
-
-                                        {/* Zoom */}
-                                        <div className="mb-3">
-                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                                                <span>Thu nhỏ</span>
-                                                <span className="font-bold flex items-center gap-1"><ZoomIn className="w-3 h-3" /> {imgConfig.scale.toFixed(1)}x</span>
-                                                <span>Phóng to</span>
-                                            </div>
-                                            <input
-                                                type="range"
-                                                min="1" max="3" step="0.1"
-                                                value={imgConfig.scale}
-                                                onChange={(e) => handleImageConfigChange('scale', parseFloat(e.target.value))}
-                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                                            />
-                                        </div>
-
-                                        {/* Position Y */}
-                                        <div className="mb-3">
-                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                                                <span className="flex items-center gap-1"><ArrowUp className="w-3 h-3" /> Lên</span>
-                                                <span className="font-bold">Dọc ({imgConfig.y}%)</span>
-                                                <span className="flex items-center gap-1">Xuống <ArrowDown className="w-3 h-3" /></span>
-                                            </div>
-                                            <input
-                                                type="range"
-                                                min="-100" max="100" step="1"
-                                                value={imgConfig.y}
-                                                onChange={(e) => handleImageConfigChange('y', parseFloat(e.target.value))}
-                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                                            />
-                                        </div>
-
-                                        {/* Position X */}
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                                                <span className="flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> Trái</span>
-                                                <span className="font-bold">Ngang ({imgConfig.x}%)</span>
-                                                <span className="flex items-center gap-1">Phải <ArrowRight className="w-3 h-3" /></span>
-                                            </div>
-                                            <input
-                                                type="range"
-                                                min="-100" max="100" step="1"
-                                                value={imgConfig.x}
-                                                onChange={(e) => handleImageConfigChange('x', parseFloat(e.target.value))}
-                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Màu chủ đạo</label>
-                                    <div className="flex gap-2">
-                                        {['#e11d48', '#db2777', '#7c3aed', '#059669', '#d97706'].map(color => (
-                                            <button
-                                                key={color}
-                                                className={`w-8 h-8 rounded-full border-2 ${invitation.themeColor === color ? 'border-gray-600 scale-110' : 'border-transparent'}`}
-                                                style={{ backgroundColor: color }}
-                                                onClick={() => handleInputChange('themeColor', color)}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* RIGHT: Preview & Marketing Card */}
-                <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[500px]">
-                    <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
-                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2 text-center">Xem trước Card Marketing</h3>
-
-                        {/* MARKETING CARD NODE - Captured by html2canvas */}
-                        <div
-                            ref={marketingCardRef}
-                            className="w-[320px] sm:w-[350px] bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col"
-                            style={{ minHeight: '550px' }}
-                        >
-                            {/* Background Image Area */}
-                            <div className="h-[350px] relative bg-gray-200 overflow-hidden">
-                                {invitation.coverImage ? (
-                                    <img
-                                        src={invitation.coverImage}
-                                        className="w-full h-full object-cover origin-center transition-transform"
-                                        alt="Wedding"
-                                        crossOrigin="anonymous"
-                                        style={{
-                                            transform: `scale(${imgConfig.scale}) translate(${imgConfig.x}%, ${imgConfig.y}%)`
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100">
-                                        <ImageIcon className="w-12 h-12 mb-2" />
-                                        <span>Chưa có ảnh bìa</span>
-                                    </div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none"></div>
-
-                                <div className="absolute bottom-4 left-0 w-full text-center text-white px-4">
-                                    <p className="font-serif-display italic text-lg opacity-90 mb-1">Save the Date</p>
-                                    <h2 className="font-serif-display text-3xl font-bold leading-tight">
-                                        {invitation.groomName || 'Chú Rể'}
-                                        <span className="text-rose-400 mx-2">&</span>
-                                        {invitation.brideName || 'Cô Dâu'}
-                                    </h2>
-                                    <p className="mt-2 text-sm font-medium uppercase tracking-widest opacity-80">
-                                        {invitation.date ? new Date(invitation.date).toLocaleDateString('vi-VN') : 'DD/MM/YYYY'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Info & QR Area */}
-                            <div className="flex-1 bg-white p-5 flex flex-col items-center justify-between text-center relative">
-                                {/* Decorative Circles */}
-                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm z-10">
-                                    <Heart className="w-6 h-6 text-rose-500 fill-current" />
-                                </div>
-
-                                <div className="mt-4 space-y-1">
-                                    <p className="text-gray-500 text-xs uppercase tracking-wide">Trân trọng mời bạn đến dự</p>
-                                    <h3 className="font-bold text-gray-800 text-lg uppercase">Lễ Thành Hôn</h3>
-                                </div>
-
-                                {/* QR Code Container */}
-                                <div className="my-3 p-2 border-2 border-rose-100 rounded-xl bg-white shadow-sm">
-                                    <QRCodeCanvas
-                                        value={publicLink}
-                                        size={100}
-                                        bgColor={"#ffffff"}
-                                        fgColor={invitation.themeColor}
-                                        level={"M"}
-                                        includeMargin={true}
-                                    />
-                                </div>
-
-                                <p className="text-xs text-gray-400 font-medium">Quét mã để xem thiệp & bản đồ</p>
-
-                                <div className="w-full border-t border-gray-100 mt-4 pt-3 flex items-center justify-between">
-                                    <span className="font-serif-display font-bold text-rose-600 text-lg">WedPlan AI</span>
-                                    <span className="text-[10px] text-gray-400">wedplanai.io.vn</span>
-                                </div>
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 py-6 border-y border-gray-100">
+                        <div className="flex flex-col items-center">
+                            <Clock className="w-6 h-6 mb-2 text-gray-400" />
+                            <h3 className="font-bold text-lg text-gray-800 uppercase font-sans">Thời gian</h3>
+                            <p className="text-2xl font-bold mt-1" style={{ color: primaryColor }}>{invitation.time}</p>
+                            <p className="text-gray-500 font-sans">{new Date(invitation.date).toLocaleDateString('vi-VN')}</p>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <MapPin className="w-6 h-6 mb-2 text-gray-400" />
+                            <h3 className="font-bold text-lg text-gray-800 uppercase font-sans">Địa điểm</h3>
+                            <p className="text-lg font-bold mt-1 text-gray-800">{invitation.location}</p>
+                            <p className="text-gray-500 font-sans text-sm">{invitation.address}</p>
                         </div>
                     </div>
 
-                    <p className="text-xs text-gray-400 max-w-xs text-center mt-2">
-                        * Mẹo: Tải ảnh này về và đăng lên Story Facebook/Instagram hoặc gửi Zalo cho bạn bè.
-                    </p>
+                    <div className="mt-8">
+                        {invitation.mapLink && (
+                            <a
+                                href={invitation.mapLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-8 py-3 rounded-full text-white font-bold shadow-lg hover:shadow-xl transition-all font-sans transform hover:-translate-y-1"
+                                style={{ backgroundColor: primaryColor }}
+                            >
+                                <Navigation className="w-4 h-4" /> Chỉ đường trên Map
+                            </a>
+                        )}
+                    </div>
+                </div>
+
+                {/* 3. Gift Box (Banking) */}
+                {bankQrUrl && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+                        <div className="text-center mb-6">
+                            <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-3 text-rose-500">
+                                <Gift className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-bold text-xl text-gray-800 font-sans">Hộp Mừng Cưới</h3>
+                            <p className="text-sm text-gray-500 mt-1 font-sans">Dành cho người bận rộn</p>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+                            <div className="p-2 border border-rose-100 rounded-xl bg-white shadow-sm">
+                                <img src={bankQrUrl} className="w-48 h-auto rounded-lg" alt="QR Banking" />
+                            </div>
+                            <div className="text-center md:text-left font-sans">
+                                <p className="text-sm text-gray-500 mb-1">Ngân hàng</p>
+                                <p className="font-bold text-gray-800 mb-4">{invitation.bankInfo.bankId}</p>
+
+                                <p className="text-sm text-gray-500 mb-1">Chủ tài khoản</p>
+                                <p className="font-bold text-gray-800 mb-4 uppercase">{invitation.bankInfo.accountName}</p>
+
+                                <p className="text-sm text-gray-500 mb-1">Số tài khoản</p>
+                                <div className="flex items-center gap-2 justify-center md:justify-start">
+                                    <p className="font-mono font-bold text-lg text-rose-600 tracking-wider">{invitation.bankInfo.accountNumber}</p>
+                                    <button onClick={handleCopyBank} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                        {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                {copied && <span className="text-xs text-green-600 font-medium">Đã sao chép!</span>}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Footer */}
+                <div className="text-center pt-8 pb-4">
+                    <p className="text-xs text-gray-400 font-sans">Thiệp được tạo miễn phí bởi <span className="font-bold text-rose-400">WedPlan AI</span></p>
                 </div>
             </div>
+
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in-up {
+                    animation: fadeInUp 1s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 };
 
-export default InvitationBuilder;
+export default PublicInvitationView;
