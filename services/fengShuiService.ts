@@ -15,22 +15,15 @@ Phong cách trả lời:
 
 /**
  * Helper function to clean and parse JSON from AI response.
- * Handles cases where AI wraps JSON in Markdown code blocks or adds preamble text.
  */
 const cleanAndParseJSON = (text: string): any => {
   try {
-    // 1. Remove Markdown code block markers if present
     let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-    // 2. Find the First '{' and Last '}' to extract the valid JSON object
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
-
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       cleaned = cleaned.substring(firstBrace, lastBrace + 1);
     }
-
-    // 3. Attempt to parse
     return JSON.parse(cleaned);
   } catch (error) {
     console.error("JSON Parsing Error. Raw text:", text);
@@ -48,24 +41,26 @@ export const analyzeCompatibility = async (profile: CoupleProfile): Promise<Harm
 
     HÃY LUẬN GIẢI CHI TIẾT THEO CẤU TRÚC SAU (Trả về JSON):
 
-    1. **Chuyển đổi**: Đổi ngày sinh sang Âm Lịch (Can Chi). Xác định Mệnh (Ngũ Hành Nạp Âm), Cung Phi (theo Bát Trạch).
-    2. **Xét 5 yếu tố chính**:
-       - **Mệnh (Ngũ hành):** Tương sinh hay Tương khắc? (Ví dụ: Chồng Kim - Vợ Thủy là Tương Sinh).
-       - **Thiên Can:** Hợp hay Phá?
-       - **Địa Chi:** Tam Hợp/Lục Hợp hay Tứ Hành Xung/Lục Hại?
-       - **Cung Phi Bát Trạch (Rất quan trọng):** Kết hợp Cung chồng và Cung vợ ra du niên nào (Sinh Khí, Phúc Đức, Thiên Y, Phục Vị là tốt; Tuyệt Mệnh, Ngũ Quỷ, Lục Sát, Họa Hại là xấu).
-       - **Cao Ly Đầu Hình:** Xem Thiên Can chồng và Địa Chi vợ.
+    1. **Chuyển đổi**: Đổi ngày sinh sang Âm Lịch (Can Chi). Xác định Mệnh (Ngũ Hành Nạp Âm), Cung Phi.
+    2. **Xét 5 yếu tố chính**: Ngũ hành, Thiên Can, Địa Chi, Cung Phi Bát Trạch, Cao Ly Đầu Hình.
     3. **Tổng kết điểm số:** Thang điểm 100.
-    4. **Lời bình & Hóa giải:** Viết một đoạn văn Markdown đẹp. Nếu có xung khắc (đặc biệt là Tuyệt Mệnh hay Ngũ Quỷ), hãy chỉ cách hóa giải cụ thể (ví dụ: Sinh con năm nào để trung hòa, kê giường hướng nào).
+    4. **Lời bình & Hóa giải:** Viết Markdown đẹp, chi tiết.
 
     OUTPUT FORMAT (JSON Only):
     {
       "score": number,
       "summary": "Câu chốt ngắn gọn (Ví dụ: Cung Diên Niên - Trăm năm hạnh phúc)",
-      "groomLunar": "Can Chi - Mệnh - Cung (Ví dụ: Giáp Tý - Hải Trung Kim - Cung Đoài)",
-      "brideLunar": "Can Chi - Mệnh - Cung (Ví dụ: Ất Sửu - Hải Trung Kim - Cung Ly)",
-      "groomElement": "Mệnh Ngũ Hành (Ví dụ: Kim)",
-      "brideElement": "Mệnh Ngũ Hành (Ví dụ: Kim)",
+      "groomLunar": "Can Chi (Ví dụ: Giáp Tý)",
+      "brideLunar": "Can Chi (Ví dụ: Ất Sửu)",
+      
+      "groomElement": "Mệnh Nạp Âm (Ví dụ: Hải Trung Kim)",
+      "groomElementKey": "KIM" | "MOC" | "THUY" | "HOA" | "THO",
+      
+      "brideElement": "Mệnh Nạp Âm (Ví dụ: Lư Trung Hỏa)",
+      "brideElementKey": "KIM" | "MOC" | "THUY" | "HOA" | "THO",
+
+      "conflictStatus": "SINH" | "KHAC" | "BINH", 
+
       "detailedAnalysis": "Chuỗi Markdown trình bày kết quả. Dùng các icon (✅, ⚠️, 🔥) để sinh động. Cần chia rõ các mục: 1. Luận Ngũ Hành, 2. Luận Cung Phi, 3. Luận Can Chi, 4. Kết Luận & Hóa Giải."
     }
   `;
@@ -91,11 +86,11 @@ export const findAuspiciousDates = async (profile: CoupleProfile): Promise<Auspi
     Nhiệm vụ của Thầy: Tìm 5 ngày ĐẠI CÁT (tốt nhất) trong khoảng thời gian trên để tổ chức Lễ Cưới (Rước Dâu).
 
     Tiêu chí lọc ngày khắt khe:
-    1. **Tránh tuổi Kim Lâu** của cô dâu (nếu phạm Kim Lâu thì phải đợi qua Đông Chí hoặc tư vấn cách 'Xin dâu hai lần').
-    2. **Ngày Hoàng Đạo:** Phải là ngày tốt trong tháng.
+    1. **Tránh tuổi Kim Lâu** của cô dâu.
+    2. **Ngày Hoàng Đạo**.
     3. **Tránh ngày xấu:** Tam Nương, Nguyệt Kỵ, Thọ Tử, Sát Chủ, Dương Công Kỵ Nhật.
     4. **Hợp tuổi:** Ngày không được xung Thái Tuế với cô dâu/chú rể.
-    5. **Nhị Thập Bát Tú:** Ưu tiên các sao tốt (Giác, Phòng, Vĩ, Cơ...).
+    5. **Nhị Thập Bát Tú:** Ưu tiên các sao tốt.
     6. **Trực:** Ưu tiên Trực Khai, Trực Kiến, Trực Bình, Trực Mãn.
 
     OUTPUT FORMAT (JSON Only Array):
