@@ -2,15 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import {
     Heart, Download, Eye,
-    Info, Palette, Camera, Sparkles,
-    ZoomIn, RefreshCw, Wand2, Upload, Trash2, Loader2, Image as ImageIcon
+    Info, Image as ImageIcon,
+    ZoomIn, Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
+    Palette, ChevronDown
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { BankInfo } from '../../types';
-import { storage, auth } from '../../lib/firebase'; // Thêm auth để kiểm tra session
-import * as Storage from 'firebase/storage';
-import { generateWeddingSticker } from '../../services/aiService';
 
 // Danh sách ngân hàng phổ biến cho VietQR
 const BANKS = [
@@ -24,27 +22,43 @@ const BANKS = [
     { id: 'TPB', name: 'TPBank' },
 ];
 
-const PRESET_GROOMS = ["Felix", "Aneka", "Jack", "Jerry", "Callum", "Pat", "Oliver", "Leo", "Max", "Sam", "Alex", "Micah", "Nolan"];
-const PRESET_BRIDES = ["Molly", "Aneka", "Lilly", "Annie", "Zoe", "Sophia", "Lily", "Mia", "Ruby", "Ella", "Avery", "Sara", "Leah"];
+const FloralCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => {
+    const classes = {
+        tl: 'top-0 left-0 -translate-x-1/4 -translate-y-1/4 rotate-0',
+        tr: 'top-0 right-0 translate-x-1/4 -translate-y-1/4 rotate-90',
+        bl: 'bottom-0 left-0 -translate-x-1/4 translate-y-1/4 -rotate-90',
+        br: 'bottom-0 right-0 translate-x-1/4 translate-y-1/4 rotate-180'
+    };
+
+    return (
+        <div className={`absolute w-32 h-32 pointer-events-none z-10 opacity-60 mix-blend-multiply ${classes[position]}`}>
+            <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-rose-200">
+                <path d="M20 20C50 20 80 40 100 80C120 40 150 20 180 20" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
+                <path d="M20 20C20 50 40 80 80 100C40 120 20 150 20 180" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
+                <circle cx="20" cy="20" r="8" fill="currentColor" className="text-rose-300" />
+                <path d="M100 80C110 110 140 130 180 130" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
+                <path d="M80 100C110 110 130 140 130 180" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
+            </svg>
+        </div>
+    );
+};
 
 const InvitationBuilder: React.FC = () => {
     const { invitation, updateInvitation, user, addNotification } = useStore();
-    const [activeTab, setActiveTab] = useState<'INFO' | 'BANK' | 'DESIGN'>('INFO');
+    const [activeTab, setActiveTab] = useState<'INFO' | 'BANK' | 'PHOTO'>('INFO');
     const marketingCardRef = useRef<HTMLDivElement>(null);
-
-    // AI Gen State
-    const [generatingAction, setGeneratingAction] = useState<string | null>(null);
-    const [promptDesc, setPromptDesc] = useState(invitation.sticker.styleDescription || "Tóc đen, đồ cưới truyền thống Việt Nam, màu đỏ vàng, chibi cute.");
-    const groomFileRef = useRef<HTMLInputElement>(null);
-    const brideFileRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Initial load check
     useEffect(() => {
         if (!invitation.groomName && user?.displayName) {
             updateInvitation({ groomName: user.displayName });
         }
-        if (!invitation.sticker) {
-            updateInvitation({ sticker: { groom: "Felix", bride: "Aneka", mode: 'BASIC' } });
+        // Set default photo config if missing
+        if (!invitation.photoConfig) {
+            updateInvitation({
+                photoConfig: { scale: 1, x: 0, y: 0 }
+            });
         }
     }, []);
 
@@ -58,19 +72,13 @@ const InvitationBuilder: React.FC = () => {
         });
     };
 
-    const handleStickerChange = (type: 'groom' | 'bride', value: string) => {
+    const handlePhotoConfigChange = (field: 'scale' | 'x' | 'y', value: number) => {
         updateInvitation({
-            sticker: {
-                ...invitation.sticker,
-                [type]: value,
-                mode: 'BASIC'
+            photoConfig: {
+                ...(invitation.photoConfig || { scale: 1, x: 0, y: 0 }),
+                [field]: value
             }
         });
-    };
-
-    const randomizeSticker = (type: 'groom' | 'bride') => {
-        const randomSeed = Math.random().toString(36).substring(7);
-        handleStickerChange(type, randomSeed);
     };
 
     const downloadMarketingCard = async () => {
@@ -92,133 +100,58 @@ const InvitationBuilder: React.FC = () => {
         }
     };
 
-    // --- AI AVATAR LOGIC (ĐÃ NÂNG CẤP) ---
+    // --- LOCAL IMAGE PROCESSING ---
+    const resizeAndConvertToBase64 = (file: File, maxWidth: number = 800): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
 
-    const handleFaceUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'groom' | 'bride') => {
-        const file = e.target.files?.[0];
-
-        // 1. Kiểm tra File & User Local
-        if (!file || !user) return;
-
-        // 2. [FIX CRITICAL] Kiểm tra kết nối Firebase thực tế
-        if (!auth.currentUser) {
-            alert("⚠️ Lỗi phiên đăng nhập: Kết nối đến server bị ngắt quãng.\n\nHãy tải lại trang (F5) hoặc Đăng xuất rồi Đăng nhập lại để khắc phục.");
-            return;
-        }
-
-        try {
-            // [FIX EXTENSION] Lấy đuôi file (ví dụ .png, .jpg) để tránh lỗi định dạng
-            const fileExt = file.name.split('.').pop() || 'png';
-            const fileName = `${type}_${Date.now()}.${fileExt}`;
-
-            // Sử dụng auth.currentUser.uid để đảm bảo trùng khớp với Rules
-            const currentUserId = auth.currentUser.uid;
-            const storageRef = Storage.ref(storage, `ai_faces/${currentUserId}/${fileName}`);
-
-            // Thêm metadata để server nhận diện đúng loại file
-            const metadata = {
-                contentType: file.type,
-            };
-
-            // Thực hiện Upload
-            addNotification('INFO', 'Đang tải ảnh lên...');
-            const snapshot = await Storage.uploadBytes(storageRef, file, metadata);
-            const url = await Storage.getDownloadURL(snapshot.ref);
-
-            updateInvitation({
-                sticker: {
-                    ...invitation.sticker,
-                    [`${type}FaceUrl`]: url
-                }
-            });
-            addNotification('SUCCESS', `Đã tải ảnh ${type === 'groom' ? 'Chú Rể' : 'Cô Dâu'} thành công!`);
-
-        } catch (err: any) {
-            console.error("Upload Failed:", err);
-
-            // Xử lý thông báo lỗi thân thiện
-            if (err.code === 'storage/unauthorized') {
-                alert(`⛔ Lỗi quyền truy cập (403 Forbidden)\n\nNguyên nhân: Server từ chối bạn ghi vào thư mục này.\nGiải pháp: Hãy Đăng xuất và Đăng nhập lại tài khoản Google của bạn.`);
-            } else if (err.code === 'storage/canceled') {
-                addNotification('WARNING', 'Đã hủy tải lên.');
-            } else {
-                alert(`Lỗi không xác định: ${err.message}`);
-            }
-        } finally {
-            // Reset input để cho phép chọn lại cùng 1 file nếu cần
-            if (e.target) e.target.value = '';
-        }
-    };
-
-    const urlToBase64 = async (url: string): Promise<string | undefined> => {
-        try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) {
-            console.error("Error converting image:", e);
-            return undefined;
-        }
-    };
-
-    const handleGenerateSticker = async (action: string, actionKey: string) => {
-        if (!user || !auth.currentUser) {
-            alert("Vui lòng đăng nhập lại để sử dụng tính năng AI.");
-            return;
-        }
-
-        setGeneratingAction(actionKey);
-        try {
-            const groomRef = invitation.sticker.groomFaceUrl ? await urlToBase64(invitation.sticker.groomFaceUrl) : undefined;
-            const brideRef = invitation.sticker.brideFaceUrl ? await urlToBase64(invitation.sticker.brideFaceUrl) : undefined;
-
-            const base64Image = await generateWeddingSticker(
-                user,
-                promptDesc,
-                action,
-                { groom: groomRef, bride: brideRef }
-            );
-
-            // Upload kết quả sticker lên Storage
-            const res = await fetch(base64Image);
-            const blob = await res.blob();
-
-            const currentUserId = auth.currentUser.uid;
-            // [FIX EXTENSION] Sticker AI luôn là PNG
-            const storageRef = Storage.ref(storage, `ai_stickers/${currentUserId}/${actionKey}_${Date.now()}.png`);
-
-            const metadata = { contentType: 'image/png' };
-            const snapshot = await Storage.uploadBytes(storageRef, blob, metadata);
-            const downloadUrl = await Storage.getDownloadURL(snapshot.ref);
-
-            updateInvitation({
-                sticker: {
-                    ...invitation.sticker,
-                    mode: 'AI_GEN',
-                    styleDescription: promptDesc,
-                    stickerPack: {
-                        ...invitation.sticker.stickerPack,
-                        [actionKey]: downloadUrl,
-                        ...(actionKey === 'main' ? { main: downloadUrl } : {})
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
                     }
-                }
-            });
-            addNotification('SUCCESS', `Đã tạo sticker: ${action}`);
 
-        } catch (err: any) {
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    // Quality 0.8 for good balance
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = (err) => reject(err);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const base64String = await resizeAndConvertToBase64(file, 800);
+            updateInvitation({
+                couplePhoto: base64String,
+                photoConfig: { scale: 1, x: 0, y: 0 } // Reset config on new photo
+            });
+            addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
+        } catch (err) {
             console.error(err);
-            alert(`Lỗi tạo ảnh: ${err.message}`);
-        } finally {
-            setGeneratingAction(null);
+            alert("Lỗi xử lý ảnh. Vui lòng thử ảnh khác.");
         }
     };
 
     const publicLink = `${window.location.origin}/?view=invitation&uid=${user?.uid || 'guest'}`;
-    const getAvatarUrl = (seed: string) => `https://api.dicebear.com/9.x/notionists/svg?seed=${seed}&scale=120&backgroundColor=transparent`;
+    const primaryColor = invitation.themeColor || '#e11d48';
 
     return (
         <div className="h-full flex flex-col bg-[#FDF2F8]">
@@ -229,7 +162,7 @@ const InvitationBuilder: React.FC = () => {
                         <Heart className="w-6 h-6 text-rose-500 fill-current animate-pulse" />
                         Thiệp Mời Online
                     </h1>
-                    <p className="text-xs text-gray-500 mt-1">Tạo thiệp, QR mừng cưới & Sticker cặp đôi.</p>
+                    <p className="text-xs text-gray-500 mt-1">Tạo thiệp, QR mừng cưới & Ảnh cưới đẹp.</p>
                 </div>
                 <div className="flex gap-2">
                     <a
@@ -238,13 +171,13 @@ const InvitationBuilder: React.FC = () => {
                         rel="noreferrer"
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-bold hover:bg-rose-50 transition-colors"
                     >
-                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem trang khách</span>
+                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem thực tế</span>
                     </a>
                     <button
                         onClick={downloadMarketingCard}
                         className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md transition-colors"
                     >
-                        <Download className="w-4 h-4" /> <span className="hidden sm:inline">Tải ảnh thiệp</span>
+                        <Download className="w-4 h-4" /> <span className="hidden sm:inline">Tải ảnh</span>
                     </button>
                 </div>
             </div>
@@ -256,8 +189,8 @@ const InvitationBuilder: React.FC = () => {
                     <div className="flex border-b border-gray-100">
                         <button onClick={() => setActiveTab('INFO')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'INFO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Thông Tin</button>
                         <button onClick={() => setActiveTab('BANK')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'BANK' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Ngân Hàng</button>
-                        <button onClick={() => setActiveTab('DESIGN')} className={`flex-1 py-3 text-sm font-bold border-b-2 flex items-center justify-center gap-1 ${activeTab === 'DESIGN' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
-                            <Sparkles className="w-3.5 h-3.5" /> AVATAR AI
+                        <button onClick={() => setActiveTab('PHOTO')} className={`flex-1 py-3 text-sm font-bold border-b-2 flex items-center justify-center gap-1 ${activeTab === 'PHOTO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
+                            <ImageIcon className="w-3.5 h-3.5" /> Ảnh Cưới
                         </button>
                     </div>
 
@@ -269,11 +202,11 @@ const InvitationBuilder: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-xs font-bold text-gray-500 uppercase">Chú Rể</label>
-                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.groomName} onChange={e => handleInputChange('groomName', e.target.value)} placeholder="Tên Chú Rể" />
+                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam" value={invitation.groomName} onChange={e => handleInputChange('groomName', e.target.value)} placeholder="Tên Chú Rể" />
                                     </div>
                                     <div>
                                         <label className="text-xs font-bold text-gray-500 uppercase">Cô Dâu</label>
-                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.brideName} onChange={e => handleInputChange('brideName', e.target.value)} placeholder="Tên Cô Dâu" />
+                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam" value={invitation.brideName} onChange={e => handleInputChange('brideName', e.target.value)} placeholder="Tên Cô Dâu" />
                                     </div>
                                 </div>
 
@@ -289,23 +222,33 @@ const InvitationBuilder: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Địa điểm (Tên nhà hàng/Tư gia)</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.location} onChange={e => handleInputChange('location', e.target.value)} placeholder="VD: Trung tâm tiệc cưới White Palace" />
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Địa điểm</label>
+                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam" value={invitation.location} onChange={e => handleInputChange('location', e.target.value)} placeholder="VD: Trung tâm tiệc cưới White Palace" />
                                 </div>
 
                                 <div>
                                     <label className="text-xs font-bold text-gray-500 uppercase">Địa chỉ chi tiết</label>
-                                    <textarea rows={2} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none" value={invitation.address} onChange={e => handleInputChange('address', e.target.value)} placeholder="Số 123 Đường ABC, Phường XYZ..." />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Link Google Maps</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.mapLink} onChange={e => handleInputChange('mapLink', e.target.value)} placeholder="https://maps.app.goo.gl/..." />
+                                    <textarea rows={2} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none font-be-vietnam" value={invitation.address} onChange={e => handleInputChange('address', e.target.value)} placeholder="Số 123 Đường ABC, Phường XYZ..." />
                                 </div>
 
                                 <div>
                                     <label className="text-xs font-bold text-gray-500 uppercase">Lời Nhắn / Lời Mời</label>
-                                    <textarea rows={3} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none" value={invitation.wishes} onChange={e => handleInputChange('wishes', e.target.value)} />
+                                    <textarea rows={3} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none font-be-vietnam" value={invitation.wishes} onChange={e => handleInputChange('wishes', e.target.value)} />
+                                </div>
+
+                                {/* Color Picker */}
+                                <div className="pt-4 border-t border-gray-100">
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-2"><Palette className="w-3 h-3" /> Màu chủ đạo</label>
+                                    <div className="flex gap-2">
+                                        {['#e11d48', '#db2777', '#7c3aed', '#059669', '#d97706', '#1e293b'].map(color => (
+                                            <button
+                                                key={color}
+                                                className={`w-8 h-8 rounded-full border-2 transition-transform ${invitation.themeColor === color ? 'border-gray-600 scale-110 shadow-sm' : 'border-transparent'}`}
+                                                style={{ backgroundColor: color }}
+                                                onClick={() => handleInputChange('themeColor', color)}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -341,275 +284,180 @@ const InvitationBuilder: React.FC = () => {
                             </div>
                         )}
 
-                        {activeTab === 'DESIGN' && (
+                        {activeTab === 'PHOTO' && (
                             <div className="space-y-6 animate-fadeIn">
-                                {/* MODE SWITCH */}
-                                <div className="flex bg-gray-100 p-1 rounded-xl">
-                                    <button
-                                        onClick={() => updateInvitation({ sticker: { ...invitation.sticker, mode: 'BASIC' } })}
-                                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${invitation.sticker.mode === 'BASIC' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}
-                                    >
-                                        Cơ bản (Icon)
-                                    </button>
-                                    <button
-                                        onClick={() => updateInvitation({ sticker: { ...invitation.sticker, mode: 'AI_GEN' } })}
-                                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${invitation.sticker.mode === 'AI_GEN' ? 'bg-white text-rose-600 shadow-sm' : 'text-gray-500'}`}
-                                    >
-                                        <Sparkles className="w-3 h-3" /> Nâng cao (AI Sticker)
-                                    </button>
+                                {/* UPLOAD BUTTON */}
+                                <div
+                                    className="border-2 border-dashed border-rose-200 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-rose-400 hover:bg-rose-50 transition-all group"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                                        <Upload className="w-6 h-6 text-rose-500" />
+                                    </div>
+                                    <p className="text-sm font-bold text-gray-700">Tải ảnh cưới lên</p>
+                                    <p className="text-xs text-gray-400 mt-1">Hỗ trợ JPG, PNG (Tối đa 5MB)</p>
                                 </div>
 
-                                {/* AI MODE CONTENT */}
-                                {invitation.sticker.mode === 'AI_GEN' ? (
-                                    <div className="space-y-5">
-                                        <div className="bg-gradient-to-r from-rose-50 to-pink-50 p-4 rounded-xl border border-rose-100">
-                                            <h4 className="text-sm font-bold text-rose-800 mb-3 flex items-center gap-2"><Camera className="w-4 h-4" /> 1. Upload Khuôn Mặt</h4>
-                                            <div className="flex gap-4">
-                                                <div className="flex-1 flex flex-col items-center gap-2">
-                                                    <div
-                                                        className="w-16 h-16 rounded-full bg-white border-2 border-dashed border-rose-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-rose-500 relative"
-                                                        onClick={() => groomFileRef.current?.click()}
-                                                    >
-                                                        {invitation.sticker.groomFaceUrl ? (
-                                                            <img src={invitation.sticker.groomFaceUrl} className="w-full h-full object-cover" />
-                                                        ) : <Upload className="w-5 h-5 text-rose-300" />}
-                                                        <input type="file" ref={groomFileRef} className="hidden" accept="image/*" onChange={(e) => handleFaceUpload(e, 'groom')} />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-gray-600">Chú Rể</span>
-                                                </div>
-                                                <div className="flex-1 flex flex-col items-center gap-2">
-                                                    <div
-                                                        className="w-16 h-16 rounded-full bg-white border-2 border-dashed border-rose-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-rose-500 relative"
-                                                        onClick={() => brideFileRef.current?.click()}
-                                                    >
-                                                        {invitation.sticker.brideFaceUrl ? (
-                                                            <img src={invitation.sticker.brideFaceUrl} className="w-full h-full object-cover" />
-                                                        ) : <Upload className="w-5 h-5 text-rose-300" />}
-                                                        <input type="file" ref={brideFileRef} className="hidden" accept="image/*" onChange={(e) => handleFaceUpload(e, 'bride')} />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-gray-600">Cô Dâu</span>
-                                                </div>
-                                            </div>
+                                {invitation.couplePhoto && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2"><Move className="w-4 h-4" /> Căn chỉnh vị trí</h4>
+                                            <button onClick={() => updateInvitation({ couplePhoto: undefined })} className="text-red-500 text-xs font-bold flex items-center gap-1 hover:underline"><Trash2 className="w-3 h-3" /> Xóa ảnh</button>
                                         </div>
 
+                                        {/* ZOOM SLIDER */}
                                         <div>
-                                            <h4 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2"><Palette className="w-4 h-4" /> 2. Mô Tả Phong Cách</h4>
-                                            <textarea
-                                                className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-rose-500 outline-none resize-none bg-gray-50 h-24"
-                                                placeholder="VD: Tóc chú rể vuốt ngược, mặc vest đen. Cô dâu tóc dài xoăn nhẹ, váy cưới trắng trễ vai. Phong cách Chibi cute, má hồng."
-                                                value={promptDesc}
-                                                onChange={(e) => setPromptDesc(e.target.value)}
+                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                <span>Thu nhỏ</span>
+                                                <span className="font-bold flex items-center gap-1"><Maximize className="w-3 h-3" /> Phóng to ({invitation.photoConfig?.scale || 1}x)</span>
+                                            </div>
+                                            <input
+                                                type="range" min="1" max="3" step="0.1"
+                                                className="w-full accent-rose-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                value={invitation.photoConfig?.scale || 1}
+                                                onChange={(e) => handlePhotoConfigChange('scale', parseFloat(e.target.value))}
                                             />
                                         </div>
 
+                                        {/* X POSITION SLIDER */}
                                         <div>
-                                            <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><Wand2 className="w-4 h-4" /> 3. Tạo Sticker Hành Động</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {[
-                                                    { key: 'main', label: 'Ảnh Chính', prompt: 'Standing together holding hands, romantic' },
-                                                    { key: 'kiss', label: 'Hôn nhau', prompt: 'Kissing romantically' },
-                                                    { key: 'hug', label: 'Ôm nhau', prompt: 'Hugging tightly, cute' },
-                                                    { key: 'dance', label: 'Khiêu vũ', prompt: 'Dancing happily' },
-                                                    { key: 'cheers', label: 'Cụng ly', prompt: 'Holding champagne glasses, cheers' },
-                                                    { key: 'proposal', label: 'Cầu hôn', prompt: 'Groom kneeling proposing with ring' }
-                                                ].map((action) => (
-                                                    <div key={action.key} className="relative group">
-                                                        <button
-                                                            onClick={() => handleGenerateSticker(action.prompt, action.key)}
-                                                            disabled={!!generatingAction}
-                                                            className="w-full p-3 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50 transition-all flex flex-col items-center gap-2 relative overflow-hidden"
-                                                        >
-                                                            {invitation.sticker.stickerPack?.[action.key as keyof typeof invitation.sticker.stickerPack] ? (
-                                                                <img
-                                                                    src={invitation.sticker.stickerPack[action.key as keyof typeof invitation.sticker.stickerPack]}
-                                                                    className="w-full h-24 object-contain"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-24 bg-gray-50 flex items-center justify-center text-gray-300">
-                                                                    <ImageIcon className="w-8 h-8" />
-                                                                </div>
-                                                            )}
-                                                            <span className="text-xs font-bold text-gray-700">{action.label}</span>
-
-                                                            {generatingAction === action.key && (
-                                                                <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                                                                    <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
-                                                                </div>
-                                                            )}
-                                                        </button>
-                                                    </div>
-                                                ))}
+                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                <span>Trái</span>
+                                                <span className="font-bold flex items-center gap-1"><ArrowRightLeft className="w-3 h-3" /> Di chuyển Ngang</span>
+                                                <span>Phải</span>
                                             </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    /* BASIC MODE CONTENT */
-                                    <div className="bg-gradient-to-r from-violet-50 to-indigo-50 p-4 rounded-xl border border-indigo-100">
-                                        <h3 className="font-bold text-indigo-900 text-sm flex items-center gap-2 mb-3">
-                                            <Palette className="w-4 h-4 text-indigo-500" />
-                                            Chọn Avatar (DiceBear)
-                                        </h3>
-
-                                        {/* GROOM SELECTOR */}
-                                        <div className="mb-4">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Chú Rể</label>
-                                                <button onClick={() => randomizeSticker('groom')} className="text-xs text-indigo-600 flex items-center gap-1 hover:underline"><RefreshCw className="w-3 h-3" /> Ngẫu nhiên</button>
-                                            </div>
-                                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                                {PRESET_GROOMS.map(seed => (
-                                                    <div
-                                                        key={seed}
-                                                        onClick={() => handleStickerChange('groom', seed)}
-                                                        className={`w-12 h-12 rounded-full border-2 overflow-hidden flex-shrink-0 cursor-pointer transition-all bg-white ${invitation.sticker?.groom === seed ? 'border-indigo-600 scale-110 shadow-sm' : 'border-transparent hover:border-gray-300'}`}
-                                                    >
-                                                        <img src={getAvatarUrl(seed)} className="w-full h-full object-cover" />
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            <input
+                                                type="range" min="-50" max="50" step="1"
+                                                className="w-full accent-rose-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                value={invitation.photoConfig?.x || 0}
+                                                onChange={(e) => handlePhotoConfigChange('x', parseFloat(e.target.value))}
+                                            />
                                         </div>
 
-                                        {/* BRIDE SELECTOR */}
+                                        {/* Y POSITION SLIDER */}
                                         <div>
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Cô Dâu</label>
-                                                <button onClick={() => randomizeSticker('bride')} className="text-xs text-rose-600 flex items-center gap-1 hover:underline"><RefreshCw className="w-3 h-3" /> Ngẫu nhiên</button>
+                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                <span>Lên</span>
+                                                <span className="font-bold flex items-center gap-1"><ArrowUp className="w-3 h-3" /> Di chuyển Dọc</span>
+                                                <span>Xuống</span>
                                             </div>
-                                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                                {PRESET_BRIDES.map(seed => (
-                                                    <div
-                                                        key={seed}
-                                                        onClick={() => handleStickerChange('bride', seed)}
-                                                        className={`w-12 h-12 rounded-full border-2 overflow-hidden flex-shrink-0 cursor-pointer transition-all bg-white ${invitation.sticker?.bride === seed ? 'border-rose-600 scale-110 shadow-sm' : 'border-transparent hover:border-gray-300'}`}
-                                                    >
-                                                        <img src={getAvatarUrl(seed)} className="w-full h-full object-cover" />
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            <input
+                                                type="range" min="-50" max="50" step="1"
+                                                className="w-full accent-rose-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                value={invitation.photoConfig?.y || 0}
+                                                onChange={(e) => handlePhotoConfigChange('y', parseFloat(e.target.value))}
+                                            />
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Color Picker */}
-                                <div className="pt-4 border-t border-gray-100">
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Màu chủ đạo thiệp</label>
-                                    <div className="flex gap-2">
-                                        {['#e11d48', '#db2777', '#7c3aed', '#059669', '#d97706', '#1e293b'].map(color => (
-                                            <button
-                                                key={color}
-                                                className={`w-8 h-8 rounded-full border-2 ${invitation.themeColor === color ? 'border-gray-600 scale-110' : 'border-transparent'}`}
-                                                style={{ backgroundColor: color }}
-                                                onClick={() => handleInputChange('themeColor', color)}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* RIGHT: Preview & Marketing Card */}
-                <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[500px]">
-                    <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
-                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2 text-center">Card Marketing (Ảnh tải về)</h3>
+                {/* RIGHT: Preview (Enhanced with Modern Look) */}
+                <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[700px]">
+                    <div className="bg-white p-2 rounded-[2.5rem] shadow-sm mb-4 border-[8px] border-white">
 
-                        {/* MARKETING CARD NODE - Captured by html2canvas */}
+                        {/* CARD PREVIEW CONTAINER (Mobile Size) */}
                         <div
                             ref={marketingCardRef}
-                            className="w-[350px] bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col border border-gray-100"
-                            style={{ minHeight: '600px' }}
+                            className="w-[360px] bg-white relative flex flex-col overflow-hidden rounded-[2rem] shadow-lg"
+                            style={{ height: '740px' }} // Fixed height mobile view
                         >
-                            {/* Sticker Header */}
-                            <div className="h-[300px] relative overflow-hidden flex items-center justify-center pt-8" style={{ backgroundColor: invitation.themeColor + '15' }}>
-
-                                {/* DISPLAY LOGIC: AI MODE VS BASIC MODE */}
-                                {invitation.sticker.mode === 'AI_GEN' ? (
-                                    <div className="relative w-64 h-64 animate-float-slow">
-                                        {invitation.sticker.stickerPack?.main ? (
-                                            <img src={invitation.sticker.stickerPack.main} className="w-full h-full object-contain drop-shadow-xl" crossOrigin="anonymous" />
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                                <Sparkles className="w-12 h-12 mb-2" />
-                                                <span className="text-xs">Chưa tạo sticker AI</span>
-                                            </div>
-                                        )}
-                                    </div>
+                            {/* Main Photo Area (Full Bleed Top) */}
+                            <div className="h-[450px] w-full relative overflow-hidden bg-gray-200">
+                                {invitation.couplePhoto ? (
+                                    <img
+                                        src={invitation.couplePhoto}
+                                        className="absolute w-full h-full object-cover transition-transform duration-100"
+                                        style={{
+                                            transform: `scale(${invitation.photoConfig?.scale || 1}) translate(${invitation.photoConfig?.x || 0}%, ${invitation.photoConfig?.y || 0}%)`
+                                        }}
+                                        alt="Wedding Couple"
+                                    />
                                 ) : (
-                                    <div className="flex items-center gap-4 transform scale-125">
-                                        <div className="relative z-10 w-24 h-24 drop-shadow-xl animate-float-slow">
-                                            <img src={getAvatarUrl(invitation.sticker?.groom || 'Felix')} className="w-full h-full object-cover" crossOrigin="anonymous" />
-                                        </div>
-                                        <Heart className="w-8 h-8 fill-current animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 opacity-50" style={{ color: invitation.themeColor }} />
-                                        <div className="relative z-10 w-24 h-24 drop-shadow-xl animate-float-delayed">
-                                            <img src={getAvatarUrl(invitation.sticker?.bride || 'Aneka')} className="w-full h-full object-cover" crossOrigin="anonymous" />
-                                        </div>
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-50">
+                                        <ImageIcon className="w-16 h-16 mb-2" />
+                                        <span className="text-sm font-medium">Chưa có ảnh</span>
                                     </div>
                                 )}
 
-                                {/* Overlay Text */}
-                                <div className="absolute bottom-0 left-0 w-full p-4 text-center">
-                                    <p className="font-serif-display italic text-sm opacity-60 mb-1" style={{ color: invitation.themeColor }}>Save the Date</p>
-                                    <h2 className="font-serif-display text-2xl font-bold leading-tight text-gray-800">
-                                        {invitation.groomName || 'Chú Rể'}
-                                        <span className="text-rose-400 mx-2">&</span>
+                                {/* Modern Overlay Gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70"></div>
+
+                                {/* Text Overlay on Image */}
+                                <div className="absolute bottom-0 w-full p-6 text-center text-white pb-8">
+                                    <p className="font-be-vietnam text-xs tracking-[0.3em] uppercase opacity-90 mb-2 font-bold">Save The Date</p>
+                                    <h2 className="font-['Great_Vibes',cursive] text-5xl leading-tight mb-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                                        {invitation.groomName || 'Chú Rể'} <br />
+                                        <span className="text-2xl font-serif text-rose-200">&</span> <br />
                                         {invitation.brideName || 'Cô Dâu'}
                                     </h2>
-                                    <p className="mt-1 text-xs font-medium uppercase tracking-widest opacity-60 text-gray-500">
-                                        {invitation.date ? new Date(invitation.date).toLocaleDateString('vi-VN') : 'DD/MM/YYYY'}
-                                    </p>
+                                    <div className="w-8 h-8 mx-auto mt-2 animate-bounce">
+                                        <ChevronDown className="w-full h-full text-white/80" />
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Info & QR Area */}
-                            <div className="flex-1 bg-white p-5 flex flex-col items-center justify-between text-center relative">
-                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm z-10">
-                                    <Heart className="w-6 h-6 fill-current" style={{ color: invitation.themeColor }} />
+                            {/* Info Section */}
+                            <div className="flex-1 px-6 py-6 flex flex-col items-center text-center bg-white relative">
+                                <FloralCorner position="tl" />
+                                <FloralCorner position="tr" />
+
+                                <div className="space-y-4 mb-4 w-full relative z-10">
+                                    <div>
+                                        <h3 className="font-be-vietnam text-lg font-bold text-gray-800 uppercase tracking-widest mb-1">Thành Hôn</h3>
+                                        <p className="text-gray-500 font-be-vietnam italic text-xs">Trân trọng kính mời quý khách tới dự lễ chung vui</p>
+                                    </div>
+
+                                    <div className="flex items-center justify-center gap-3 bg-white/50 backdrop-blur p-3 rounded-xl border border-rose-100 shadow-sm">
+                                        <div className="text-right">
+                                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Giờ</p>
+                                            <p className="font-bold text-xl text-rose-600 font-be-vietnam">{invitation.time || '00:00'}</p>
+                                        </div>
+                                        <div className="w-px h-8 bg-rose-200"></div>
+                                        <div className="text-left">
+                                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Ngày</p>
+                                            <p className="font-bold text-sm text-gray-800 font-be-vietnam uppercase">{invitation.date ? new Date(invitation.date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'DD/MM/YYYY'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-xs text-gray-600 font-be-vietnam leading-relaxed px-2">
+                                        Tại <span className="font-bold">{invitation.location || 'Địa điểm tổ chức'}</span>
+                                    </div>
                                 </div>
 
-                                <div className="mt-4 space-y-1">
-                                    <p className="text-gray-500 text-xs uppercase tracking-wide">Trân trọng mời bạn đến dự</p>
-                                    <h3 className="font-bold text-gray-800 text-lg uppercase">Lễ Thành Hôn</h3>
-                                </div>
-
-                                {/* QR Code Container */}
-                                <div className="my-3 p-2 border-2 border-dashed rounded-xl bg-white shadow-sm" style={{ borderColor: invitation.themeColor + '40' }}>
+                                {/* QR Code Compact */}
+                                <div className="mt-auto flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-dashed border-gray-300 w-full justify-center relative z-10">
                                     <QRCodeCanvas
                                         value={publicLink}
-                                        size={100}
+                                        size={40}
                                         bgColor={"#ffffff"}
-                                        fgColor={invitation.themeColor}
+                                        fgColor={primaryColor}
                                         level={"M"}
-                                        includeMargin={true}
                                     />
-                                </div>
-
-                                <p className="text-[10px] text-gray-400 font-medium">Quét mã để xem Thiệp Online</p>
-
-                                <div className="w-full border-t border-gray-100 mt-4 pt-3 flex items-center justify-between">
-                                    <span className="font-serif-display font-bold text-lg" style={{ color: invitation.themeColor }}>WedPlan AI</span>
-                                    <span className="text-[10px] text-gray-400">wedplanai.io.vn</span>
+                                    <div className="text-left">
+                                        <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Quét mã QR</p>
+                                        <p className="text-[8px] text-gray-500 font-be-vietnam">Xem bản đồ & Mừng cưới</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <p className="text-xs text-gray-400 font-medium font-be-vietnam">Kéo thả ảnh để căn chỉnh vị trí</p>
                 </div>
             </div>
+
             <style>{`
-                @keyframes floatSlow {
-                    0%, 100% { transform: translateY(0px) rotate(-2deg); }
-                    50% { transform: translateY(-10px) rotate(2deg); }
-                }
-                @keyframes floatDelayed {
-                    0%, 100% { transform: translateY(0px) rotate(2deg); }
-                    50% { transform: translateY(-10px) rotate(-2deg); }
-                }
-                .animate-float-slow {
-                    animation: floatSlow 6s ease-in-out infinite;
-                }
-                .animate-float-delayed {
-                    animation: floatDelayed 6s ease-in-out infinite 1s;
-                }
+                @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+                
+                .font-merriweather { font-family: 'Merriweather', serif; }
+                .font-cinzel { font-family: 'Cinzel', serif; }
+                .font-be-vietnam { font-family: 'Be Vietnam Pro', sans-serif; }
             `}</style>
         </div>
     );

@@ -128,13 +128,10 @@ export interface BankInfo {
   template: 'qr_code' | 'compact';
 }
 
-export interface StickerPack {
-  main?: string; // Ảnh chính
-  kiss?: string; // Hôn
-  hug?: string; // Ôm
-  dance?: string; // Nhảy
-  cheers?: string; // Cụng ly
-  proposal?: string; // Cầu hôn
+export interface PhotoConfig {
+  scale: number;
+  x: number;
+  y: number;
 }
 
 export interface InvitationData {
@@ -148,15 +145,13 @@ export interface InvitationData {
   mapLink: string;
   bankInfo: BankInfo;
   wishes: string;
-  sticker: {
-    groom: string; // Seed string for DiceBear
-    bride: string; // Seed string for DiceBear
-    // AI GEN FIELDS
-    mode: 'BASIC' | 'AI_GEN';
-    groomFaceUrl?: string; // URL ảnh thật
-    brideFaceUrl?: string; // URL ảnh thật
-    styleDescription?: string;
-    stickerPack?: StickerPack;
-  };
+
+  // NEW PHOTO FIELDS
+  couplePhoto?: string; // Base64 string
+  photoConfig?: PhotoConfig;
+
+  // Deprecated but kept for type safety during migration if needed
+  sticker?: any;
+
   themeColor: string;
 }
