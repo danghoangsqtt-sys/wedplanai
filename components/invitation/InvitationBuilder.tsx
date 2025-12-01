@@ -63,9 +63,18 @@ const InvitationBuilder: React.FC = () => {
 
         setIsUploading(true);
         try {
-            const storageRef = ref(storage, `invitations/${user!.uid}/${file.name}_${Date.now()}`);
-            const metadata = { contentType: file.type }; // Thêm dòng này
-            const snapshot = await uploadBytes(storageRef, file, metadata); // Truyền metadata vào
+            // Tạo tên file duy nhất
+            const fileName = `${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}_${Date.now()}`;
+            const storageRef = ref(storage, `invitations/${user!.uid}/${fileName}`);
+
+            // --- QUAN TRỌNG: Thêm Metadata ---
+            const metadata = {
+                contentType: file.type, // Ví dụ: 'image/jpeg', 'image/png'
+            };
+
+            // Truyền metadata vào hàm uploadBytes
+            const snapshot = await uploadBytes(storageRef, file, metadata);
+
             const url = await getDownloadURL(snapshot.ref);
             updateInvitation({ coverImage: url });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
@@ -74,6 +83,8 @@ const InvitationBuilder: React.FC = () => {
             alert("Lỗi upload: " + error.message);
         } finally {
             setIsUploading(false);
+            // Reset input để cho phép chọn lại cùng file nếu muốn
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
