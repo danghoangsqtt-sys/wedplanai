@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { analyzeCompatibility, findAuspiciousDates } from '../../services/fengShuiService';
@@ -24,6 +25,9 @@ const getElementConfig = (key: ElementKey | undefined) => {
 const MarkdownRenderer = ({ content }: { content: string }) => {
   if (!content) return null;
 
+  // 1. Normalize newlines: Handle literal "\n" strings if they appear in the JSON
+  const normalizedContent = content.replace(/\\n/g, '\n');
+
   // Function to parse inline formatting: Bold (**text**)
   const parseInline = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
@@ -37,7 +41,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
 
   return (
     <div className="space-y-3 text-gray-700 leading-relaxed font-sans text-sm md:text-base">
-      {content.split('\n').map((line, index) => {
+      {normalizedContent.split('\n').map((line, index) => {
         const trimmed = line.trim();
         if (!trimmed) return <div key={index} className="h-2" />; // Spacer for empty lines
 
