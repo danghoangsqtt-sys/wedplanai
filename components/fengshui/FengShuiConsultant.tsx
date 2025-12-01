@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { analyzeCompatibility, findAuspiciousDates } from '../../services/fengShuiService';
@@ -19,6 +18,55 @@ const getElementConfig = (key: ElementKey | undefined) => {
     case 'THO': return { label: 'Thổ', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: Mountain };
     default: return { label: '?', color: 'text-gray-400', bg: 'bg-gray-50', border: 'border-gray-200', icon: Sparkles };
   }
+};
+
+// --- HELPER: MARKDOWN RENDERER ---
+const MarkdownRenderer = ({ content }: { content: string }) => {
+  if (!content) return null;
+
+  // Function to parse inline formatting: Bold (**text**)
+  const parseInline = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
+  return (
+    <div className="space-y-3 text-gray-700 leading-relaxed font-sans text-sm md:text-base">
+      {content.split('\n').map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={index} className="h-2" />; // Spacer for empty lines
+
+        // Headers
+        if (trimmed.startsWith('### ')) {
+           return <h4 key={index} className="text-lg font-bold text-amber-800 mt-4 mb-2 font-serif">{parseInline(trimmed.substring(4))}</h4>;
+        }
+        if (trimmed.startsWith('## ')) {
+           return <h3 key={index} className="text-xl font-bold text-amber-900 mt-6 mb-3 border-b border-amber-100 pb-1 font-serif">{parseInline(trimmed.substring(3))}</h3>;
+        }
+        if (trimmed.startsWith('# ')) {
+           return <h2 key={index} className="text-2xl font-bold text-amber-900 mt-8 mb-4 font-serif">{parseInline(trimmed.substring(2))}</h2>;
+        }
+
+        // List items (unordered)
+        if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+           return (
+             <div key={index} className="flex gap-3 pl-1 md:pl-2">
+                <span className="text-amber-500 mt-2 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 block"></span>
+                <div className="flex-1">{parseInline(trimmed.substring(2))}</div>
+             </div>
+           );
+        }
+
+        // Normal paragraph
+        return <p key={index} className="mb-1">{parseInline(trimmed)}</p>;
+      })}
+    </div>
+  );
 };
 
 const FengShuiConsultant: React.FC = () => {
@@ -338,8 +386,9 @@ const FengShuiConsultant: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="prose prose-stone max-w-none prose-p:text-gray-700 prose-headings:text-amber-900 prose-headings:font-serif prose-li:text-gray-700 prose-strong:text-red-800">
-                   {fengShuiResults.harmony.detailedAnalysis}
+                {/* Replaced prose with MarkdownRenderer */}
+                <div className="bg-amber-50/30 p-4 md:p-6 rounded-xl border border-amber-50/50">
+                   <MarkdownRenderer content={fengShuiResults.harmony.detailedAnalysis} />
                 </div>
              </div>
 
