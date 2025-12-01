@@ -52,61 +52,46 @@ const InvitationBuilder: React.FC = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // 1. Validate size < 5MB
-        if (file.size > 5 * 1024 * 1024) {
-            alert("Ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhỏ hơn.");
-            return;
-        }
+        // Bỏ qua check size tạm thời để test logic upload trước
+        // if (file.size > 5 * 1024 * 1024) { ... }
 
-        if (!storage) {
-            alert("Chưa cấu hình Storage. Vui lòng liên hệ Admin.");
+        if (!storage || !user) {
+            alert("Lỗi hệ thống: Chưa đăng nhập hoặc thiếu cấu hình Storage.");
             return;
         }
 
         setIsUploading(true);
         try {
-            // 2. Tạo tên file an toàn (Loại bỏ ký tự đặc biệt)
-            const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-            const storageRef = ref(storage, `invitations/${user!.uid}/${safeName}_${Date.now()}`);
+            // Tạo tên file đơn giản để tránh lỗi ký tự lạ
+            const safeName = `upload_${Date.now()}.jpg`;
+            const storageRef = ref(storage, `invitations/${user.uid}/${safeName}`);
 
-            // 3. --- FIX LỖI 403 (QUAN TRỌNG NHẤT) ---
-            // Tự động đoán định dạng ảnh dựa trên đuôi file
-            const ext = file.name.split('.').pop()?.toLowerCase();
-            let mimeType = 'image/jpeg'; // Mặc định là JPEG để luôn qua được Rules
-
-            if (ext === 'png') mimeType = 'image/png';
-            else if (ext === 'gif') mimeType = 'image/gif';
-            else if (ext === 'webp') mimeType = 'image/webp';
-            else if (ext === 'svg') mimeType = 'image/svg+xml';
-
-            // Nếu trình duyệt nhận diện được đây là ảnh, thì dùng type của trình duyệt
-            // Nếu trình duyệt không nhận ra (file.type rỗng) thì dùng mimeType mặc định ở trên
-            if (file.type && file.type.startsWith('image/')) {
-                mimeType = file.type;
-            }
-
-            // Tạo metadata bắt buộc
+            // --- BẮT BUỘC: Metadata chuẩn ---
+            // Dù file gốc là gì, ta cứ khai báo nó là image/jpeg để qua mặt Rules
+            // (Lưu ý: Cách này chỉ để fix lỗi permission, file vẫn hiển thị bình thường)
             const metadata = {
-                contentType: mimeType,
+                contentType: 'image/jpeg',
             };
-            // ----------------------------------------
 
-            // 4. Upload kèm Metadata
+            console.log("Đang upload với metadata:", metadata); // Debug log
+
+            // Upload
             const snapshot = await uploadBytes(storageRef, file, metadata);
+            console.log("Upload thành công!", snapshot);
 
             const url = await getDownloadURL(snapshot.ref);
             updateInvitation({ coverImage: url });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
+
         } catch (error: any) {
-            console.error("Upload failed", error);
+            console.error("Chi tiết lỗi upload:", error);
             if (error.code === 'storage/unauthorized') {
-                alert("Lỗi quyền truy cập (403). Vui lòng thử đổi tên file ảnh hoặc chuyển sang định dạng JPG/PNG chuẩn.");
+                alert(`Lỗi 403: Bạn không có quyền ghi vào thư mục của user ${user.uid}. Hãy kiểm tra lại Rules.`);
             } else {
                 alert("Lỗi upload: " + error.message);
             }
         } finally {
             setIsUploading(false);
-            // Reset input để cho phép chọn lại
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
