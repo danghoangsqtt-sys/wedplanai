@@ -237,7 +237,8 @@ const ProcedureDetail: React.FC<ProcedureDetailProps> = ({ step, region }) => {
          // Lưu theo user ID để tránh conflict nếu nhiều người dùng chung
          const userFolder = user?.uid || 'guest';
          const storageRef = ref(storage, `procedure_images/${userFolder}/${region}/${step.id}/${itemName}_${Date.now()}`);
-         const snapshot = await uploadBytes(storageRef, file);
+         const metadata = { contentType: file.type };
+         const snapshot = await uploadBytes(storageRef, file, metadata);
          const url = await getDownloadURL(snapshot.ref);
 
          setEditedStep(prev => ({
