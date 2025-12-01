@@ -26,7 +26,7 @@ const callGeminiDirect = async (systemPrompt: string, userMessage: string, isJso
     // Sử dụng model Flash cho tốc độ nhanh và tối ưu chi phí (Free tier ok)
     // Bạn có thể đổi thành "gemini-2.0-flash-exp" nếu muốn thử nghiệm bản mới nhất
     const model = ai.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       generationConfig
     });
 
