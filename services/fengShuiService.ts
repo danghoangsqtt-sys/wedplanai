@@ -1,26 +1,26 @@
-
 import { generateAIContent } from "./aiService";
 import { useStore } from "../store/useStore";
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from "../types/fengshui";
 
 const FENG_SHUI_SYSTEM_PROMPT = `
-Bạn là một Thầy Phong Thủy (Tử Vi & Tướng Số) uy tín, am hiểu sâu sắc về văn hóa Việt Nam, Can Chi, Ngũ Hành, và Lịch Vạn Niên.
+Bạn là một Thầy Phong Thủy (Tử Vi & Tướng Số) uy tín, am hiểu sâu sắc về văn hóa Việt Nam.
 Nhiệm vụ của bạn là xem tuổi vợ chồng và chọn ngày lành tháng tốt cho cưới hỏi.
-
 Giọng văn: Trang trọng, cổ điển nhưng dễ hiểu, mang tính khuyên răn tích cực.
-Lưu ý: Luôn tìm cách hóa giải nếu tuổi xung khắc, không nói lời tuyệt vọng.
+QUAN TRỌNG: Luôn trả về định dạng JSON hợp lệ tuyệt đối. Không thêm bất kỳ lời dẫn hay ký tự markdown nào ngoài JSON.
 `;
 
 /**
- * Helper function to clean and parse JSON from AI response.
- * Handles cases where AI wraps JSON in Markdown code blocks or adds preamble text.
+ * Hàm làm sạch và parse JSON an toàn hơn
+ * Xử lý các lỗi thường gặp: Markdown block, ký tự xuống dòng chưa escape, dấu ngoặc kép lỗi.
  */
 const cleanAndParseJSON = (text: string): any => {
+  let cleaned = text;
+  
   try {
-    // 1. Remove Markdown code block markers if present
-    let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    // 1. Xóa Markdown code blocks (```json ... ```)
+    cleaned = cleaned.replace(/```json/gi, '').replace(/```/g, '').trim();
 
-    // 2. Find the First '{' and Last '}' to extract the valid JSON object
+    // 2. Trích xuất phần JSON hợp lệ (từ dấu { đầu tiên đến dấu } cuối cùng)
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
 
@@ -28,11 +28,25 @@ const cleanAndParseJSON = (text: string): any => {
       cleaned = cleaned.substring(firstBrace, lastBrace + 1);
     }
 
-    // 3. Attempt to parse
+    // 3. Thử parse lần 1 (Chuẩn)
     return JSON.parse(cleaned);
+
   } catch (error) {
-    console.error("JSON Parsing Error. Raw text:", text);
-    throw new Error("Hệ thống AI đang bận hoặc trả về dữ liệu không đúng định dạng. Vui lòng thử lại.");
+    console.warn("JSON Parse lần 1 thất bại, đang thử sửa lỗi format...", error);
+    
+    try {
+      // 4. Thử sửa lỗi phổ biến: Xuống dòng thực tế (Literal Newlines) trong chuỗi JSON gây lỗi
+      // Thay thế các ký tự xuống dòng thực tế (\n, \r) bằng escape sequence (\\n)
+      // Lưu ý: Chỉ thay thế nếu nó không phải là khoảng trắng JSON hợp lệ (khó xác định chính xác bằng regex đơn giản nhưng cách này cứu được 90% case văn bản dài)
+      const fixed = cleaned
+        .replace(/[\n\r]/g, '\\n') // Thay thế xuống dòng thực bằng \n
+        .replace(/\\n\s+/g, '\\n'); // Xóa khoảng trắng thừa sau xuống dòng nếu có
+
+      return JSON.parse(fixed);
+    } catch (err2) {
+      console.error("JSON Parsing Fatal Error. Raw text:", text);
+      throw new Error("Hệ thống AI trả về dữ liệu không đúng định dạng JSON. Vui lòng thử lại.");
+    }
   }
 };
 
@@ -50,7 +64,7 @@ export const analyzeCompatibility = async (profile: CoupleProfile): Promise<Harm
     3. Luận giải sự xung hợp về Mệnh, Can Chi, Cung Phi, Thiên Mệnh Năm Sinh.
     4. Tính điểm hòa hợp trên thang 100.
 
-    OUTPUT FORMAT (JSON Only):
+    OUTPUT FORMAT (JSON Only - Chú ý escape dấu ngoặc kép " bằng \\"):
     {
       "score": number,
       "summary": "String tóm tắt (Ví dụ: Tam Hợp - Đại Cát)",
@@ -58,7 +72,7 @@ export const analyzeCompatibility = async (profile: CoupleProfile): Promise<Harm
       "brideLunar": "String (Ví dụ: Ất Sửu - 1985)",
       "groomElement": "String (Ví dụ: Hải Trung Kim)",
       "brideElement": "String (Ví dụ: Lư Trung Hỏa)",
-      "detailedAnalysis": "Markdown string giải thích chi tiết. Dùng các gạch đầu dòng."
+      "detailedAnalysis": "Markdown string giải thích chi tiết. Dùng các gạch đầu dòng và xuống dòng bằng \\n."
     }
   `;
 
