@@ -1,64 +1,84 @@
-
 import { generateAIContent } from "./aiService";
 import { useStore } from "../store/useStore";
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from "../types/fengshui";
+import { getCanChi, getCungMenh, getNguHanhNapAm } from "../utils/fengShuiUtils"; // Import hàm mới
 
 const FENG_SHUI_SYSTEM_PROMPT = `
-Bạn là một Thầy Phong Thủy (Tử Vi & Tướng Số) uy tín, am hiểu sâu sắc về văn hóa Việt Nam, Can Chi, Ngũ Hành, và Lịch Vạn Niên.
-Nhiệm vụ của bạn là xem tuổi vợ chồng và chọn ngày lành tháng tốt cho cưới hỏi.
-
-Giọng văn: Trang trọng, cổ điển nhưng dễ hiểu, mang tính khuyên răn tích cực.
-Lưu ý: Luôn tìm cách hóa giải nếu tuổi xung khắc, không nói lời tuyệt vọng.
+Bạn là "Thầy Phong Thủy WedPlan". Tôi sẽ cung cấp thông tin Tử Vi CHÍNH XÁC (Can, Chi, Cung, Mệnh) của hai vợ chồng.
+Nhiệm vụ của bạn là: Dựa trên các thông số tôi cung cấp, hãy luận giải sự xung hợp và chấm điểm.
+TUYỆT ĐỐI KHÔNG tự tính lại Can Chi hay Cung Mệnh, hãy tin tưởng dữ liệu đầu vào.
 `;
 
 /**
  * Helper function to clean and parse JSON from AI response.
- * Handles cases where AI wraps JSON in Markdown code blocks or adds preamble text.
  */
 const cleanAndParseJSON = (text: string): any => {
   try {
-    // 1. Remove Markdown code block markers if present
     let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-    // 2. Find the First '{' and Last '}' to extract the valid JSON object
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
-
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       cleaned = cleaned.substring(firstBrace, lastBrace + 1);
     }
-
-    // 3. Attempt to parse
     return JSON.parse(cleaned);
   } catch (error) {
     console.error("JSON Parsing Error. Raw text:", text);
-    throw new Error("Hệ thống AI đang bận hoặc trả về dữ liệu không đúng định dạng. Vui lòng thử lại.");
+    throw new Error("Thầy đang bận xem kỹ lại quẻ, vui lòng thử lại sau giây lát.");
   }
 };
 
 export const analyzeCompatibility = async (profile: CoupleProfile): Promise<HarmonyResult> => {
   const user = useStore.getState().user;
-  
-  const prompt = `
-    Hãy phân tích sự hòa hợp của cặp đôi này:
-    - Chồng: ${profile.groomName}, Sinh ngày (Dương lịch): ${profile.groomDob}, Giờ sinh: ${profile.groomTime || "Không rõ"}
-    - Vợ: ${profile.brideName}, Sinh ngày (Dương lịch): ${profile.brideDob}, Giờ sinh: ${profile.brideTime || "Không rõ"}
 
-    Yêu cầu phân tích:
-    1. Chuyển đổi ngày sinh Dương lịch sang Âm lịch (Can Chi).
-    2. Xác định Mệnh (Ngũ Hành), Thiên Can, Địa Chi, Cung Mệnh của cả hai.
-    3. Luận giải sự xung hợp về Mệnh, Can Chi, Cung Phi, Thiên Mệnh Năm Sinh.
-    4. Tính điểm hòa hợp trên thang 100.
+  // 1. TÍNH TOÁN DỮ LIỆU CỐ ĐỊNH (Hard Calculation)
+  const groomYear = new Date(profile.groomDob).getFullYear();
+  const brideYear = new Date(profile.brideDob).getFullYear();
+
+  const groomLunar = getCanChi(groomYear); // Ví dụ: Kỷ Mão
+  const brideLunar = getCanChi(brideYear); // Ví dụ: Tân Tỵ
+
+  const groomCung = getCungMenh(groomYear, 'MALE'); // {cung: 'Khảm', hanh: 'Thủy'}
+  const brideCung = getCungMenh(brideYear, 'FEMALE'); // {cung: 'Đoài', hanh: 'Kim'}
+
+  const groomMenh = getNguHanhNapAm(groomYear); // Thành Đầu Thổ
+  const brideMenh = getNguHanhNapAm(brideYear); // Bạch Lạp Kim
+
+  // 2. GỬI DỮ LIỆU ĐÃ TÍNH CHO AI
+  const prompt = `
+    Thông tin Tử Vi đã xác thực (Vui lòng dùng thông tin này để luận giải):
+    
+    🤵 CHỒNG: 
+    - Sinh năm: ${groomYear} (${groomLunar})
+    - Mệnh: ${groomMenh}
+    - Cung Phi: Cung ${groomCung.cung} (Hành ${groomCung.hanh})
+
+    👰 VỢ:
+    - Sinh năm: ${brideYear} (${brideLunar})
+    - Mệnh: ${brideMenh}
+    - Cung Phi: Cung ${brideCung.cung} (Hành ${brideCung.hanh})
+
+    Yêu cầu:
+    1. Luận giải sự hòa hợp về Mệnh (Ngũ hành nạp âm).
+    2. Luận giải sự hòa hợp về Cung Phi Bát Trạch (Ví dụ: Khảm kết hợp Đoài là Họa Hại hay Sinh Khí?).
+    3. Luận giải Thiên Can, Địa Chi.
+    4. Tính điểm hòa hợp (Thang 100).
 
     OUTPUT FORMAT (JSON Only):
     {
-      "score": number,
-      "summary": "String tóm tắt (Ví dụ: Tam Hợp - Đại Cát)",
-      "groomLunar": "String (Ví dụ: Giáp Tý - 1984)",
-      "brideLunar": "String (Ví dụ: Ất Sửu - 1985)",
-      "groomElement": "String (Ví dụ: Hải Trung Kim)",
-      "brideElement": "String (Ví dụ: Lư Trung Hỏa)",
-      "detailedAnalysis": "Markdown string giải thích chi tiết. Dùng các gạch đầu dòng."
+      "score": number, 
+      "summary": "Câu chốt ngắn gọn",
+      "groomLunar": "${groomLunar}", 
+      "brideLunar": "${brideLunar}",
+      
+      "groomElement": "${groomMenh}",
+      "groomElementKey": "KIM" | "MOC" | "THUY" | "HOA" | "THO", 
+      
+      "brideElement": "${brideMenh}",
+      "brideElementKey": "KIM" | "MOC" | "THUY" | "HOA" | "THO",
+
+      "conflictStatus": "SINH" | "KHAC" | "BINH", 
+
+      "detailedAnalysis": "Viết chi tiết luận giải dựa trên dữ liệu trên. Xuống dòng bằng \\n."
     }
   `;
 
@@ -75,27 +95,30 @@ export const findAuspiciousDates = async (profile: CoupleProfile): Promise<Auspi
   const user = useStore.getState().user;
 
   const prompt = `
-    Dựa trên tuổi của hai vợ chồng:
+    Gia chủ muốn chọn ngày cưới.
     - Chồng: ${profile.groomDob}
     - Vợ: ${profile.brideDob}
-    
-    Hãy tìm 5 ngày tốt nhất để tổ chức đám cưới trong khoảng thời gian mong muốn: ${profile.desiredPeriod}.
+    - Khoảng thời gian mong muốn: ${profile.desiredPeriod}
 
-    Tiêu chí chọn ngày (Theo phong tục Việt Nam):
-    - Ưu tiên ngày Hoàng Đạo, Đại An, Tốc Hỷ.
-    - Tránh ngày Tam Nương, Nguyệt Kỵ, Sát Chủ, Thọ Tử, Dương Công Kỵ Nhật.
-    - Ngày phải hợp với tuổi Cô Dâu & Chú Rể (hoặc ít nhất không xung khắc).
-    - Có giờ đẹp trong ngày để rước dâu.
+    Nhiệm vụ của Thầy: Tìm 5 ngày ĐẠI CÁT (tốt nhất) trong khoảng thời gian trên để tổ chức Lễ Cưới (Rước Dâu).
+
+    Tiêu chí lọc ngày khắt khe:
+    1. **Tránh tuổi Kim Lâu** của cô dâu.
+    2. **Ngày Hoàng Đạo**.
+    3. **Tránh ngày xấu:** Tam Nương, Nguyệt Kỵ, Thọ Tử, Sát Chủ, Dương Công Kỵ Nhật.
+    4. **Hợp tuổi:** Ngày không được xung Thái Tuế với cô dâu/chú rể.
+    5. **Nhị Thập Bát Tú:** Ưu tiên các sao tốt.
+    6. **Trực:** Ưu tiên Trực Khai, Trực Kiến, Trực Bình, Trực Mãn.
 
     OUTPUT FORMAT (JSON Only Array):
     {
       "dates": [
         {
           "solarDate": "YYYY-MM-DD",
-          "lunarDate": "String (Ví dụ: 15/08 Âm lịch - Ngày Giáp Tý)",
-          "dayName": "String (Ví dụ: Hoàng Đạo - Tư Mệnh)",
-          "timeSlots": "String (Các giờ đẹp trong ngày)",
-          "reason": "String giải thích ngắn gọn tại sao ngày này tốt",
+          "lunarDate": "Ngày Âm (Can Chi)",
+          "dayName": "Tên ngày (Ví dụ: Ngày Hoàng Đạo - Trực Khai)",
+          "timeSlots": "Giờ Hoàng Đạo đẹp nhất để Rước Dâu (Ví dụ: Giờ Tỵ (09h-11h), Giờ Thân (15h-17h))",
+          "reason": "Giải thích chi tiết tại sao tốt: Hợp mệnh nào, Sao nào chiếu, Lợi cho việc gì (Cầu tài, Cầu con...).",
           "suitability": "VERY_HIGH" | "HIGH" | "MODERATE"
         }
       ]

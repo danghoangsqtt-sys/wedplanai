@@ -1,4 +1,6 @@
 
+export type ElementKey = 'KIM' | 'MOC' | 'THUY' | 'HOA' | 'THO';
+
 export interface CoupleProfile {
   groomName: string;
   groomDob: string; // YYYY-MM-DD
@@ -14,8 +16,15 @@ export interface HarmonyResult {
   summary: string; // e.g., "Tam Hợp - Rất Tốt"
   groomLunar: string; // e.g., "Giáp Tý"
   brideLunar: string; // e.g., "Ất Sửu"
+
   groomElement: string; // e.g., "Hải Trung Kim"
+  groomElementKey: ElementKey; // NEW: For UI styling
+
   brideElement: string; // e.g., "Lư Trung Hỏa"
+  brideElementKey: ElementKey; // NEW: For UI styling
+
+  conflictStatus: 'SINH' | 'KHAC' | 'BINH'; // Tương Sinh, Tương Khắc, Bình Hòa
+
   detailedAnalysis: string; // Markdown text
 }
 
