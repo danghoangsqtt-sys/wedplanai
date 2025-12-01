@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep } from '../types';
+import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep, InvitationData } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { saveUserDataToCloud, loadUserDataFromCloud, syncUserProfile, getUserPublicProfile } from '../services/cloudService';
 import { fetchAllProfiles, fetchAnalyticsData, AdminAnalytics } from '../services/adminService';
@@ -32,7 +32,8 @@ interface AppState {
   // App Data (Now in Store)
   guests: Guest[];
   budgetItems: BudgetItem[];
-  procedures: Record<WeddingRegion, ProcedureStep[]>; // Dynamic Procedures
+  procedures: Record<WeddingRegion, ProcedureStep[]>;
+  invitation: InvitationData; // NEW: Invitation State
   isSyncing: boolean;
 
   // Feng Shui Data
@@ -59,7 +60,7 @@ interface AppState {
   addUser: (user: UserProfile) => Promise<void>;
   updateUser: (uid: string, data: Partial<UserProfile>) => Promise<void>;
   deleteUser: (uid: string) => Promise<void>;
-  refreshUserProfile: () => Promise<void>; // NEW: Sync status from cloud
+  refreshUserProfile: () => Promise<void>;
 
   // Data Actions
   addGuest: (guest: Guest) => void;
@@ -76,6 +77,9 @@ interface AppState {
   addProcedure: (region: WeddingRegion, step: ProcedureStep) => void;
   deleteProcedure: (region: WeddingRegion, id: string) => void;
   resetProcedures: () => void;
+
+  // Invitation Actions
+  updateInvitation: (data: Partial<InvitationData>) => void;
 
   // Advanced Actions
   recalculateDeadlines: (weddingDateStr: string) => void;
@@ -99,15 +103,36 @@ interface AppState {
 
 let syncTimeout: ReturnType<typeof setTimeout>;
 
+const DEFAULT_INVITATION: InvitationData = {
+  templateId: 'classic_1',
+  groomName: '',
+  brideName: '',
+  date: '',
+  time: '',
+  location: '',
+  address: '',
+  mapLink: '',
+  bankInfo: {
+    bankId: '',
+    accountNumber: '',
+    accountName: '',
+    template: 'qr_code'
+  },
+  wishes: 'Trân trọng kính mời bạn đến chung vui cùng gia đình chúng tôi.',
+  coverImage: null,
+  themeColor: '#e11d48'
+};
+
 const triggerCloudSync = (get: () => AppState) => {
-  const { user, guests, budgetItems, fengShuiProfile, fengShuiResults, procedures } = get();
+  const { user, guests, budgetItems, fengShuiProfile, fengShuiResults, procedures, invitation } = get();
   if (user?.enableCloudStorage) {
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
       saveUserDataToCloud(user.uid, {
         guests,
         budgetItems,
-        procedures, // Sync procedures as well if user customized them
+        procedures,
+        invitation,
         fengShuiProfile: fengShuiProfile || undefined,
         fengShuiResults: fengShuiResults || undefined
       });
@@ -118,7 +143,6 @@ const triggerCloudSync = (get: () => AppState) => {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Initialize with DEFAULT_GUEST_USER if no user exists in storage
       user: DEFAULT_GUEST_USER,
       settings: {
         geminiApiKey: '',
@@ -130,7 +154,8 @@ export const useStore = create<AppState>()(
       adminStats: null,
       guests: INITIAL_GUESTS,
       budgetItems: INITIAL_BUDGET_ITEMS,
-      procedures: WEDDING_PROCEDURES, // Initialize from static data
+      procedures: WEDDING_PROCEDURES,
+      invitation: DEFAULT_INVITATION,
       isSyncing: false,
       fengShuiProfile: null,
       fengShuiResults: { harmony: null, dates: [] },
@@ -140,21 +165,17 @@ export const useStore = create<AppState>()(
 
       login: async (user) => {
         set({ user, isSyncing: true });
-
         get().addNotification('SUCCESS', `Chào mừng ${user.displayName} đã quay trở lại!`);
-
-        // 1. Sync public profile for Admin visibility
         await syncUserProfile(user);
 
-        // 2. Load data from Cloud if enabled
         if (user.enableCloudStorage) {
           const cloudData = await loadUserDataFromCloud(user.uid);
           if (cloudData) {
             set({
               guests: cloudData.guests,
               budgetItems: cloudData.budgetItems,
-              // Only load procedures if they exist in cloud, else keep default/local
               procedures: cloudData.procedures || WEDDING_PROCEDURES,
+              invitation: cloudData.invitation || DEFAULT_INVITATION,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
               isSyncing: false
@@ -163,7 +184,6 @@ export const useStore = create<AppState>()(
             return;
           }
         }
-
         set({ isSyncing: false });
       },
 
@@ -172,8 +192,8 @@ export const useStore = create<AppState>()(
           user: DEFAULT_GUEST_USER,
           guests: INITIAL_GUESTS,
           budgetItems: INITIAL_BUDGET_ITEMS,
-          // Reset procedures to default on logout to avoid mix-up
           procedures: WEDDING_PROCEDURES,
+          invitation: DEFAULT_INVITATION,
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] },
           guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 }
@@ -185,7 +205,6 @@ export const useStore = create<AppState>()(
 
       updateSettings: (newSettings) => set((state) => ({ settings: { ...state.settings, ...newSettings } })),
 
-      // --- Real Admin Actions ---
       fetchAdminData: async () => {
         const users = await fetchAllProfiles();
         const stats = await fetchAnalyticsData();
@@ -212,12 +231,10 @@ export const useStore = create<AppState>()(
             throw new Error("Lỗi cập nhật quyền trên Cloud: " + e.message);
           }
         }
-
         const currentUser = get().user;
         if (currentUser && currentUser.uid === uid) {
           set({ user: { ...currentUser, ...data } });
         }
-
         const updatedAdminUsers = get().adminUsers.map(u => u.uid === uid ? { ...u, ...data } : u);
         const updatedUsers = get().users.map(u => u.uid === uid ? { ...u, ...data } : u);
         set({ adminUsers: updatedAdminUsers, users: updatedUsers });
@@ -240,7 +257,6 @@ export const useStore = create<AppState>()(
       refreshUserProfile: async () => {
         const currentUser = get().user;
         if (!currentUser || currentUser.role === 'GUEST') return;
-
         try {
           const cloudProfile = await getUserPublicProfile(currentUser.uid);
           if (cloudProfile) {
@@ -258,8 +274,6 @@ export const useStore = create<AppState>()(
           console.error("Failed to refresh user profile", e);
         }
       },
-
-      // --- Data Actions with Sync Trigger ---
 
       addGuest: (guest) => {
         set((state) => ({ guests: [...state.guests, guest] }));
@@ -304,16 +318,12 @@ export const useStore = create<AppState>()(
         triggerCloudSync(get);
       },
 
-      // --- Procedure Actions ---
       updateProcedure: (region, step) => {
         set((state) => {
           const regionProcedures = state.procedures[region] || [];
           const newProcedures = regionProcedures.map(p => p.id === step.id ? step : p);
           return {
-            procedures: {
-              ...state.procedures,
-              [region]: newProcedures
-            }
+            procedures: { ...state.procedures, [region]: newProcedures }
           };
         });
         get().addNotification('SUCCESS', 'Đã cập nhật quy trình.');
@@ -324,10 +334,7 @@ export const useStore = create<AppState>()(
         set((state) => {
           const regionProcedures = state.procedures[region] || [];
           return {
-            procedures: {
-              ...state.procedures,
-              [region]: [...regionProcedures, step]
-            }
+            procedures: { ...state.procedures, [region]: [...regionProcedures, step] }
           };
         });
         get().addNotification('SUCCESS', 'Đã thêm quy trình mới.');
@@ -338,10 +345,7 @@ export const useStore = create<AppState>()(
         set((state) => {
           const regionProcedures = state.procedures[region] || [];
           return {
-            procedures: {
-              ...state.procedures,
-              [region]: regionProcedures.filter(p => p.id !== id)
-            }
+            procedures: { ...state.procedures, [region]: regionProcedures.filter(p => p.id !== id) }
           };
         });
         get().addNotification('INFO', 'Đã xóa quy trình.');
@@ -354,18 +358,21 @@ export const useStore = create<AppState>()(
         triggerCloudSync(get);
       },
 
+      // Invitation Actions
+      updateInvitation: (data) => {
+        set((state) => ({ invitation: { ...state.invitation, ...data } }));
+        triggerCloudSync(get);
+      },
+
       recalculateDeadlines: (weddingDateStr) => {
         if (!weddingDateStr) return;
         const weddingDate = new Date(weddingDateStr);
-
         set((state) => {
           const newItems = state.budgetItems.map(item => {
             if (item.status === TaskStatus.DONE || item.status === TaskStatus.PAID) return item;
-
             let daysBefore = 0;
             const cat = item.category.toLowerCase();
             const name = item.itemName.toLowerCase();
-
             if (cat.includes('nhà hàng') || cat.includes('tiệc cưới')) {
               if (name.includes('đặt cọc')) daysBefore = 180;
               else if (name.includes('thực đơn') || name.includes('chốt')) daysBefore = 30;
@@ -385,30 +392,22 @@ export const useStore = create<AppState>()(
             } else {
               daysBefore = 7;
             }
-
             const deadlineDate = new Date(weddingDate);
             deadlineDate.setDate(weddingDate.getDate() - daysBefore);
-
-            return {
-              ...item,
-              deadline: deadlineDate.toISOString().split('T')[0]
-            };
+            return { ...item, deadline: deadlineDate.toISOString().split('T')[0] };
           });
-
           return { budgetItems: newItems };
         });
-
         get().addNotification('SUCCESS', 'Đã cập nhật lại hạn chót công việc.');
         triggerCloudSync(get);
       },
 
-      // --- Advanced Actions ---
       resetData: () => {
         set({
           guests: INITIAL_GUESTS,
           budgetItems: INITIAL_BUDGET_ITEMS,
-          // also reset procedures
           procedures: WEDDING_PROCEDURES,
+          invitation: DEFAULT_INVITATION,
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] }
         });
@@ -420,6 +419,7 @@ export const useStore = create<AppState>()(
           guests: data.guests || [],
           budgetItems: data.budgetItems || [],
           procedures: data.procedures || WEDDING_PROCEDURES,
+          invitation: data.invitation || DEFAULT_INVITATION,
           fengShuiProfile: data.fengShuiProfile || null,
           fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] }
         });
@@ -437,7 +437,6 @@ export const useStore = create<AppState>()(
         triggerCloudSync(get);
       },
 
-      // --- Usage Actions ---
       incrementGuestFengShui: () => set((state) => ({
         guestUsage: { ...state.guestUsage, fengShuiCount: state.guestUsage.fengShuiCount + 1 }
       })),
@@ -452,11 +451,9 @@ export const useStore = create<AppState>()(
 
       resetGuestUsage: () => set({ guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 } }),
 
-      // --- Notification Implementation ---
       addNotification: (type, message, duration = 3000) => {
         const id = Date.now().toString();
         set((state) => ({ notifications: [...state.notifications, { id, type, message, duration }] }));
-
         if (duration > 0) {
           setTimeout(() => {
             get().removeNotification(id);
@@ -469,13 +466,14 @@ export const useStore = create<AppState>()(
       }
     }),
     {
-      name: 'wedplan-storage-v6',
+      name: 'wedplan-storage-v7', // Increment version
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,
         guests: state.guests,
         budgetItems: state.budgetItems,
         procedures: state.procedures,
+        invitation: state.invitation,
         fengShuiProfile: state.fengShuiProfile,
         fengShuiResults: state.fengShuiResults,
         users: state.users,

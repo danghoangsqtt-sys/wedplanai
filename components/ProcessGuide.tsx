@@ -58,8 +58,6 @@ const ProcessGuide: React.FC = () => {
     }
   };
 
-  const isAdmin = user?.role === 'ADMIN';
-
   return (
     <div className="flex flex-col lg:flex-row lg:h-full bg-[#FDF2F8] lg:overflow-hidden rounded-xl lg:rounded-none lg:shadow-none shadow-sm border border-rose-100 lg:border-none m-0 lg:m-0">
 
@@ -78,15 +76,15 @@ const ProcessGuide: React.FC = () => {
                 <p className="text-[10px] md:text-xs text-gray-500">Quy trình {region === 'NORTH' ? 'Miền Bắc' : region === 'CENTRAL' ? 'Miền Trung' : 'Miền Nam'}</p>
               </div>
             </div>
-            {isAdmin && (
-              <button
-                onClick={handleReset}
-                className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                title="Khôi phục mặc định"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
+
+            {/* Reset Button - Available to everyone */}
+            <button
+              onClick={handleReset}
+              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+              title="Khôi phục mặc định"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Region Tabs */}
@@ -105,15 +103,13 @@ const ProcessGuide: React.FC = () => {
             ))}
           </div>
 
-          {/* Admin Add Button */}
-          {isAdmin && (
-            <button
-              onClick={handleAddStep}
-              className="w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 hover:border-rose-300 transition-all text-xs font-bold"
-            >
-              <Plus className="w-4 h-4" /> Thêm quy trình mới
-            </button>
-          )}
+          {/* Add Button - Available to everyone */}
+          <button
+            onClick={handleAddStep}
+            className="w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 hover:border-rose-300 transition-all text-xs font-bold"
+          >
+            <Plus className="w-4 h-4" /> Thêm quy trình mới
+          </button>
         </div>
 
         {/* Timeline Component - Responsive Container */}
@@ -134,17 +130,17 @@ const ProcessGuide: React.FC = () => {
       <div className="lg:flex-1 lg:overflow-y-auto bg-white lg:bg-[#FDF2F8] relative min-h-[400px]">
         {currentStep ? (
           <div className="h-full flex flex-col">
-            {isAdmin && (
-              <div className="absolute top-4 right-4 z-50">
-                <button
-                  onClick={() => handleDeleteStep(currentStep.id)}
-                  className="bg-white text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 p-2 rounded-lg shadow-sm transition-all"
-                  title="Xóa quy trình này"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+            {/* Delete Button - Available to everyone */}
+            <div className="absolute top-4 right-4 z-50">
+              <button
+                onClick={() => handleDeleteStep(currentStep.id)}
+                className="bg-white text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 p-2 rounded-lg shadow-sm transition-all"
+                title="Xóa quy trình này"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+
             <ProcedureDetail step={currentStep} region={region} />
           </div>
         ) : (

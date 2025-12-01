@@ -119,3 +119,26 @@ export interface ProcedureStep {
   scriptSuggestion: string; // Basic topic for speech
   tasks: ProcedureTaskTemplate[];
 }
+
+// --- Invitation & Marketing Types ---
+export interface BankInfo {
+  bankId: string; // e.g., "MB", "VCB"
+  accountNumber: string;
+  accountName: string;
+  template: 'qr_code' | 'compact';
+}
+
+export interface InvitationData {
+  templateId: string;
+  groomName: string;
+  brideName: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  location: string;
+  address: string;
+  mapLink: string;
+  bankInfo: BankInfo;
+  wishes: string;
+  coverImage: string | null;
+  themeColor: string;
+}

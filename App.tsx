@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { AttendanceProbability, DashboardStats, TaskStatus } from './types';
 import GuestManager from './components/GuestManager';
@@ -9,6 +10,8 @@ import UserManagement from './components/admin/UserManagement';
 import Dashboard from './components/Dashboard';
 import ProcessGuide from './components/ProcessGuide';
 import FengShuiConsultant from './components/fengshui/FengShuiConsultant';
+import InvitationBuilder from './components/invitation/InvitationBuilder'; // NEW
+import PublicInvitationView from './components/invitation/PublicInvitationView'; // NEW
 import SettingsPage, { SettingsTab } from './components/SettingsPage';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
@@ -17,13 +20,23 @@ import { logAppVisit } from './services/cloudService';
 
 function App() {
   const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile, addNotification } = useStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'process' | 'fengshui' | 'guests' | 'budget' | 'ai' | 'admin' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'process' | 'fengshui' | 'guests' | 'budget' | 'ai' | 'admin' | 'settings' | 'invitation'>('dashboard');
 
   // UI State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>('ACCOUNT');
+
+  // --- PUBLIC VIEW HANDLING ---
+  // Check URL query params first
+  const queryParams = new URLSearchParams(window.location.search);
+  const viewMode = queryParams.get('view');
+  const targetUid = queryParams.get('uid');
+
+  if (viewMode === 'invitation' && targetUid) {
+    return <PublicInvitationView uid={targetUid} />;
+  }
 
   // --- Apply Theme Effect ---
   useEffect(() => {
@@ -48,9 +61,6 @@ function App() {
   // --- Redirect Logic: Active User without Gemini Key ---
   useEffect(() => {
     if (user?.role === 'USER' && user.isActive && user.allowCustomApiKey && !settings.geminiApiKey) {
-      // Only redirect if trying to use AI, or perhaps force it generally. 
-      // For now, let's redirect if they land on AI tab or just general check.
-      // To avoid looping, we check if we aren't already there.
       if (activeTab === 'ai') {
         setSettingsDefaultTab('SYSTEM');
         setActiveTab('settings');
@@ -170,6 +180,12 @@ function App() {
 
             {activeTab === 'process' && (
               <ProcessGuide />
+            )}
+
+            {activeTab === 'invitation' && (
+              <div className="h-full flex-1 min-h-[500px] lg:min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
+                <InvitationBuilder />
+              </div>
             )}
 
             {activeTab === 'fengshui' && (

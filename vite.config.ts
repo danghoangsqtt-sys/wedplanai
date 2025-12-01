@@ -1,4 +1,3 @@
-
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -13,20 +12,22 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
-      // Thêm đoạn headers này để sửa lỗi COOP
       headers: {
         "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
       },
     },
     plugins: [react()],
     define: {
+      // Sửa lại biến môi trường cho đúng (bạn đang bị lặp tên biến trong code cũ)
       'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY)
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        // ĐÃ XÓA các dòng alias trỏ về https://esm.sh/...
       }
-    }
+    },
+    // ĐÃ XÓA phần optimizeDeps.exclude
   };
 });
