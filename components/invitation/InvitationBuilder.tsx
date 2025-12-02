@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import {
@@ -44,11 +43,25 @@ const FloralCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => 
     );
 };
 
+// Helper để parse ngày giờ chuẩn xác (tránh lỗi lệch múi giờ)
+const parseDate = (dateStr: string) => {
+    if (!dateStr) return { day: '01', month: '01', year: '2026', full: '01/01/2026' };
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return { day: '01', month: '01', year: '2026', full: '01/01/2026' };
+    
+    return {
+        day: parts[2],
+        month: parts[1],
+        year: parts[0],
+        full: `${parts[2]}/${parts[1]}/${parts[0]}`
+    };
+};
+
 const InvitationBuilder: React.FC = () => {
     const { invitation, updateInvitation, user, addNotification } = useStore();
     const [activeTab, setActiveTab] = useState<'INFO' | 'BANK' | 'PHOTO'>('INFO');
     
-    // Mobile View State: 'EDIT' (Nhập liệu) or 'PREVIEW' (Xem thiệp)
+    // Mobile View State
     const [mobileView, setMobileView] = useState<'EDIT' | 'PREVIEW'>('EDIT');
     
     // Dynamic Scale for Mobile Preview
@@ -72,10 +85,8 @@ const InvitationBuilder: React.FC = () => {
         const handleResize = () => {
             const width = window.innerWidth;
             if (width < 1024) {
-                // Mobile/Tablet logic
-                // Target width of card is 375px
+                // Mobile/Tablet logic: Scale to fit width
                 const availableWidth = width - 32; 
-                // Calculate scale to fit width
                 const scale = Math.min(1, availableWidth / 390); 
                 setPreviewScale(scale);
             } else {
@@ -83,7 +94,7 @@ const InvitationBuilder: React.FC = () => {
             }
         };
 
-        handleResize(); // Call immediately
+        handleResize();
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -108,10 +119,8 @@ const InvitationBuilder: React.FC = () => {
     };
 
     const downloadMarketingCard = async () => {
-        // Nếu đang ở mobile và ở tab EDIT, chuyển sang PREVIEW trước để render DOM
         if (window.innerWidth < 1024 && mobileView === 'EDIT') {
             setMobileView('PREVIEW');
-            // Chờ DOM render
             setTimeout(() => downloadMarketingCard(), 500);
             return;
         }
@@ -120,8 +129,10 @@ const InvitationBuilder: React.FC = () => {
         try {
             const canvas = await html2canvas(marketingCardRef.current, {
                 useCORS: true,
-                scale: 3, // High quality export
-                backgroundColor: null
+                scale: 2, // High quality export
+                backgroundColor: null,
+                logging: false,
+                allowTaint: true,
             });
             const link = document.createElement('a');
             link.download = `thiep-cuoi-${user!.uid || 'guest'}.png`;
@@ -157,9 +168,7 @@ const InvitationBuilder: React.FC = () => {
 
                     const ctx = canvas.getContext('2d');
                     ctx?.drawImage(img, 0, 0, width, height);
-
-                    // Quality 0.85 for good balance
-                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                    resolve(canvas.toDataURL('image/jpeg', 0.9));
                 };
                 img.onerror = (err) => reject(err);
             };
@@ -185,7 +194,7 @@ const InvitationBuilder: React.FC = () => {
     };
 
     const publicLink = `${window.location.origin}/?view=invitation&uid=${user?.uid || 'guest'}`;
-    const primaryColor = invitation.themeColor || '#e11d48';
+    const dateObj = parseDate(invitation.date);
 
     return (
         <div className="h-full flex flex-col bg-[#FDF2F8] relative">
@@ -203,10 +212,10 @@ const InvitationBuilder: React.FC = () => {
                         href={publicLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-center w-8 h-8 md:w-auto md:h-auto md:gap-2 md:px-3 md:py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs md:text-sm font-bold hover:bg-rose-50 transition-colors"
+                        className="flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:gap-2 md:px-3 md:py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs md:text-sm font-bold hover:bg-rose-50 transition-colors"
                         title="Xem thiệp thực tế"
                     >
-                        <Eye className="w-4 h-4" /> <span className="hidden md:inline">Xem thực tế</span>
+                        <Eye className="w-5 h-5" /> <span className="hidden md:inline">Xem thực tế</span>
                     </a>
                     <button
                         onClick={downloadMarketingCard}
@@ -370,7 +379,7 @@ const InvitationBuilder: React.FC = () => {
                                                 <span>Phải</span>
                                             </div>
                                             <input
-                                                type="range" min="-50" max="50" step="1"
+                                                type="range" min="-100" max="100" step="1"
                                                 className="w-full accent-rose-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                                 value={invitation.photoConfig?.x || 0}
                                                 onChange={(e) => handlePhotoConfigChange('x', parseFloat(e.target.value))}
@@ -385,7 +394,7 @@ const InvitationBuilder: React.FC = () => {
                                                 <span>Xuống</span>
                                             </div>
                                             <input
-                                                type="range" min="-50" max="50" step="1"
+                                                type="range" min="-100" max="100" step="1"
                                                 className="w-full accent-rose-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                                 value={invitation.photoConfig?.y || 0}
                                                 onChange={(e) => handlePhotoConfigChange('y', parseFloat(e.target.value))}
@@ -419,13 +428,13 @@ const InvitationBuilder: React.FC = () => {
                             {/* Photo Area - Top 55% */}
                             <div className="h-[370px] w-full relative overflow-hidden bg-gray-100 border-b border-rose-50">
                                 {invitation.couplePhoto ? (
-                                    <img
-                                        src={invitation.couplePhoto}
-                                        className="w-full h-full object-cover transition-transform duration-100"
+                                    /* Use div background for correct export rendering */
+                                    <div 
+                                        className="w-full h-full bg-cover bg-no-repeat bg-center"
                                         style={{
-                                            transform: `scale(${invitation.photoConfig?.scale || 1}) translate(${invitation.photoConfig?.x || 0}%, ${invitation.photoConfig?.y || 0}%)`
+                                            backgroundImage: `url(${invitation.couplePhoto})`,
+                                            transform: `scale(${invitation.photoConfig?.scale || 1}) translate(${invitation.photoConfig?.x || 0}px, ${invitation.photoConfig?.y || 0}px)`
                                         }}
-                                        alt="Wedding Couple"
                                     />
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-50">
@@ -441,58 +450,59 @@ const InvitationBuilder: React.FC = () => {
                                 <div className="absolute top-4 right-4 z-20">
                                     <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/50 flex items-center gap-2 shadow-lg">
                                         <Heart className="w-3.5 h-3.5 text-rose-500 fill-current" />
-                                        <span className="text-rose-900 text-[10px] font-bold tracking-wider uppercase font-be-vietnam leading-none pt-0.5">WedPlan AI</span>
+                                        <span className="text-rose-900 text-[10px] font-bold tracking-wider uppercase font-be-vietnam flex items-center h-full pt-0.5">WedPlan AI</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Content Area */}
-                            <div className="flex-1 px-5 py-4 flex flex-col bg-white relative">
+                            <div className="flex-1 px-5 py-4 flex flex-col bg-white relative justify-between">
                                 <FloralCorner position="tl" />
                                 <FloralCorner position="tr" />
                                 
-                                {/* Date / Time Display (Ticket Style) */}
-                                <div className="w-full border-b border-gray-100 pb-4 mb-4 relative z-10">
-                                     <div className="flex justify-between items-end">
-                                         <div className="text-left">
-                                             <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam mb-1 font-bold">Save The Date</p>
-                                             <div className="text-3xl font-bold text-gray-800 font-cinzel leading-none">
-                                                {invitation.date ? new Date(invitation.date).getDate() : '01'}
-                                             </div>
-                                             <div className="text-xs font-bold text-rose-500 uppercase font-be-vietnam mt-1">
-                                                {invitation.date ? `Tháng ${new Date(invitation.date).getMonth() + 1}, ${new Date(invitation.date).getFullYear()}` : 'Tháng 1, 2024'}
-                                             </div>
+                                {/* Date / Time Display (Clean Style) */}
+                                <div className="w-full relative z-10 flex items-center justify-between">
+                                     <div className="text-left">
+                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Save The Date</p>
+                                         <div className="text-4xl font-black text-gray-800 font-serif leading-none tracking-tight">
+                                            {dateObj.day}
                                          </div>
-                                         <div className="text-right">
-                                             <div className="bg-rose-50 text-rose-600 px-3 py-1.5 rounded-lg font-bold text-xl font-mono tracking-tighter shadow-sm border border-rose-100">
-                                                {invitation.time || '00:00'}
-                                             </div>
-                                             <p className="text-[9px] text-gray-400 mt-1.5 uppercase font-be-vietnam font-bold">Giờ đón khách</p>
+                                         <div className="text-[10px] font-bold text-rose-500 uppercase font-be-vietnam tracking-wide">
+                                            Tháng {dateObj.month}, {dateObj.year}
+                                         </div>
+                                     </div>
+                                     
+                                     <div className="h-8 w-px bg-gray-200 mx-4"></div>
+
+                                     <div className="text-right">
+                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Giờ đón khách</p>
+                                         <div className="text-3xl font-black text-rose-600 font-mono leading-none tracking-tight">
+                                            {invitation.time || '00:00'}
                                          </div>
                                      </div>
                                 </div>
 
                                 {/* Names & Location */}
-                                <div className="space-y-2 mb-auto text-center relative z-10">
-                                     <h2 className="font-['Great_Vibes'] text-4xl text-gray-800 leading-tight">
-                                        {invitation.groomName} <span className="text-rose-400 text-2xl font-serif">&</span> {invitation.brideName}
+                                <div className="space-y-1 text-center relative z-10 my-2">
+                                     <h2 className="font-['Great_Vibes'] text-5xl text-gray-800 leading-tight">
+                                        {invitation.groomName} <span className="text-rose-400 text-3xl font-serif">&</span> {invitation.brideName}
                                      </h2>
                                      <div className="pt-2">
-                                        <p className="text-xs font-bold text-gray-700 font-be-vietnam uppercase tracking-wide line-clamp-1">
-                                            {invitation.location}
+                                        <p className="text-xs font-black text-gray-700 font-be-vietnam uppercase tracking-widest line-clamp-1">
+                                            {invitation.location || 'Tên nhà hàng'}
                                         </p>
-                                        <p className="text-[10px] text-gray-500 italic mt-0.5 line-clamp-2 px-4">
-                                            {invitation.address}
+                                        <p className="text-[10px] text-gray-500 italic mt-0.5 line-clamp-1 px-2">
+                                            {invitation.address || 'Địa chỉ tổ chức...'}
                                         </p>
                                      </div>
                                 </div>
 
                                 {/* QR & Footer */}
-                                <div className="w-full mt-2 relative z-10">
-                                    <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-dashed border-gray-300">
+                                <div className="w-full relative z-10">
+                                    <div className="flex items-center justify-between bg-white p-2 rounded-xl border-2 border-dashed border-rose-200">
                                          <div className="flex items-center gap-3 text-left">
-                                             <div className="bg-white p-1 rounded-lg shadow-sm">
-                                                <QRCodeCanvas value={publicLink} size={42} />
+                                             <div className="bg-rose-50 p-1 rounded-lg">
+                                                <QRCodeCanvas value={publicLink} size={48} />
                                              </div>
                                              <div>
                                                  <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Mừng cưới</p>
@@ -500,9 +510,9 @@ const InvitationBuilder: React.FC = () => {
                                              </div>
                                          </div>
                                          {/* Footer Branding Aligned */}
-                                         <div className="flex items-center gap-1.5 opacity-80 pr-2">
-                                             <span className="text-[8px] text-gray-400 font-be-vietnam uppercase tracking-wider font-bold">Powered by</span>
-                                             <span className="text-[9px] font-black text-rose-600 font-be-vietnam leading-none pt-0.5">WEDPLAN AI</span>
+                                         <div className="flex flex-col items-end opacity-80 pr-1">
+                                             <span className="text-[7px] text-gray-400 font-be-vietnam uppercase tracking-wider font-bold">Powered by</span>
+                                             <span className="text-[9px] font-black text-rose-600 font-be-vietnam">WEDPLAN AI</span>
                                          </div>
                                     </div>
                                 </div>
