@@ -51,10 +51,13 @@ const InvitationBuilder: React.FC = () => {
     // Mobile View State: 'EDIT' (Nhập liệu) or 'PREVIEW' (Xem thiệp)
     const [mobileView, setMobileView] = useState<'EDIT' | 'PREVIEW'>('EDIT');
     
+    // Dynamic Scale for Mobile Preview
+    const [previewScale, setPreviewScale] = useState(1);
+    
     const marketingCardRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Initial load check
+    // Initial load check & Resize Listener
     useEffect(() => {
         if (!invitation.groomName && user?.displayName) {
             updateInvitation({ groomName: user.displayName });
@@ -65,6 +68,25 @@ const InvitationBuilder: React.FC = () => {
                 photoConfig: { scale: 1, x: 0, y: 0 }
             });
         }
+
+        const handleResize = () => {
+            const width = window.innerWidth;
+            if (width < 1024) {
+                // Mobile/Tablet logic
+                // Target width of card is approx 380px (360 + padding/border)
+                // We leave 32px padding (16px each side)
+                const availableWidth = width - 32; 
+                // Calculate scale to fit width
+                const scale = Math.min(1, availableWidth / 390); 
+                setPreviewScale(scale);
+            } else {
+                setPreviewScale(1);
+            }
+        };
+
+        handleResize(); // Call immediately
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const handleInputChange = (field: string, value: any) => {
@@ -182,9 +204,10 @@ const InvitationBuilder: React.FC = () => {
                         href={publicLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-bold hover:bg-rose-50 transition-colors"
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs md:text-sm font-bold hover:bg-rose-50 transition-colors"
+                        title="Xem thiệp thực tế (Public Link)"
                     >
-                        <Eye className="w-4 h-4" /> <span>Xem thực tế</span>
+                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem thực tế</span>
                     </a>
                     <button
                         onClick={downloadMarketingCard}
@@ -371,9 +394,17 @@ const InvitationBuilder: React.FC = () => {
                 </div>
 
                 {/* RIGHT: Preview (Visible on Desktop OR Mobile Preview Mode) */}
-                <div className={`flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[700px] ${mobileView === 'EDIT' ? 'hidden lg:flex' : 'flex'}`}>
+                <div className={`flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-start lg:justify-center min-h-[700px] ${mobileView === 'EDIT' ? 'hidden lg:flex' : 'flex'}`}>
+                    
                     {/* Scale Wrapper for Mobile */}
-                    <div className="bg-white p-2 rounded-[2.5rem] shadow-sm mb-4 border-[8px] border-white transform lg:transform-none scale-[0.85] origin-top md:scale-100">
+                    <div 
+                        className="bg-white p-2 rounded-[2.5rem] shadow-sm mb-4 border-[8px] border-white origin-top transition-transform duration-300"
+                        style={{ 
+                            transform: `scale(${previewScale})`,
+                            // Negative margin to remove whitespace caused by scaling
+                            marginBottom: previewScale < 1 ? `-${(740 * (1 - previewScale)) - 20}px` : '0px'
+                        }}
+                    >
 
                         {/* CARD PREVIEW CONTAINER (Mobile Size) */}
                         <div
