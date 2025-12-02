@@ -269,6 +269,12 @@ const InvitationBuilder: React.FC = () => {
                                 </div>
 
                                 <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Link Bản Đồ (Google Maps)</label>
+                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam text-blue-600" value={invitation.mapLink || ''} onChange={e => handleInputChange('mapLink', e.target.value)} placeholder="https://maps.app.goo.gl/..." />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic">Dán link chia sẻ từ Google Maps để hiện nút chỉ đường.</p>
+                                </div>
+
+                                <div>
                                     <label className="text-xs font-bold text-gray-500 uppercase">Lời Nhắn / Lời Mời</label>
                                     <textarea rows={3} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none font-be-vietnam" value={invitation.wishes} onChange={e => handleInputChange('wishes', e.target.value)} />
                                 </div>
