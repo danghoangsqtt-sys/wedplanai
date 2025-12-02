@@ -386,40 +386,41 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
                 {/* 5. BRANDING FOOTER */}
                 <div className="bg-[#FAF7F2] py-12 text-center border-t border-stone-200 mt-auto relative z-20">
                     <ScrollReveal>
-                        <div className="flex flex-col items-center justify-center gap-3">
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-rose-100 mb-2">
-                                <Sparkles className="w-6 h-6 text-rose-400 animate-pulse" />
+                        <div className="flex flex-col items-center justify-center gap-4">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md border border-rose-100 mb-2">
+                                <Sparkles className="w-8 h-8 text-rose-500 animate-pulse" />
                             </div>
-                            <div className="font-handwriting text-3xl text-gray-800">
+                            <div className="font-handwriting text-4xl text-gray-800 drop-shadow-sm">
                                 WedPlan <span className="text-rose-500">AI</span>
                             </div>
-                            <p className="text-[10px] md:text-xs text-gray-500 font-be-vietnam uppercase tracking-widest max-w-[200px] leading-relaxed">
+                            <p className="text-[10px] md:text-xs text-gray-500 font-be-vietnam uppercase tracking-widest max-w-[240px] leading-relaxed">
                                 Professional Wedding Planner & Invitation Creator
                             </p>
-
-                            <a
-                                href="https://wedplan.ai"
+                            
+                            <a 
+                                href="https://wedplan.ai" 
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="mt-4 px-6 py-2 bg-white border border-rose-200 rounded-full text-xs font-bold text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm uppercase tracking-wide"
+                                className="mt-6 px-8 py-3 bg-gray-900 text-white border border-gray-900 rounded-full text-xs font-bold hover:bg-gray-800 hover:scale-105 transition-all shadow-lg uppercase tracking-wide flex items-center gap-2"
                             >
-                                Create your own
+                                <Sparkles className="w-4 h-4 text-yellow-400" /> Create your own
                             </a>
                         </div>
                     </ScrollReveal>
                 </div>
             </div>
 
-            {/* FLOATING BADGE (Bottom Right) */}
-            <div className="fixed bottom-4 right-4 z-50 animate-fadeIn delay-1000">
-                <a
-                    href="/"
-                    className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/50 hover:scale-105 transition-transform group"
+            {/* FLOATING BADGE (Bottom Right) - Optimized for Mobile */}
+            <div className="fixed bottom-4 right-4 z-50 animate-fadeIn delay-1000 safe-area-bottom">
+                <a 
+                    href="/" 
+                    className="flex items-center gap-3 bg-white/95 backdrop-blur-xl px-4 py-2 rounded-full shadow-2xl border border-rose-100 hover:scale-105 transition-transform group ring-1 ring-black/5"
                 >
-                    <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
-                    <span className="text-[10px] font-bold text-gray-600 group-hover:text-rose-600 uppercase tracking-wider font-be-vietnam">
-                        Made with WedPlan AI
-                    </span>
+                    <div className="bg-rose-50 p-1.5 rounded-full"><Heart className="w-3.5 h-3.5 text-rose-500 fill-current" /></div>
+                    <div className="flex flex-col leading-none text-left">
+                        <span className="text-[9px] text-gray-400 font-be-vietnam uppercase tracking-widest mb-0.5">Made with</span>
+                        <span className="text-[11px] font-black text-gray-800 group-hover:text-rose-600 font-be-vietnam tracking-wide">WedPlan AI</span>
+                    </div>
                 </a>
             </div>
 
