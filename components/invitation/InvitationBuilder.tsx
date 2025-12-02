@@ -526,11 +526,11 @@ const InvitationBuilder: React.FC = () => {
                                             />
                                         </div>
 
-                                        {/* QR Context Text */}
-                                        <div className="flex-1 text-left">
+                                        {/* QR Context Text (Chỉnh sửa tại đây) */}
+                                        <div className="flex-1 text-left pr-1"> {/* Thêm pr-1 để giảm khoảng cách */}
                                             <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5 export-fix">Thiệp mời Online</p>
-                                            <p className="text-xs font-bold text-gray-800 leading-tight mb-1 export-fix">Quét mã để xem bản đồ & gửi lời chúc</p>
-                                            <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100 w-fit export-fix">
+                                            <p className="text-[11px] font-bold text-gray-800 leading-snug export-fix">Quét mã để xem bản đồ & gửi lời chúc</p> {/* Giảm kích thước chữ và line-height */}
+                                            <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100 w-fit export-fix mt-1">
                                                 <span>👉 wedplan.ai</span>
                                             </div>
                                         </div>
