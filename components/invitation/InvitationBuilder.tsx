@@ -4,8 +4,8 @@ import { useStore } from '../../store/useStore';
 import {
     Heart, Download, Eye,
     Info, Image as ImageIcon,
-    ZoomIn, Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
-    Palette, ChevronDown, Sparkles
+    Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
+    Palette, ChevronDown, Sparkles, Edit3, LayoutTemplate
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
@@ -47,6 +47,10 @@ const FloralCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => 
 const InvitationBuilder: React.FC = () => {
     const { invitation, updateInvitation, user, addNotification } = useStore();
     const [activeTab, setActiveTab] = useState<'INFO' | 'BANK' | 'PHOTO'>('INFO');
+    
+    // Mobile View State: 'EDIT' (Nhập liệu) or 'PREVIEW' (Xem thiệp)
+    const [mobileView, setMobileView] = useState<'EDIT' | 'PREVIEW'>('EDIT');
+    
     const marketingCardRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +87,14 @@ const InvitationBuilder: React.FC = () => {
     };
 
     const downloadMarketingCard = async () => {
+        // Nếu đang ở mobile và ở tab EDIT, chuyển sang PREVIEW trước để render DOM
+        if (window.innerWidth < 1024 && mobileView === 'EDIT') {
+            setMobileView('PREVIEW');
+            // Chờ DOM render
+            setTimeout(() => downloadMarketingCard(), 500);
+            return;
+        }
+
         if (!marketingCardRef.current) return;
         try {
             const canvas = await html2canvas(marketingCardRef.current, {
@@ -155,39 +167,40 @@ const InvitationBuilder: React.FC = () => {
     const primaryColor = invitation.themeColor || '#e11d48';
 
     return (
-        <div className="h-full flex flex-col bg-[#FDF2F8]">
+        <div className="h-full flex flex-col bg-[#FDF2F8] relative">
             {/* Header */}
-            <div className="p-4 md:p-6 bg-white border-b border-rose-100 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-                <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <Heart className="w-6 h-6 text-rose-500 fill-current animate-pulse" />
-                        Thiệp Mời Online
+            <div className="p-3 md:p-6 bg-white border-b border-rose-100 flex justify-between items-center sticky top-0 z-20 shadow-sm flex-shrink-0">
+                <div className="flex-1 min-w-0 mr-2">
+                    <h1 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2 truncate">
+                        <Heart className="w-5 h-5 md:w-6 md:h-6 text-rose-500 fill-current animate-pulse flex-shrink-0" />
+                        <span className="truncate">Thiệp Mời Online</span>
                     </h1>
-                    <p className="text-xs text-gray-500 mt-1">Tạo thiệp, QR mừng cưới & Ảnh cưới đẹp.</p>
+                    <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 truncate">Tạo thiệp, QR mừng cưới & Ảnh cưới đẹp.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                     <a
                         href={publicLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-bold hover:bg-rose-50 transition-colors"
+                        className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-bold hover:bg-rose-50 transition-colors"
                     >
-                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem thực tế</span>
+                        <Eye className="w-4 h-4" /> <span>Xem thực tế</span>
                     </a>
                     <button
                         onClick={downloadMarketingCard}
-                        className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md transition-colors"
+                        className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-rose-600 text-white rounded-lg text-xs md:text-sm font-bold hover:bg-rose-700 shadow-md transition-colors"
                     >
                         <Download className="w-4 h-4" /> <span className="hidden sm:inline">Tải ảnh</span>
+                        <span className="sm:hidden">Lưu</span>
                     </button>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-                {/* LEFT: Controls */}
-                <div className="w-full lg:w-[500px] bg-white border-r border-rose-100 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row pb-16 lg:pb-0">
+                {/* LEFT: Controls (Visible on Desktop OR Mobile Edit Mode) */}
+                <div className={`w-full lg:w-[500px] bg-white border-r border-rose-100 flex flex-col h-full overflow-hidden ${mobileView === 'PREVIEW' ? 'hidden lg:flex' : 'flex'}`}>
                     {/* Tabs */}
-                    <div className="flex border-b border-gray-100">
+                    <div className="flex border-b border-gray-100 flex-shrink-0">
                         <button onClick={() => setActiveTab('INFO')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'INFO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Thông Tin</button>
                         <button onClick={() => setActiveTab('BANK')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'BANK' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Ngân Hàng</button>
                         <button onClick={() => setActiveTab('PHOTO')} className={`flex-1 py-3 text-sm font-bold border-b-2 flex items-center justify-center gap-1 ${activeTab === 'PHOTO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
@@ -196,7 +209,7 @@ const InvitationBuilder: React.FC = () => {
                     </div>
 
                     {/* Scrollable Form Area */}
-                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 pb-24 lg:pb-6">
 
                         {activeTab === 'INFO' && (
                             <div className="space-y-4 animate-fadeIn">
@@ -357,9 +370,10 @@ const InvitationBuilder: React.FC = () => {
                     </div>
                 </div>
 
-                {/* RIGHT: Preview (Enhanced with Modern Look) */}
-                <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[700px]">
-                    <div className="bg-white p-2 rounded-[2.5rem] shadow-sm mb-4 border-[8px] border-white">
+                {/* RIGHT: Preview (Visible on Desktop OR Mobile Preview Mode) */}
+                <div className={`flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[700px] ${mobileView === 'EDIT' ? 'hidden lg:flex' : 'flex'}`}>
+                    {/* Scale Wrapper for Mobile */}
+                    <div className="bg-white p-2 rounded-[2.5rem] shadow-sm mb-4 border-[8px] border-white transform lg:transform-none scale-[0.85] origin-top md:scale-100">
 
                         {/* CARD PREVIEW CONTAINER (Mobile Size) */}
                         <div
@@ -464,8 +478,27 @@ const InvitationBuilder: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <p className="text-xs text-gray-400 font-medium font-be-vietnam">Kéo thả ảnh để căn chỉnh vị trí</p>
+                    <p className="text-xs text-gray-400 font-medium font-be-vietnam hidden lg:block">Kéo thả ảnh để căn chỉnh vị trí</p>
                 </div>
+            </div>
+
+            {/* MOBILE BOTTOM NAVIGATION (Tab Switcher) */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <button 
+                    onClick={() => setMobileView('EDIT')}
+                    className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-colors ${mobileView === 'EDIT' ? 'text-rose-600 bg-rose-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                >
+                    <Edit3 className="w-5 h-5" />
+                    <span className="text-[10px] font-bold uppercase">Nhập thông tin</span>
+                </button>
+                <div className="w-px bg-gray-200"></div>
+                <button 
+                    onClick={() => setMobileView('PREVIEW')}
+                    className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-colors ${mobileView === 'PREVIEW' ? 'text-rose-600 bg-rose-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                >
+                    <LayoutTemplate className="w-5 h-5" />
+                    <span className="text-[10px] font-bold uppercase">Xem thiệp</span>
+                </button>
             </div>
 
             <style>{`
