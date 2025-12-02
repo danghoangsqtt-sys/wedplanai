@@ -10,6 +10,9 @@ import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { BankInfo } from '../../types';
 
+// SỬA LỖI DOMAIN CÔNG KHAI TẠI ĐÂY
+const PUBLIC_DOMAIN = 'wedplanai.io.vn'; // Domain đúng theo yêu cầu của bạn
+
 // Danh sách ngân hàng phổ biến cho VietQR
 const BANKS = [
     { id: 'MB', name: 'MB Bank' },
@@ -208,7 +211,8 @@ const InvitationBuilder: React.FC = () => {
         }
     };
 
-    const publicLink = `${window.location.origin}/?view=invitation&uid=${user?.uid || 'guest'}`;
+    // SỬ DỤNG PUBLIC_DOMAIN ĐÃ KHAI BÁO
+    const publicLink = `https://${PUBLIC_DOMAIN}/?view=invitation&uid=${user?.uid || 'guest'}`;
     const dateObj = parseDate(invitation.date);
 
     return (
@@ -462,7 +466,7 @@ const InvitationBuilder: React.FC = () => {
                                 <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
                                 
                                 {/* Brand Badge sang trọng góc trên */}
-                                <div className="absolute top-4 right-4"> {/* Đã sửa lỗi tụt logo WEDPLAN AI */}
+                                <div className="absolute top-4 right-4"> {/* Sửa lỗi tụt logo WEDPLAN AI */}
                                     <div className="bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-lg border border-white flex items-center gap-2">
                                         <Heart className="w-3 h-3 text-rose-500 fill-current" />
                                         <span className="text-[10px] font-bold tracking-widest uppercase text-gray-800 export-fix">WEDPLAN AI</span>
@@ -473,12 +477,12 @@ const InvitationBuilder: React.FC = () => {
                             {/* 2. CONTENT AREA */}
                             <div className="flex-1 relative z-10 -mt-10 flex flex-col items-center text-center px-6 pb-6">
                                 
-                                {/* Date Circle */}
-                                <div className="bg-white p-1 rounded-full shadow-xl mb-4" style={{ height: '88px', width: '88px' }}> {/* Fix tụt số 18 */}
+                                {/* Date Block (Fix lỗi tụt số 18) */}
+                                <div className="bg-white p-1 rounded-full shadow-xl mb-4" style={{ height: '88px', width: '88px' }}>
                                     <div className="h-full w-full rounded-full border border-rose-100 flex flex-col items-center justify-center bg-white shadow-sm">
-                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5 export-fix">Tháng {dateObj.month}</span>
-                                        <span className="text-3xl font-serif font-black text-gray-800 leading-none pb-1 export-fix">{dateObj.day}</span>
-                                        <span className="text-[10px] text-rose-500 font-bold export-fix">{dateObj.year}</span>
+                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mt-1 export-fix">Tháng {dateObj.month}</span>
+                                        <span className="text-3xl font-serif font-black text-gray-800 leading-none export-fix">{dateObj.day}</span>
+                                        <span className="text-[10px] text-rose-500 font-bold mb-1 export-fix">{dateObj.year}</span>
                                     </div>
                                 </div>
 
@@ -526,12 +530,12 @@ const InvitationBuilder: React.FC = () => {
                                             />
                                         </div>
 
-                                        {/* QR Context Text (Sửa lỗi tràn dòng) */}
+                                        {/* QR Context Text (Đã sửa lỗi rớt chữ 'chúc' và chỉnh font size) */}
                                         <div className="flex-1 text-left pr-1"> 
                                             <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5 export-fix">Thiệp mời Online</p>
-                                            <p className="text-[11px] font-bold text-gray-800 leading-snug export-fix" style={{ maxWidth: '170px' }}>Quét mã để xem bản đồ & gửi lời chúc</p> {/* Đặt Max-width cố định */}
+                                            <p className="text-[10px] font-bold text-gray-800 leading-snug export-fix">Quét mã để xem bản đồ & gửi lời chúc</p> {/* Giảm size chữ */}
                                             <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100 w-fit export-fix mt-1">
-                                                <span>👉 wedplan.ai</span>
+                                                <span>👉 {PUBLIC_DOMAIN}</span> {/* SỬA LỖI DOMAIN */}
                                             </div>
                                         </div>
                                     </div>
