@@ -398,7 +398,7 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
                             </p>
                             
                             <a 
-                                href="https://wedplan.ai" 
+                                href="https://wedplanai.io.vn" 
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="mt-6 px-8 py-3 bg-gray-900 text-white border border-gray-900 rounded-full text-xs font-bold hover:bg-gray-800 hover:scale-105 transition-all shadow-lg uppercase tracking-wide flex items-center gap-2"
