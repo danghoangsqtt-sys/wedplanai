@@ -462,10 +462,10 @@ const InvitationBuilder: React.FC = () => {
                                 <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
                                 
                                 {/* Brand Badge sang trọng góc trên */}
-                                <div className="absolute top-4 right-4"> {/* Sửa lỗi tụt: top-5 -> top-4, right-5 -> right-4 */}
+                                <div className="absolute top-4 right-4"> {/* Đã sửa lỗi tụt logo WEDPLAN AI */}
                                     <div className="bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-lg border border-white flex items-center gap-2">
                                         <Heart className="w-3 h-3 text-rose-500 fill-current" />
-                                        <span className="text-[10px] font-bold tracking-widest uppercase text-gray-800 export-fix">WedPlan AI</span>
+                                        <span className="text-[10px] font-bold tracking-widest uppercase text-gray-800 export-fix">WEDPLAN AI</span>
                                     </div>
                                 </div>
                             </div>
@@ -474,7 +474,7 @@ const InvitationBuilder: React.FC = () => {
                             <div className="flex-1 relative z-10 -mt-10 flex flex-col items-center text-center px-6 pb-6">
                                 
                                 {/* Date Circle */}
-                                <div className="bg-white p-1 rounded-full shadow-xl mb-4" style={{ height: '88px', width: '88px' }}> {/* Cưỡng chế kích thước để tránh lỗi tụt số 18 */}
+                                <div className="bg-white p-1 rounded-full shadow-xl mb-4" style={{ height: '88px', width: '88px' }}> {/* Fix tụt số 18 */}
                                     <div className="h-full w-full rounded-full border border-rose-100 flex flex-col items-center justify-center bg-white shadow-sm">
                                         <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5 export-fix">Tháng {dateObj.month}</span>
                                         <span className="text-3xl font-serif font-black text-gray-800 leading-none pb-1 export-fix">{dateObj.day}</span>
@@ -526,10 +526,10 @@ const InvitationBuilder: React.FC = () => {
                                             />
                                         </div>
 
-                                        {/* QR Context Text (Đã sửa lỗi rớt chữ 'chúc') */}
+                                        {/* QR Context Text (Sửa lỗi tràn dòng) */}
                                         <div className="flex-1 text-left pr-1"> 
                                             <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5 export-fix">Thiệp mời Online</p>
-                                            <p className="text-[11px] font-bold text-gray-800 leading-snug export-fix pr-1">Quét mã để xem bản đồ & gửi lời chúc</p>
+                                            <p className="text-[11px] font-bold text-gray-800 leading-snug export-fix" style={{ maxWidth: '170px' }}>Quét mã để xem bản đồ & gửi lời chúc</p> {/* Đặt Max-width cố định */}
                                             <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100 w-fit export-fix mt-1">
                                                 <span>👉 wedplan.ai</span>
                                             </div>
