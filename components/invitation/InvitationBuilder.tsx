@@ -33,13 +33,13 @@ const FloralCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => 
 
     return (
         <div className={`absolute w-32 h-32 pointer-events-none z-10 opacity-60 mix-blend-multiply ${classes[position]}`}>
-            <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-rose-200">
-                <path d="M20 20C50 20 80 40 100 80C120 40 150 20 180 20" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
-                <path d="M20 20C20 50 40 80 80 100C40 120 20 150 20 180" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
-                <circle cx="20" cy="20" r="8" fill="currentColor" className="text-rose-300" />
-                <path d="M100 80C110 110 140 130 180 130" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
-                <path d="M80 100C110 110 130 140 130 180" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
-            </svg>
+             <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-rose-200">
+                <path d="M20 20C50 20 80 40 100 80C120 40 150 20 180 20" stroke="currentColor" strokeWidth="2" className="text-rose-300"/>
+                <path d="M20 20C20 50 40 80 80 100C40 120 20 150 20 180" stroke="currentColor" strokeWidth="2" className="text-rose-300"/>
+                <circle cx="20" cy="20" r="8" fill="currentColor" className="text-rose-300"/>
+                <path d="M100 80C110 110 140 130 180 130" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200"/>
+                <path d="M80 100C110 110 130 140 130 180" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200"/>
+             </svg>
         </div>
     );
 };
@@ -390,9 +390,9 @@ const InvitationBuilder: React.FC = () => {
 
                                 {/* BRANDING WATERMARK (Top Right) */}
                                 <div className="absolute top-4 right-4 z-20">
-                                    <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5 shadow-lg">
-                                        <Heart className="w-3 h-3 text-rose-400 fill-current" />
-                                        <span className="text-white text-[10px] font-bold tracking-wide uppercase font-be-vietnam">WedPlan AI</span>
+                                    <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30 flex items-center gap-1.5 shadow-xl">
+                                        <div className="bg-rose-50 rounded-full p-0.5"><Heart className="w-3 h-3 text-rose-500 fill-current" /></div>
+                                        <span className="text-rose-600 text-[10px] font-bold tracking-wider uppercase font-be-vietnam drop-shadow-sm">WedPlan AI</span>
                                     </div>
                                 </div>
 
@@ -414,7 +414,7 @@ const InvitationBuilder: React.FC = () => {
                             <div className="flex-1 px-6 py-6 flex flex-col items-center text-center bg-white relative">
                                 <FloralCorner position="tl" />
                                 <FloralCorner position="tr" />
-
+                                
                                 <div className="space-y-4 mb-4 w-full relative z-10">
                                     <div>
                                         <h3 className="font-be-vietnam text-lg font-bold text-gray-800 uppercase tracking-widest mb-1">Thành Hôn</h3>
@@ -439,8 +439,8 @@ const InvitationBuilder: React.FC = () => {
                                 </div>
 
                                 {/* QR Code Compact + BRANDING FOOTER */}
-                                <div className="mt-auto w-full relative z-10 flex flex-col gap-2">
-                                    <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-dashed border-gray-300 w-full justify-center">
+                                <div className="mt-auto w-full relative z-10 flex flex-col">
+                                    <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-dashed border-gray-300 w-full justify-center mb-3">
                                         <QRCodeCanvas
                                             value={publicLink}
                                             size={40}
@@ -453,11 +453,12 @@ const InvitationBuilder: React.FC = () => {
                                             <p className="text-[8px] text-gray-500 font-be-vietnam">Xem bản đồ & Mừng cưới</p>
                                         </div>
                                     </div>
-
+                                    
                                     {/* BRANDING FOOTER */}
-                                    <div className="flex items-center justify-center gap-1.5 text-[8px] text-gray-400 font-be-vietnam mt-1 uppercase tracking-widest opacity-80">
-                                        <Sparkles className="w-2.5 h-2.5 text-rose-400" />
-                                        Powered by <span className="font-bold text-rose-500">WedPlan AI</span>
+                                    <div className="w-full bg-[#FFF0F5] py-2 flex items-center justify-center gap-1.5 border-t border-rose-100 rounded-b-xl -mx-6 px-6 -mb-6">
+                                        <Sparkles className="w-3 h-3 text-rose-500" />
+                                        <span className="text-[9px] text-rose-400 font-be-vietnam uppercase tracking-widest">Created with</span>
+                                        <span className="text-[10px] font-black text-rose-600 font-be-vietnam tracking-wide">WEDPLAN AI</span>
                                     </div>
                                 </div>
                             </div>
