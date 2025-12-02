@@ -36,7 +36,7 @@ export interface BudgetItem {
   category: string; // e.g., "Lễ Hỏi", "Trang Trí", "Tiệc Cưới"
   itemName: string; // e.g., "Tráp ăn hỏi", "Backdrop"
   assignee: string; // e.g., "Chú Rể", "Mẹ Cô Dâu"
-  side: WeddingSide;
+  side: WeddingSide; 
   collaborator?: string;
   deadline?: string; // ISO date string (YYYY-MM-DD)
   status: TaskStatus;
@@ -145,13 +145,13 @@ export interface InvitationData {
   mapLink: string;
   bankInfo: BankInfo;
   wishes: string;
-
+  
   // NEW PHOTO FIELDS
   couplePhoto?: string; // Base64 string
   photoConfig?: PhotoConfig;
-
+  
   // Deprecated but kept for type safety during migration if needed
-  sticker?: any;
-
+  sticker?: any; 
+  
   themeColor: string;
 }
