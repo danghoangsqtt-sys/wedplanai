@@ -465,7 +465,7 @@ const InvitationBuilder: React.FC = () => {
                                 <div className="absolute top-5 right-5">
                                     <div className="bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-lg border border-white flex items-center gap-2">
                                         <Heart className="w-3 h-3 text-rose-500 fill-current" />
-                                        <span className="text-[10px] font-bold tracking-widest uppercase text-gray-800">WedPlan AI</span>
+                                        <span className="text-[10px] font-bold tracking-widest uppercase text-gray-800 export-fix">WedPlan AI</span>
                                     </div>
                                 </div>
                             </div>
@@ -476,34 +476,34 @@ const InvitationBuilder: React.FC = () => {
                                 {/* Date Circle */}
                                 <div className="bg-white p-1 rounded-full shadow-xl mb-4">
                                     <div className="w-20 h-20 rounded-full border border-rose-100 flex flex-col items-center justify-center bg-white shadow-sm">
-                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5">Tháng {dateObj.month}</span>
-                                        <span className="text-3xl font-serif font-black text-gray-800 leading-none pb-1">{dateObj.day}</span>
-                                        <span className="text-[10px] text-rose-500 font-bold">{dateObj.year}</span>
+                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5 export-fix">Tháng {dateObj.month}</span>
+                                        <span className="text-3xl font-serif font-black text-gray-800 leading-none pb-1 export-fix">{dateObj.day}</span>
+                                        <span className="text-[10px] text-rose-500 font-bold export-fix">{dateObj.year}</span>
                                     </div>
                                 </div>
 
                                 {/* Tên Cô Dâu Chú Rể */}
                                 <div className="w-full mb-2">
-                                    <h2 className="font-['Great_Vibes'] text-[42px] text-gray-800 leading-normal drop-shadow-sm pb-2" style={{ color: invitation.themeColor }}>
+                                    <h2 className="font-['Great_Vibes'] text-[42px] text-gray-800 leading-normal drop-shadow-sm pb-2 export-fix" style={{ color: invitation.themeColor }}>
                                         {invitation.groomName} <span className="text-2xl text-gray-400 font-serif mx-1">&</span> {invitation.brideName}
                                     </h2>
                                 </div>
 
                                 {/* Thông tin tiệc */}
                                 <div className="space-y-2 mb-auto w-full">
-                                    <div className="flex items-center justify-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">
+                                    <div className="flex items-center justify-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 export-fix">
                                         <span className="h-[1px] w-4 bg-rose-200"></span>
                                         SAVE THE DATE
                                         <span className="h-[1px] w-4 bg-rose-200"></span>
                                     </div>
                                     
-                                    <p className="text-sm font-bold text-gray-800 uppercase tracking-wide px-4 pb-1">
+                                    <p className="text-sm font-bold text-gray-800 uppercase tracking-wide px-4 pb-1 export-fix">
                                         {invitation.location || 'Địa điểm tổ chức'}
                                     </p>
-                                    <p className="text-xs text-gray-500 italic px-8 leading-relaxed pb-1">
+                                    <p className="text-xs text-gray-500 italic px-8 leading-relaxed pb-1 export-fix">
                                         {invitation.address || 'Địa chỉ chi tiết...'}
                                     </p>
-                                    <p className="text-sm font-bold text-rose-500 mt-1 pb-1">
+                                    <p className="text-sm font-bold text-rose-500 mt-1 pb-1 export-fix">
                                         {invitation.time || '00:00'} • Đón Khách
                                     </p>
                                 </div>
@@ -528,9 +528,9 @@ const InvitationBuilder: React.FC = () => {
 
                                         {/* QR Context Text */}
                                         <div className="flex-1 text-left">
-                                            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5">Thiệp mời Online</p>
-                                            <p className="text-xs font-bold text-gray-800 leading-tight mb-1">Quét mã để xem bản đồ & gửi lời chúc</p>
-                                            <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100 w-fit">
+                                            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5 export-fix">Thiệp mời Online</p>
+                                            <p className="text-xs font-bold text-gray-800 leading-tight mb-1 export-fix">Quét mã để xem bản đồ & gửi lời chúc</p>
+                                            <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100 w-fit export-fix">
                                                 <span>👉 wedplan.ai</span>
                                             </div>
                                         </div>
@@ -569,6 +569,12 @@ const InvitationBuilder: React.FC = () => {
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Be+Vietnam+Pro:wght@400;500;700&family=Cinzel:wght@400;700&display=swap');
                 
+                /* FIX LỖI CLIPPING TEXT TRONG HTML2CANVAS */
+                /* Cưỡng chế line-height cao hơn cho các font tùy chỉnh */
+                .export-fix {
+                    line-height: 1.4 !important;
+                }
+
                 .font-merriweather { font-family: 'Merriweather', serif; }
                 .font-cinzel { font-family: 'Cinzel', serif; }
                 .font-be-vietnam { font-family: 'Be Vietnam Pro', sans-serif; }
