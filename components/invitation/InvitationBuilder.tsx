@@ -4,7 +4,7 @@ import {
     Heart, Download, Eye,
     Info, Image as ImageIcon,
     Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
-    Palette, ChevronDown, Sparkles, Edit3, LayoutTemplate
+    Palette, Edit3, LayoutTemplate, Search, X
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
@@ -43,7 +43,7 @@ const FloralCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => 
     );
 };
 
-// Helper để parse ngày giờ chuẩn xác (tránh lỗi lệch múi giờ)
+// Helper để parse ngày giờ chuẩn xác
 const parseDate = (dateStr: string) => {
     if (!dateStr) return { day: '01', month: '01', year: '2026', full: '01/01/2026' };
     const parts = dateStr.split('-');
@@ -67,6 +67,9 @@ const InvitationBuilder: React.FC = () => {
     // Dynamic Scale for Mobile Preview
     const [previewScale, setPreviewScale] = useState(1);
     
+    // Image Modal State
+    const [viewingImage, setViewingImage] = useState<{ name: string, url: string | null } | null>(null);
+
     const marketingCardRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,22 +129,34 @@ const InvitationBuilder: React.FC = () => {
         }
 
         if (!marketingCardRef.current) return;
+        
+        // Hiển thị thông báo đang xử lý
+        const btn = document.getElementById('btn-download');
+        const originalText = btn ? btn.innerHTML : '';
+        if(btn) btn.innerText = "Đang xử lý...";
+
         try {
+            // Tăng scale lên 4 để ảnh siêu nét
             const canvas = await html2canvas(marketingCardRef.current, {
                 useCORS: true,
-                scale: 2, // High quality export
-                backgroundColor: null,
+                scale: 4, 
+                backgroundColor: '#ffffff',
                 logging: false,
                 allowTaint: true,
+                imageTimeout: 0,
             });
+            
             const link = document.createElement('a');
-            link.download = `thiep-cuoi-${user!.uid || 'guest'}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.download = `Thiep-Moi-${invitation.groomName}-${invitation.brideName}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
             link.click();
-            addNotification('SUCCESS', 'Đã tải ảnh thiệp về máy!');
+            
+            addNotification('SUCCESS', 'Đã tải ảnh chất lượng cao!');
         } catch (err) {
             console.error(err);
-            alert("Lỗi khi tạo ảnh. Vui lòng thử lại.");
+            addNotification('ERROR', 'Lỗi khi tạo ảnh. Hãy thử lại.');
+        } finally {
+            if(btn) btn.innerHTML = originalText;
         }
     };
 
@@ -218,6 +233,7 @@ const InvitationBuilder: React.FC = () => {
                         <Eye className="w-5 h-5" /> <span className="hidden md:inline">Xem thực tế</span>
                     </a>
                     <button
+                        id="btn-download"
                         onClick={downloadMarketingCard}
                         className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-rose-600 text-white rounded-lg text-xs md:text-sm font-bold hover:bg-rose-700 shadow-md transition-colors"
                     >
@@ -419,103 +435,111 @@ const InvitationBuilder: React.FC = () => {
                         }}
                     >
 
-                        {/* CARD PREVIEW CONTAINER (Standard Mobile 375x667) */}
+                        {/* CARD PREVIEW CONTAINER - PREMIUM LAYOUT */}
                         <div
                             ref={marketingCardRef}
-                            className="w-[375px] bg-white relative flex flex-col overflow-hidden shadow-2xl"
+                            className="w-[375px] bg-white relative flex flex-col shadow-2xl overflow-hidden"
                             style={{ height: '667px' }}
                         >
-                            {/* Photo Area - Top 55% */}
-                            <div className="h-[370px] w-full relative overflow-hidden bg-gray-100 border-b border-rose-50">
+                            {/* 1. PHOTO AREA (Chiếm 60% diện tích) */}
+                            <div className="h-[400px] w-full relative overflow-hidden">
                                 {invitation.couplePhoto ? (
-                                    /* Use div background for correct export rendering */
                                     <div 
-                                        className="w-full h-full bg-cover bg-no-repeat bg-center"
+                                        className="w-full h-full bg-cover bg-no-repeat bg-center transition-transform duration-300"
                                         style={{
                                             backgroundImage: `url(${invitation.couplePhoto})`,
                                             transform: `scale(${invitation.photoConfig?.scale || 1}) translate(${invitation.photoConfig?.x || 0}px, ${invitation.photoConfig?.y || 0}px)`
                                         }}
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-50">
-                                        <ImageIcon className="w-16 h-16 mb-2" />
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 text-gray-400">
+                                        <ImageIcon className="w-16 h-16 mb-2 opacity-50" />
                                         <span className="text-sm font-medium">Chưa có ảnh</span>
                                     </div>
                                 )}
-
-                                {/* Overlay Gradient */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30 pointer-events-none"></div>
-
-                                {/* Watermark (Top Right) - Perfectly Aligned */}
-                                <div className="absolute top-4 right-4 z-20">
-                                    <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/50 flex items-center gap-2 shadow-lg">
-                                        <Heart className="w-3.5 h-3.5 text-rose-500 fill-current" />
-                                        <span className="text-rose-900 text-[10px] font-bold tracking-wider uppercase font-be-vietnam flex items-center h-full pt-0.5">WedPlan AI</span>
+                                
+                                {/* Lớp phủ gradient nhẹ ở đáy ảnh để làm mềm chuyển tiếp */}
+                                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
+                                
+                                {/* Brand Badge sang trọng góc trên */}
+                                <div className="absolute top-5 right-5">
+                                    <div className="bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-lg border border-white flex items-center gap-2">
+                                        <Heart className="w-3 h-3 text-rose-500 fill-current" />
+                                        <span className="text-[10px] font-bold tracking-widest uppercase text-gray-800">WedPlan AI</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Content Area */}
-                            <div className="flex-1 px-5 py-4 flex flex-col bg-white relative justify-between">
-                                <FloralCorner position="tl" />
-                                <FloralCorner position="tr" />
+                            {/* 2. CONTENT AREA */}
+                            <div className="flex-1 relative z-10 -mt-10 flex flex-col items-center text-center px-6 pb-6">
                                 
-                                {/* Date / Time Display (Clean Style) */}
-                                <div className="w-full relative z-10 flex items-center justify-between">
-                                     <div className="text-left">
-                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Save The Date</p>
-                                         <div className="text-4xl font-black text-gray-800 font-serif leading-none tracking-tight">
-                                            {dateObj.day}
-                                         </div>
-                                         <div className="text-[10px] font-bold text-rose-500 uppercase font-be-vietnam tracking-wide">
-                                            Tháng {dateObj.month}, {dateObj.year}
-                                         </div>
-                                     </div>
-                                     
-                                     <div className="h-8 w-px bg-gray-200 mx-4"></div>
-
-                                     <div className="text-right">
-                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Giờ đón khách</p>
-                                         <div className="text-3xl font-black text-rose-600 font-mono leading-none tracking-tight">
-                                            {invitation.time || '00:00'}
-                                         </div>
-                                     </div>
-                                </div>
-
-                                {/* Names & Location */}
-                                <div className="space-y-1 text-center relative z-10 my-2">
-                                     <h2 className="font-['Great_Vibes'] text-5xl text-gray-800 leading-tight">
-                                        {invitation.groomName} <span className="text-rose-400 text-3xl font-serif">&</span> {invitation.brideName}
-                                     </h2>
-                                     <div className="pt-2">
-                                        <p className="text-xs font-black text-gray-700 font-be-vietnam uppercase tracking-widest line-clamp-1">
-                                            {invitation.location || 'Tên nhà hàng'}
-                                        </p>
-                                        <p className="text-[10px] text-gray-500 italic mt-0.5 line-clamp-1 px-2">
-                                            {invitation.address || 'Địa chỉ tổ chức...'}
-                                        </p>
-                                     </div>
-                                </div>
-
-                                {/* QR & Footer */}
-                                <div className="w-full relative z-10">
-                                    <div className="flex items-center justify-between bg-white p-2 rounded-xl border-2 border-dashed border-rose-200">
-                                         <div className="flex items-center gap-3 text-left">
-                                             <div className="bg-rose-50 p-1 rounded-lg">
-                                                <QRCodeCanvas value={publicLink} size={48} />
-                                             </div>
-                                             <div>
-                                                 <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Mừng cưới</p>
-                                                 <p className="text-[9px] text-gray-500 font-be-vietnam">Quét mã QR</p>
-                                             </div>
-                                         </div>
-                                         {/* Footer Branding Aligned */}
-                                         <div className="flex flex-col items-end opacity-80 pr-1">
-                                             <span className="text-[7px] text-gray-400 font-be-vietnam uppercase tracking-wider font-bold">Powered by</span>
-                                             <span className="text-[9px] font-black text-rose-600 font-be-vietnam">WEDPLAN AI</span>
-                                         </div>
+                                {/* Date Circle */}
+                                <div className="bg-white p-1 rounded-full shadow-xl mb-4">
+                                    <div className="w-20 h-20 rounded-full border border-rose-100 flex flex-col items-center justify-center bg-white shadow-sm">
+                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5">Tháng {dateObj.month}</span>
+                                        <span className="text-3xl font-serif font-black text-gray-800 leading-none pb-1">{dateObj.day}</span>
+                                        <span className="text-[10px] text-rose-500 font-bold">{dateObj.year}</span>
                                     </div>
                                 </div>
+
+                                {/* Tên Cô Dâu Chú Rể */}
+                                <div className="w-full mb-2">
+                                    <h2 className="font-['Great_Vibes'] text-[42px] text-gray-800 leading-normal drop-shadow-sm pb-2" style={{ color: invitation.themeColor }}>
+                                        {invitation.groomName} <span className="text-2xl text-gray-400 font-serif mx-1">&</span> {invitation.brideName}
+                                    </h2>
+                                </div>
+
+                                {/* Thông tin tiệc */}
+                                <div className="space-y-2 mb-auto w-full">
+                                    <div className="flex items-center justify-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">
+                                        <span className="h-[1px] w-4 bg-rose-200"></span>
+                                        SAVE THE DATE
+                                        <span className="h-[1px] w-4 bg-rose-200"></span>
+                                    </div>
+                                    
+                                    <p className="text-sm font-bold text-gray-800 uppercase tracking-wide px-4 pb-1">
+                                        {invitation.location || 'Địa điểm tổ chức'}
+                                    </p>
+                                    <p className="text-xs text-gray-500 italic px-8 leading-relaxed pb-1">
+                                        {invitation.address || 'Địa chỉ chi tiết...'}
+                                    </p>
+                                    <p className="text-sm font-bold text-rose-500 mt-1 pb-1">
+                                        {invitation.time || '00:00'} • Đón Khách
+                                    </p>
+                                </div>
+
+                                {/* 3. QR FOOTER - Thiết kế dạng vé mời (Ticket) */}
+                                <div className="w-full mt-3">
+                                    <div className="bg-gray-50 border border-dashed border-rose-200 rounded-xl p-3 flex items-center gap-4 shadow-inner relative overflow-hidden">
+                                        {/* Decoration Circles */}
+                                        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-r border-rose-200"></div>
+                                        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-l border-rose-200"></div>
+
+                                        {/* QR Code Container */}
+                                        <div className="bg-white p-1.5 rounded-lg shadow-sm border border-gray-100 flex-shrink-0">
+                                            <QRCodeCanvas 
+                                                value={publicLink} 
+                                                size={64}
+                                                level={"H"}
+                                                includeMargin={false}
+                                                fgColor="#374151"
+                                            />
+                                        </div>
+
+                                        {/* QR Context Text */}
+                                        <div className="flex-1 text-left">
+                                            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5">Thiệp mời Online</p>
+                                            <p className="text-xs font-bold text-gray-800 leading-tight mb-1">Quét mã để xem bản đồ & gửi lời chúc</p>
+                                            <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-white px-2 py-0.5 rounded-md border border-gray-100 w-fit">
+                                                <span>👉 wedplan.ai</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Floral Decor (Optional) */}
+                                <FloralCorner position="bl" />
+                                <FloralCorner position="tr" />
                             </div>
                         </div>
                     </div>
@@ -543,9 +567,7 @@ const InvitationBuilder: React.FC = () => {
             </div>
 
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
-                @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap');
-                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Be+Vietnam+Pro:wght@400;500;700&family=Cinzel:wght@400;700&display=swap');
                 
                 .font-merriweather { font-family: 'Merriweather', serif; }
                 .font-cinzel { font-family: 'Cinzel', serif; }
