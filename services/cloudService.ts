@@ -38,11 +38,20 @@ export const saveUserDataToCloud = async (uid: string, data: Omit<UserCloudData,
   if (!db) return;
 
   try {
+    // 1. Lưu dữ liệu cá nhân (Private)
     const userDocRef = doc(db, "userData", uid);
     await setDoc(userDocRef, {
       ...data,
       lastUpdated: Date.now()
     }, { merge: true });
+
+    // 2. Lưu riêng Thiệp mời sang Collection công khai (Public)
+    // Để khách mời có thể xem mà không cần đăng nhập
+    if (data.invitation) {
+      const publicInviteRef = doc(db, "public_invitations", uid);
+      await setDoc(publicInviteRef, data.invitation, { merge: true });
+    }
+
     updateLastActive(uid);
   } catch (error: any) {
     if (error.code === 'permission-denied') {
@@ -78,15 +87,22 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
 export const loadPublicInvitation = async (uid: string): Promise<InvitationData | null> => {
   if (!db) return null;
   try {
-    // Attempt to read from userData directly.
-    // Note: Firestore rules must allow read access to 'userData/{uid}' for this to work publicly.
-    // Alternatively, save a duplicate copy to a public collection 'public_invitations' on save.
-    const userDocRef = doc(db, "userData", uid);
-    const docSnap = await getDoc(userDocRef);
+    // Đọc từ collection công khai 'public_invitations' thay vì 'userData'
+    const docRef = doc(db, "public_invitations", uid);
+    const docSnap = await getDoc(docRef);
+
     if (docSnap.exists()) {
-      const data = docSnap.data() as UserCloudData;
+      return docSnap.data() as InvitationData;
+    }
+
+    // Fallback: Thử đọc từ userData nếu chưa có trong public (chỉ hoạt động nếu rules cho phép)
+    const userDocRef = doc(db, "userData", uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (userDocSnap.exists()) {
+      const data = userDocSnap.data() as UserCloudData;
       return data.invitation || null;
     }
+
     return null;
   } catch (error) {
     console.error("Error loading public invitation:", error);
