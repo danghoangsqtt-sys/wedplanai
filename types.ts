@@ -1,4 +1,3 @@
-
 export enum AttendanceProbability {
   CONFIRMED = 100, // Chắc chắn
   LIKELY = 80,     // Khả năng cao
@@ -17,7 +16,6 @@ export interface Guest {
   id: string;
   name: string;
   group: GuestGroup;
-  address?: string; // Địa chỉ
   probability: AttendanceProbability;
   childrenCount: number;
   redEnvelope: number; // Tiền mừng dự kiến (VNĐ)
@@ -37,7 +35,7 @@ export interface BudgetItem {
   category: string; // e.g., "Lễ Hỏi", "Trang Trí", "Tiệc Cưới"
   itemName: string; // e.g., "Tráp ăn hỏi", "Backdrop"
   assignee: string; // e.g., "Chú Rể", "Mẹ Cô Dâu"
-  side: WeddingSide; 
+  side: WeddingSide;
   collaborator?: string;
   deadline?: string; // ISO date string (YYYY-MM-DD)
   status: TaskStatus;
@@ -121,38 +119,47 @@ export interface ProcedureStep {
   tasks: ProcedureTaskTemplate[];
 }
 
-// --- Invitation & Marketing Types ---
+// --- Invitation Types ---
+
 export interface BankInfo {
-  bankId: string; // e.g., "MB", "VCB"
+  bankId: string;
   accountNumber: string;
   accountName: string;
-  template: 'qr_code' | 'compact';
+  qrTemplate?: 'compact' | 'compact2' | 'qr_only' | 'print';
 }
 
-export interface PhotoConfig {
-  scale: number;
-  x: number;
-  y: number;
+export interface WeddingEvent {
+  id: string;
+  title: string; // e.g. "Lễ Nạp Tài"
+  time: string; // e.g. "09:00"
+  date: string; // ISO Date YYYY-MM-DD
+  lunarDate?: string; // e.g. "10/01 Âm lịch"
+  location: string; // e.g. "Tại tư gia nhà gái"
+  description?: string; // Full phrasing template
 }
 
 export interface InvitationData {
-  templateId: string;
+  templateId: 'modern' | 'traditional' | 'luxury' | 'floral';
   groomName: string;
   brideName: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  groomParents?: { father: string; mother: string };
+  brideParents?: { father: string; mother: string };
+  date: string;
+  lunarDate?: string;
+  time: string;
   location: string;
   address: string;
-  mapLink: string;
-  bankInfo: BankInfo;
+  mapLink?: string;
   wishes: string;
-  
-  // NEW PHOTO FIELDS
-  couplePhoto?: string; // Base64 string
-  photoConfig?: PhotoConfig;
-  
-  // Deprecated but kept for type safety during migration if needed
-  sticker?: any; 
-  
   themeColor: string;
+  bankInfo: BankInfo;
+  couplePhoto?: string; // URL or Base64
+  galleryImages?: string[]; // Array of URLs
+  musicUrl?: string; // Background music URL
+  photoConfig?: {
+    scale: number;
+    x: number;
+    y: number;
+  };
+  events?: WeddingEvent[]; // NEW: List of specific ceremonies
 }

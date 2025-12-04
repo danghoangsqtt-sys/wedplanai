@@ -1,5 +1,6 @@
 
-import { Guest, GuestGroup, AttendanceProbability, BudgetItem, TaskStatus, UserProfile } from '../types';
+
+import { Guest, GuestGroup, AttendanceProbability, BudgetItem, TaskStatus, UserProfile, InvitationData } from '../types';
 
 export const INITIAL_GUESTS: Guest[] = [
   { id: '1', name: 'Nguyễn Văn A', group: GuestGroup.GROOM, address: 'Hà Nội', probability: AttendanceProbability.CONFIRMED, childrenCount: 2, redEnvelope: 1000000 },
@@ -119,4 +120,25 @@ export const DEFAULT_GUEST_USER: UserProfile = {
   enableCloudStorage: false,
   weddingDate: null,
   showCountdown: false
+};
+
+export const INITIAL_INVITATION: InvitationData = {
+  groomName: '',
+  brideName: '',
+  date: '',
+  time: '',
+  location: '',
+  address: '',
+  mapLink: '',
+  wishes: 'Trân trọng kính mời bạn đến chung vui cùng gia đình chúng tôi!',
+  bankInfo: {
+    bankId: '',
+    accountNumber: '',
+    accountName: '',
+    template: 'compact'
+  },
+  photoConfig: { scale: 1, x: 0, y: 0 },
+  themeColor: '#e11d48', // Rose-600
+  templateId: 'modern',
+  musicUrl: '',
 };

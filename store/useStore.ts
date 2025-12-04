@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep, InvitationData } from '../types';
@@ -10,14 +9,32 @@ import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
 import { db } from '../lib/firebase';
 import * as Firestore from 'firebase/firestore';
 
-// Destructure from namespace import to avoid "no exported member" errors in strict environments
-const { doc, updateDoc, deleteDoc, setDoc } = Firestore;
-
 export interface GuestUsage {
   fengShuiCount: number;
   aiChatCount: number;
   speechCount: number;
 }
+
+const DEFAULT_INVITATION: InvitationData = {
+  templateId: 'luxury',
+  groomName: '',
+  brideName: '',
+  groomParents: { father: '', mother: '' },
+  brideParents: { father: '', mother: '' },
+  date: '',
+  lunarDate: '',
+  time: '10:30',
+  location: '',
+  address: '',
+  wishes: 'Rất hân hạnh được đón tiếp quý khách!',
+  themeColor: '#e11d48',
+  bankInfo: { bankId: '', accountNumber: '', accountName: '' },
+  couplePhoto: '',
+  galleryImages: [],
+  musicUrl: '',
+  photoConfig: { scale: 1, x: 0, y: 0 },
+  events: []
+};
 
 interface AppState {
   user: UserProfile | null;
@@ -29,11 +46,10 @@ interface AppState {
 
   notifications: Notification[];
 
-  // App Data (Now in Store)
+  // App Data
   guests: Guest[];
   budgetItems: BudgetItem[];
   procedures: Record<WeddingRegion, ProcedureStep[]>;
-  invitation: InvitationData; // NEW: Invitation State
   isSyncing: boolean;
 
   // Feng Shui Data
@@ -42,6 +58,9 @@ interface AppState {
     harmony: HarmonyResult | null;
     dates: AuspiciousDate[];
   };
+
+  // Invitation Data
+  invitation: InvitationData;
 
   // User Management
   users: UserProfile[];
@@ -78,9 +97,6 @@ interface AppState {
   deleteProcedure: (region: WeddingRegion, id: string) => void;
   resetProcedures: () => void;
 
-  // Invitation Actions
-  updateInvitation: (data: Partial<InvitationData>) => void;
-
   // Advanced Actions
   recalculateDeadlines: (weddingDateStr: string) => void;
   resetData: () => void;
@@ -89,6 +105,9 @@ interface AppState {
   // Feng Shui Actions
   updateFengShuiProfile: (profile: CoupleProfile) => void;
   setFengShuiResults: (harmony: HarmonyResult | null, dates: AuspiciousDate[]) => void;
+
+  // Invitation Actions
+  updateInvitation: (data: Partial<InvitationData>) => void;
 
   // Usage Actions
   incrementGuestFengShui: () => void;
@@ -103,30 +122,6 @@ interface AppState {
 
 let syncTimeout: ReturnType<typeof setTimeout>;
 
-const DEFAULT_INVITATION: InvitationData = {
-  templateId: 'classic_1',
-  groomName: '',
-  brideName: '',
-  date: '',
-  time: '',
-  location: '',
-  address: '',
-  mapLink: '',
-  bankInfo: {
-    bankId: '',
-    accountNumber: '',
-    accountName: '',
-    template: 'qr_code'
-  },
-  wishes: 'Trân trọng kính mời bạn đến chung vui cùng gia đình chúng tôi.',
-  sticker: {
-    groom: 'Felix',
-    bride: 'Aneka',
-    mode: 'BASIC'
-  },
-  themeColor: '#e11d48'
-};
-
 const triggerCloudSync = (get: () => AppState) => {
   const { user, guests, budgetItems, fengShuiProfile, fengShuiResults, procedures, invitation } = get();
   if (user?.enableCloudStorage) {
@@ -136,9 +131,9 @@ const triggerCloudSync = (get: () => AppState) => {
         guests,
         budgetItems,
         procedures,
-        invitation,
         fengShuiProfile: fengShuiProfile || undefined,
-        fengShuiResults: fengShuiResults || undefined
+        fengShuiResults: fengShuiResults || undefined,
+        invitation
       });
     }, 2000); // Debounce 2s
   }
@@ -159,13 +154,13 @@ export const useStore = create<AppState>()(
       guests: INITIAL_GUESTS,
       budgetItems: INITIAL_BUDGET_ITEMS,
       procedures: WEDDING_PROCEDURES,
-      invitation: DEFAULT_INVITATION,
       isSyncing: false,
       fengShuiProfile: null,
       fengShuiResults: { harmony: null, dates: [] },
       notifications: [],
       users: INITIAL_USERS,
       guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
+      invitation: DEFAULT_INVITATION,
 
       login: async (user) => {
         set({ user, isSyncing: true });
@@ -179,9 +174,9 @@ export const useStore = create<AppState>()(
               guests: cloudData.guests,
               budgetItems: cloudData.budgetItems,
               procedures: cloudData.procedures || WEDDING_PROCEDURES,
-              invitation: cloudData.invitation || DEFAULT_INVITATION,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
+              invitation: cloudData.invitation || DEFAULT_INVITATION,
               isSyncing: false
             });
             get().addNotification('INFO', 'Đã đồng bộ dữ liệu từ đám mây.');
@@ -197,10 +192,10 @@ export const useStore = create<AppState>()(
           guests: INITIAL_GUESTS,
           budgetItems: INITIAL_BUDGET_ITEMS,
           procedures: WEDDING_PROCEDURES,
-          invitation: DEFAULT_INVITATION,
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] },
-          guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 }
+          guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
+          invitation: DEFAULT_INVITATION
         });
         get().addNotification('INFO', 'Đã đăng xuất thành công.');
       },
@@ -228,11 +223,10 @@ export const useStore = create<AppState>()(
       updateUser: async (uid, data) => {
         if (db) {
           try {
-            const userRef = doc(db, "public_profiles", uid);
-            await setDoc(userRef, data, { merge: true });
+            const userRef = Firestore.doc(db, "public_profiles", uid);
+            await Firestore.setDoc(userRef, data, { merge: true });
           } catch (e: any) {
             console.error("Update User Error (Firestore):", e);
-            throw new Error("Lỗi cập nhật quyền trên Cloud: " + e.message);
           }
         }
         const currentUser = get().user;
@@ -247,8 +241,8 @@ export const useStore = create<AppState>()(
       deleteUser: async (uid) => {
         if (db) {
           try {
-            await deleteDoc(doc(db, "public_profiles", uid));
-            await deleteDoc(doc(db, "userData", uid));
+            await Firestore.deleteDoc(Firestore.doc(db, "public_profiles", uid));
+            await Firestore.deleteDoc(Firestore.doc(db, "userData", uid));
           } catch (e) { console.error(e); }
         }
         set((state) => ({
@@ -362,12 +356,6 @@ export const useStore = create<AppState>()(
         triggerCloudSync(get);
       },
 
-      // Invitation Actions
-      updateInvitation: (data) => {
-        set((state) => ({ invitation: { ...state.invitation, ...data } }));
-        triggerCloudSync(get);
-      },
-
       recalculateDeadlines: (weddingDateStr) => {
         if (!weddingDateStr) return;
         const weddingDate = new Date(weddingDateStr);
@@ -411,9 +399,9 @@ export const useStore = create<AppState>()(
           guests: INITIAL_GUESTS,
           budgetItems: INITIAL_BUDGET_ITEMS,
           procedures: WEDDING_PROCEDURES,
-          invitation: DEFAULT_INVITATION,
           fengShuiProfile: null,
-          fengShuiResults: { harmony: null, dates: [] }
+          fengShuiResults: { harmony: null, dates: [] },
+          invitation: DEFAULT_INVITATION
         });
         get().addNotification('WARNING', 'Dữ liệu đã được đặt lại về mặc định.');
       },
@@ -423,9 +411,9 @@ export const useStore = create<AppState>()(
           guests: data.guests || [],
           budgetItems: data.budgetItems || [],
           procedures: data.procedures || WEDDING_PROCEDURES,
-          invitation: data.invitation || DEFAULT_INVITATION,
           fengShuiProfile: data.fengShuiProfile || null,
-          fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] }
+          fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] },
+          invitation: data.invitation || DEFAULT_INVITATION
         });
         get().addNotification('SUCCESS', 'Khôi phục dữ liệu thành công.');
         triggerCloudSync(get);
@@ -438,6 +426,11 @@ export const useStore = create<AppState>()(
 
       setFengShuiResults: (harmony, dates) => {
         set({ fengShuiResults: { harmony, dates } });
+        triggerCloudSync(get);
+      },
+
+      updateInvitation: (data) => {
+        set((state) => ({ invitation: { ...state.invitation, ...data } }));
         triggerCloudSync(get);
       },
 
@@ -470,16 +463,16 @@ export const useStore = create<AppState>()(
       }
     }),
     {
-      name: 'wedplan-storage-v9',
+      name: 'wedplan-storage-v10',
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,
         guests: state.guests,
         budgetItems: state.budgetItems,
         procedures: state.procedures,
-        invitation: state.invitation,
         fengShuiProfile: state.fengShuiProfile,
         fengShuiResults: state.fengShuiResults,
+        invitation: state.invitation,
         users: state.users,
         guestUsage: state.guestUsage
       }),

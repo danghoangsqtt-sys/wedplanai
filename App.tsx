@@ -10,9 +10,9 @@ import UserManagement from './components/admin/UserManagement';
 import Dashboard from './components/Dashboard';
 import ProcessGuide from './components/ProcessGuide';
 import FengShuiConsultant from './components/fengshui/FengShuiConsultant';
-import InvitationBuilder from './components/invitation/InvitationBuilder'; // NEW
-import PublicInvitationView from './components/invitation/PublicInvitationView'; // NEW
 import SettingsPage, { SettingsTab } from './components/SettingsPage';
+import InvitationManager from './components/invitation/InvitationManager';
+import PublicInvitationView from './components/invitation/PublicInvitationView';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import { Menu, ShieldAlert, LogIn, AlertTriangle } from 'lucide-react';
@@ -28,15 +28,16 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>('ACCOUNT');
 
-  // --- PUBLIC VIEW HANDLING ---
-  // Check URL query params first
-  const queryParams = new URLSearchParams(window.location.search);
-  const viewMode = queryParams.get('view');
-  const targetUid = queryParams.get('uid');
+  // Public View State
+  const [isPublicView, setIsPublicView] = useState(false);
 
-  if (viewMode === 'invitation' && targetUid) {
-    return <PublicInvitationView uid={targetUid} />;
-  }
+  // --- Check for Public URL Params ---
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'invitation' && params.get('uid')) {
+      setIsPublicView(true);
+    }
+  }, []);
 
   // --- Apply Theme Effect ---
   useEffect(() => {
@@ -49,14 +50,16 @@ function App() {
 
   // --- Analytics & User Sync Tracking ---
   useEffect(() => {
-    // 1. Log visit
-    logAppVisit(user?.uid);
+    if (!isPublicView) {
+      // 1. Log visit
+      logAppVisit(user?.uid);
 
-    // 2. Refresh user profile (check activation status) from Cloud
-    if (user && user.role !== 'GUEST') {
-      refreshUserProfile();
+      // 2. Refresh user profile (check activation status) from Cloud
+      if (user && user.role !== 'GUEST') {
+        refreshUserProfile();
+      }
     }
-  }, [user?.uid]);
+  }, [user?.uid, isPublicView]);
 
   // --- Redirect Logic: Active User without Gemini Key ---
   useEffect(() => {
@@ -93,6 +96,12 @@ function App() {
     setActiveTab('dashboard');
   };
 
+  // --- RENDER: PUBLIC VIEW ---
+  if (isPublicView) {
+    return <PublicInvitationView />;
+  }
+
+  // --- RENDER: APP VIEW ---
   if (!user) {
     return <div className="h-screen flex items-center justify-center">Loading...</div>;
   }
@@ -166,8 +175,8 @@ function App() {
         )}
 
         {/* Scrollable Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 lg:p-8 bg-[#FDF2F8]">
-          <div className="max-w-7xl mx-auto h-full flex flex-col">
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeTab === 'invitation' ? 'p-0' : 'p-3 md:p-6 lg:p-8'} bg-[#FDF2F8]`}>
+          <div className={`h-full flex flex-col ${activeTab === 'invitation' ? 'w-full' : 'max-w-7xl mx-auto'}`}>
 
             {activeTab === 'dashboard' && (
               <Dashboard
@@ -182,15 +191,15 @@ function App() {
               <ProcessGuide />
             )}
 
-            {activeTab === 'invitation' && (
-              <div className="h-full flex-1 min-h-[500px] lg:min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
-                <InvitationBuilder />
-              </div>
-            )}
-
             {activeTab === 'fengshui' && (
               <div className="h-full flex-1 min-h-[500px] lg:min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
                 <FengShuiConsultant isRestricted={isRestricted} />
+              </div>
+            )}
+
+            {activeTab === 'invitation' && (
+              <div className="h-full flex-1 min-h-[600px] bg-white lg:rounded-xl shadow-sm border border-rose-100 overflow-hidden">
+                <InvitationManager />
               </div>
             )}
 

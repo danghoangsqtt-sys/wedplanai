@@ -10,12 +10,12 @@ export interface UserCloudData {
   guests: Guest[];
   budgetItems: BudgetItem[];
   procedures?: Record<WeddingRegion, ProcedureStep[]>;
-  invitation?: InvitationData; // NEW
   fengShuiProfile?: CoupleProfile;
   fengShuiResults?: {
     harmony: HarmonyResult | null;
     dates: AuspiciousDate[];
   };
+  invitation?: InvitationData;
   lastUpdated: number;
 }
 
@@ -75,10 +75,12 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
   }
 };
 
-// --- NEW: Load specific data for Public View (Invitation) ---
 export const loadPublicInvitation = async (uid: string): Promise<InvitationData | null> => {
   if (!db) return null;
   try {
+    // Attempt to read from userData directly.
+    // Note: Firestore rules must allow read access to 'userData/{uid}' for this to work publicly.
+    // Alternatively, save a duplicate copy to a public collection 'public_invitations' on save.
     const userDocRef = doc(db, "userData", uid);
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
@@ -86,12 +88,11 @@ export const loadPublicInvitation = async (uid: string): Promise<InvitationData 
       return data.invitation || null;
     }
     return null;
-  } catch (e) {
-    console.error("Load Public Invitation Failed:", e);
+  } catch (error) {
+    console.error("Error loading public invitation:", error);
     return null;
   }
 };
-
 
 // --- ADMIN & ANALYTICS HELPERS ---
 
