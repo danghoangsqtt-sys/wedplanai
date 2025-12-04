@@ -17,6 +17,7 @@ export interface Guest {
   id: string;
   name: string;
   group: GuestGroup;
+  address?: string; // Địa chỉ
   probability: AttendanceProbability;
   childrenCount: number;
   redEnvelope: number; // Tiền mừng dự kiến (VNĐ)

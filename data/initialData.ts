@@ -1,8 +1,9 @@
+
 import { Guest, GuestGroup, AttendanceProbability, BudgetItem, TaskStatus, UserProfile } from '../types';
 
 export const INITIAL_GUESTS: Guest[] = [
-  { id: '1', name: 'Nguyễn Văn A', group: GuestGroup.GROOM, probability: AttendanceProbability.CONFIRMED, childrenCount: 2, redEnvelope: 1000000 },
-  { id: '2', name: 'Trần Thị B', group: GuestGroup.BRIDE, probability: AttendanceProbability.LIKELY, childrenCount: 0, redEnvelope: 500000 },
+  { id: '1', name: 'Nguyễn Văn A', group: GuestGroup.GROOM, address: 'Hà Nội', probability: AttendanceProbability.CONFIRMED, childrenCount: 2, redEnvelope: 1000000 },
+  { id: '2', name: 'Trần Thị B', group: GuestGroup.BRIDE, address: 'TP. Hồ Chí Minh', probability: AttendanceProbability.LIKELY, childrenCount: 0, redEnvelope: 500000 },
 ];
 
 export const INITIAL_BUDGET_ITEMS: BudgetItem[] = [
@@ -16,7 +17,7 @@ export const INITIAL_BUDGET_ITEMS: BudgetItem[] = [
   { id: 'pre-6', category: 'Trang Phục & Làm Đẹp', itemName: 'Áo dài mẹ cô dâu & mẹ chú rể', assignee: 'Cả hai nhà', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 3000000, actualCost: 0, note: 'Thuê hoặc may' },
   { id: 'pre-7', category: 'Trang Phục & Làm Đẹp', itemName: 'Comple (Vest) cho bố', assignee: 'Cả hai nhà', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 4000000, actualCost: 0, note: '' },
   { id: 'pre-8', category: 'Trang Phục & Làm Đẹp', itemName: 'Trang điểm cô dâu (Ngày cưới)', assignee: 'Cô Dâu', side: 'BRIDE', status: TaskStatus.PENDING, estimatedCost: 3000000, actualCost: 0, note: 'Gồm cả làm tóc' },
-  
+
   // Chụp ảnh & Nhẫn
   { id: 'av-1', category: 'Ảnh & Phim', itemName: 'Gói chụp ảnh Pre-wedding (Ảnh cưới)', assignee: 'Cả hai', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 12000000, actualCost: 0, note: 'Studio hoặc ngoại cảnh' },
   { id: 'av-2', category: 'Ảnh & Phim', itemName: 'Phóng ảnh lớn (Ảnh cổng)', assignee: 'Cả hai', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 1000000, actualCost: 0, note: 'Kèm khung ảnh' },
@@ -40,7 +41,7 @@ export const INITIAL_BUDGET_ITEMS: BudgetItem[] = [
   { id: 'wd-4', category: 'Lễ Cưới', itemName: 'Quay phim phóng sự cưới', assignee: 'Cả hai nhà', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 8000000, actualCost: 0, note: '' },
   { id: 'wd-5', category: 'Lễ Cưới', itemName: 'Chụp ảnh tiệc cưới', assignee: 'Cả hai nhà', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 5000000, actualCost: 0, note: 'Truyền thống hoặc phóng sự' },
   { id: 'wd-6', category: 'Lễ Cưới', itemName: 'Phông cưới / Rạp cưới tại nhà', assignee: 'Cả hai nhà', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 10000000, actualCost: 0, note: 'Bàn ghế, cổng hoa' },
-  
+
   // Tiệc nhà hàng
   { id: 'pt-1', category: 'Tiệc Cưới', itemName: 'Đặt cọc nhà hàng tiệc cưới', assignee: 'Cả hai nhà', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 10000000, actualCost: 0, note: '' },
   { id: 'pt-2', category: 'Tiệc Cưới', itemName: 'Chi phí thực đơn (Cỗ cưới)', assignee: 'Cả hai nhà', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: 100000000, actualCost: 0, note: 'Thanh toán sau tiệc' },
