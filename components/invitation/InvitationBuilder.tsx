@@ -4,11 +4,12 @@ import { useStore } from '../../store/useStore';
 import {
     Heart, Download, Eye,
     Info, Image as ImageIcon,
-    ZoomIn, Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
-    Palette, ChevronDown, Sparkles
+    Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
+    Palette, Edit3, LayoutTemplate, FileText, Loader2
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { BankInfo } from '../../types';
 
 // Danh sách ngân hàng phổ biến cho VietQR
@@ -33,34 +34,67 @@ const FloralCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => 
 
     return (
         <div className={`absolute w-32 h-32 pointer-events-none z-10 opacity-60 mix-blend-multiply ${classes[position]}`}>
-            <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-rose-200">
-                <path d="M20 20C50 20 80 40 100 80C120 40 150 20 180 20" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
-                <path d="M20 20C20 50 40 80 80 100C40 120 20 150 20 180" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
-                <circle cx="20" cy="20" r="8" fill="currentColor" className="text-rose-300" />
-                <path d="M100 80C110 110 140 130 180 130" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
-                <path d="M80 100C110 110 130 140 130 180" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
-            </svg>
+             <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-rose-200">
+                <path d="M20 20C50 20 80 40 100 80C120 40 150 20 180 20" stroke="currentColor" strokeWidth="2" className="text-rose-300"/>
+                <path d="M20 20C20 50 40 80 80 100C40 120 20 150 20 180" stroke="currentColor" strokeWidth="2" className="text-rose-300"/>
+                <circle cx="20" cy="20" r="8" fill="currentColor" className="text-rose-300"/>
+                <path d="M100 80C110 110 140 130 180 130" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200"/>
+                <path d="M80 100C110 110 130 140 130 180" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200"/>
+             </svg>
         </div>
     );
+};
+
+// Helper để parse ngày giờ chuẩn xác
+const parseDate = (dateStr: string) => {
+    if (!dateStr) return { day: '01', month: '01', year: '2026', full: '01/01/2026' };
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return { day: '01', month: '01', year: '2026', full: '01/01/2026' };
+    
+    return {
+        day: parts[2],
+        month: parts[1],
+        year: parts[0],
+        full: `${parts[2]}/${parts[1]}/${parts[0]}`
+    };
 };
 
 const InvitationBuilder: React.FC = () => {
     const { invitation, updateInvitation, user, addNotification } = useStore();
     const [activeTab, setActiveTab] = useState<'INFO' | 'BANK' | 'PHOTO'>('INFO');
+    const [mobileView, setMobileView] = useState<'EDIT' | 'PREVIEW'>('EDIT');
+    const [previewScale, setPreviewScale] = useState(1);
+    const [isExporting, setIsExporting] = useState(false);
+    
     const marketingCardRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Initial load check
+    // Initial load check & Resize Listener
     useEffect(() => {
         if (!invitation.groomName && user?.displayName) {
             updateInvitation({ groomName: user.displayName });
         }
-        // Set default photo config if missing
         if (!invitation.photoConfig) {
             updateInvitation({
                 photoConfig: { scale: 1, x: 0, y: 0 }
             });
         }
+
+        const handleResize = () => {
+            const width = window.innerWidth;
+            if (width < 1024) {
+                // Mobile scaling logic
+                const availableWidth = width - 32; 
+                const scale = Math.min(1, availableWidth / 390); 
+                setPreviewScale(scale);
+            } else {
+                setPreviewScale(1);
+            }
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const handleInputChange = (field: string, value: any) => {
@@ -82,22 +116,87 @@ const InvitationBuilder: React.FC = () => {
         });
     };
 
-    const downloadMarketingCard = async () => {
-        if (!marketingCardRef.current) return;
+    // --- CORE EXPORT LOGIC (FIXED ALIGNMENT) ---
+    const generateImage = async (): Promise<string | null> => {
+        if (!marketingCardRef.current) return null;
+
+        // 1. Tạo một container tạm thời, ẩn đi, để render bản sao
+        // Điều này giúp tránh việc 'transform: scale()' của giao diện làm lệch ảnh chụp
+        const originalElement = marketingCardRef.current;
+        const clone = originalElement.cloneNode(true) as HTMLElement;
+        
+        // Setup container cho bản sao (Reset transform, cố định kích thước)
+        const exportContainer = document.createElement('div');
+        exportContainer.style.position = 'absolute';
+        exportContainer.style.top = '-9999px';
+        exportContainer.style.left = '-9999px';
+        exportContainer.style.width = '375px'; // Kích thước gốc của thiệp
+        exportContainer.style.height = '667px';
+        exportContainer.style.zIndex = '-1';
+        exportContainer.appendChild(clone);
+        document.body.appendChild(exportContainer);
+
         try {
-            const canvas = await html2canvas(marketingCardRef.current, {
+            // 2. Chụp ảnh từ bản sao sạch
+            const canvas = await html2canvas(clone, {
                 useCORS: true,
-                scale: 2,
-                backgroundColor: null
+                scale: 3, // High quality (3x)
+                backgroundColor: null,
+                logging: false,
+                allowTaint: true,
+                width: 375,
+                height: 667,
+                scrollX: 0,
+                scrollY: 0,
+                x: 0,
+                y: 0
             });
-            const link = document.createElement('a');
-            link.download = `thiep-cuoi-${user!.uid || 'guest'}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            addNotification('SUCCESS', 'Đã tải ảnh thiệp về máy!');
+
+            // Cleanup
+            document.body.removeChild(exportContainer);
+            return canvas.toDataURL('image/png', 1.0);
         } catch (err) {
             console.error(err);
-            alert("Lỗi khi tạo ảnh. Vui lòng thử lại.");
+            if (document.body.contains(exportContainer)) {
+                document.body.removeChild(exportContainer);
+            }
+            return null;
+        }
+    };
+
+    const handleExportPDF = async () => {
+        setIsExporting(true);
+        // Chuyển sang Preview mode nếu đang ở Edit mobile để đảm bảo DOM tồn tại (dù mình dùng clone nhưng cần ref gốc)
+        if (window.innerWidth < 1024 && mobileView === 'EDIT') {
+            setMobileView('PREVIEW');
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        try {
+            const imgData = await generateImage();
+            if (!imgData) throw new Error("Không thể tạo hình ảnh.");
+
+            // Tạo PDF kích thước A5 hoặc Custom phù hợp với tỉ lệ điện thoại
+            // Kích thước thiệp 375x667 ~ tỉ lệ 9:16
+            // A4 là 210x297mm. Ta sẽ set kích thước PDF vừa khít ảnh để share đẹp nhất
+            const pdfWidth = 100; // mm
+            const pdfHeight = (667/375) * 100; // Tính chiều cao tương ứng tỉ lệ
+
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [pdfWidth, pdfHeight]
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Thiep_Cuoi_${user?.displayName || 'WedPlan'}.pdf`);
+            
+            addNotification('SUCCESS', 'Đã xuất file PDF thành công!');
+        } catch (err: any) {
+            console.error(err);
+            alert("Lỗi xuất PDF: " + err.message);
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -124,9 +223,7 @@ const InvitationBuilder: React.FC = () => {
 
                     const ctx = canvas.getContext('2d');
                     ctx?.drawImage(img, 0, 0, width, height);
-
-                    // Quality 0.8 for good balance
-                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                    resolve(canvas.toDataURL('image/jpeg', 0.9));
                 };
                 img.onerror = (err) => reject(err);
             };
@@ -142,7 +239,7 @@ const InvitationBuilder: React.FC = () => {
             const base64String = await resizeAndConvertToBase64(file, 800);
             updateInvitation({
                 couplePhoto: base64String,
-                photoConfig: { scale: 1, x: 0, y: 0 } // Reset config on new photo
+                photoConfig: { scale: 1, x: 0, y: 0 } 
             });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
         } catch (err) {
@@ -152,99 +249,108 @@ const InvitationBuilder: React.FC = () => {
     };
 
     const publicLink = `${window.location.origin}/?view=invitation&uid=${user?.uid || 'guest'}`;
-    const primaryColor = invitation.themeColor || '#e11d48';
+    const dateObj = parseDate(invitation.date);
 
     return (
-        <div className="h-full flex flex-col bg-[#FDF2F8]">
+        <div className="h-full flex flex-col bg-[#FDF2F8] relative">
             {/* Header */}
-            <div className="p-4 md:p-6 bg-white border-b border-rose-100 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-                <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <Heart className="w-6 h-6 text-rose-500 fill-current animate-pulse" />
-                        Thiệp Mời Online
+            <div className="px-4 py-3 md:px-6 md:py-4 bg-white border-b border-rose-100 flex justify-between items-center sticky top-0 z-20 shadow-sm flex-shrink-0">
+                <div className="flex-1 min-w-0 mr-2">
+                    <h1 className="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2 truncate">
+                        <Heart className="w-5 h-5 text-rose-500 fill-current animate-pulse flex-shrink-0" />
+                        <span className="truncate hidden sm:inline">Thiết Kế Thiệp Online</span>
+                        <span className="truncate sm:hidden">Thiệp Online</span>
                     </h1>
-                    <p className="text-xs text-gray-500 mt-1">Tạo thiệp, QR mừng cưới & Ảnh cưới đẹp.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                     <a
                         href={publicLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-bold hover:bg-rose-50 transition-colors"
+                        className="flex items-center justify-center gap-2 px-3 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-50 transition-colors"
                     >
-                        <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Xem thực tế</span>
+                        <Eye className="w-4 h-4" /> <span className="hidden md:inline">Xem Demo</span>
                     </a>
                     <button
-                        onClick={downloadMarketingCard}
-                        className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md transition-colors"
+                        onClick={handleExportPDF}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 shadow-md transition-colors disabled:opacity-70"
                     >
-                        <Download className="w-4 h-4" /> <span className="hidden sm:inline">Tải ảnh</span>
+                        {isExporting ? <Loader2 className="w-4 h-4 animate-spin"/> : <FileText className="w-4 h-4" />} 
+                        <span className="hidden sm:inline">Xuất PDF</span>
+                        <span className="sm:hidden">Lưu</span>
                     </button>
                 </div>
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-                {/* LEFT: Controls */}
-                <div className="w-full lg:w-[500px] bg-white border-r border-rose-100 flex flex-col h-full overflow-hidden">
+                
+                {/* LEFT: Controls (Scrollable) */}
+                <div className={`w-full lg:w-[450px] xl:w-[500px] bg-white border-r border-rose-100 flex flex-col h-full z-10 ${mobileView === 'PREVIEW' ? 'hidden lg:flex' : 'flex'}`}>
                     {/* Tabs */}
-                    <div className="flex border-b border-gray-100">
-                        <button onClick={() => setActiveTab('INFO')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'INFO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Thông Tin</button>
-                        <button onClick={() => setActiveTab('BANK')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${activeTab === 'BANK' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>Ngân Hàng</button>
-                        <button onClick={() => setActiveTab('PHOTO')} className={`flex-1 py-3 text-sm font-bold border-b-2 flex items-center justify-center gap-1 ${activeTab === 'PHOTO' ? 'border-rose-500 text-rose-600 bg-rose-50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
+                    <div className="flex border-b border-gray-100 flex-shrink-0 bg-gray-50/50">
+                        <button onClick={() => setActiveTab('INFO')} className={`flex-1 py-3 text-xs md:text-sm font-bold border-b-2 transition-colors ${activeTab === 'INFO' ? 'border-rose-500 text-rose-600 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>Thông Tin</button>
+                        <button onClick={() => setActiveTab('BANK')} className={`flex-1 py-3 text-xs md:text-sm font-bold border-b-2 transition-colors ${activeTab === 'BANK' ? 'border-rose-500 text-rose-600 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>Ngân Hàng</button>
+                        <button onClick={() => setActiveTab('PHOTO')} className={`flex-1 py-3 text-xs md:text-sm font-bold border-b-2 flex items-center justify-center gap-1 transition-colors ${activeTab === 'PHOTO' ? 'border-rose-500 text-rose-600 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>
                             <ImageIcon className="w-3.5 h-3.5" /> Ảnh Cưới
                         </button>
                     </div>
 
                     {/* Scrollable Form Area */}
-                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 pb-24 lg:pb-10 custom-scrollbar">
 
                         {activeTab === 'INFO' && (
                             <div className="space-y-4 animate-fadeIn">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Chú Rể</label>
-                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam" value={invitation.groomName} onChange={e => handleInputChange('groomName', e.target.value)} placeholder="Tên Chú Rể" />
+                                        <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Chú Rể</label>
+                                        <input className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam bg-gray-50 focus:bg-white transition-colors" value={invitation.groomName} onChange={e => handleInputChange('groomName', e.target.value)} placeholder="Tên Chú Rể" />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Cô Dâu</label>
-                                        <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam" value={invitation.brideName} onChange={e => handleInputChange('brideName', e.target.value)} placeholder="Tên Cô Dâu" />
+                                        <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Cô Dâu</label>
+                                        <input className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam bg-gray-50 focus:bg-white transition-colors" value={invitation.brideName} onChange={e => handleInputChange('brideName', e.target.value)} placeholder="Tên Cô Dâu" />
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Ngày Cưới</label>
-                                        <input type="date" className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.date} onChange={e => handleInputChange('date', e.target.value)} />
+                                        <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Ngày Cưới</label>
+                                        <input type="date" className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm bg-gray-50 focus:bg-white" value={invitation.date} onChange={e => handleInputChange('date', e.target.value)} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Giờ Đón Khách</label>
-                                        <input type="time" className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm" value={invitation.time} onChange={e => handleInputChange('time', e.target.value)} />
+                                        <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Giờ Đón Khách</label>
+                                        <input type="time" className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm bg-gray-50 focus:bg-white" value={invitation.time} onChange={e => handleInputChange('time', e.target.value)} />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Địa điểm</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam" value={invitation.location} onChange={e => handleInputChange('location', e.target.value)} placeholder="VD: Trung tâm tiệc cưới White Palace" />
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Địa điểm</label>
+                                    <input className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam bg-gray-50 focus:bg-white" value={invitation.location} onChange={e => handleInputChange('location', e.target.value)} placeholder="VD: Trung tâm tiệc cưới White Palace" />
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Địa chỉ chi tiết</label>
-                                    <textarea rows={2} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none font-be-vietnam" value={invitation.address} onChange={e => handleInputChange('address', e.target.value)} placeholder="Số 123 Đường ABC, Phường XYZ..." />
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Địa chỉ chi tiết</label>
+                                    <textarea rows={2} className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none font-be-vietnam bg-gray-50 focus:bg-white" value={invitation.address} onChange={e => handleInputChange('address', e.target.value)} placeholder="Số 123 Đường ABC, Phường XYZ..." />
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Lời Nhắn / Lời Mời</label>
-                                    <textarea rows={3} className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none font-be-vietnam" value={invitation.wishes} onChange={e => handleInputChange('wishes', e.target.value)} />
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Link Bản Đồ (Google Maps)</label>
+                                    <input className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-be-vietnam text-blue-600 bg-blue-50/50" value={invitation.mapLink || ''} onChange={e => handleInputChange('mapLink', e.target.value)} placeholder="https://maps.app.goo.gl/..." />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic">Dán link chia sẻ từ Google Maps để hiện nút chỉ đường.</p>
                                 </div>
 
-                                {/* Color Picker */}
+                                <div>
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Lời Nhắn</label>
+                                    <textarea rows={3} className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm resize-none font-be-vietnam bg-gray-50 focus:bg-white" value={invitation.wishes} onChange={e => handleInputChange('wishes', e.target.value)} />
+                                </div>
+
                                 <div className="pt-4 border-t border-gray-100">
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-2"><Palette className="w-3 h-3" /> Màu chủ đạo</label>
-                                    <div className="flex gap-2">
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-2"><Palette className="w-3 h-3" /> Màu chủ đạo</label>
+                                    <div className="flex gap-3">
                                         {['#e11d48', '#db2777', '#7c3aed', '#059669', '#d97706', '#1e293b'].map(color => (
                                             <button
                                                 key={color}
-                                                className={`w-8 h-8 rounded-full border-2 transition-transform ${invitation.themeColor === color ? 'border-gray-600 scale-110 shadow-sm' : 'border-transparent'}`}
+                                                className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${invitation.themeColor === color ? 'border-gray-600 scale-110 shadow-md ring-2 ring-gray-100' : 'border-transparent'}`}
                                                 style={{ backgroundColor: color }}
                                                 onClick={() => handleInputChange('themeColor', color)}
                                             />
@@ -256,15 +362,15 @@ const InvitationBuilder: React.FC = () => {
 
                         {activeTab === 'BANK' && (
                             <div className="space-y-4 animate-fadeIn">
-                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-xs text-blue-700">
-                                    <Info className="w-4 h-4 inline mr-1" />
-                                    Thông tin này sẽ tạo mã QR tự động giúp khách mời chuyển khoản dễ dàng.
+                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-xs text-blue-700 flex items-start gap-2">
+                                    <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                    <span>Thông tin này sẽ tạo mã QR tự động giúp khách mời chuyển khoản dễ dàng.</span>
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Ngân hàng</label>
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Ngân hàng</label>
                                     <select
-                                        className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm bg-white"
+                                        className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm bg-gray-50 focus:bg-white"
                                         value={invitation.bankInfo.bankId}
                                         onChange={e => handleBankChange('bankId', e.target.value)}
                                     >
@@ -274,13 +380,13 @@ const InvitationBuilder: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Số tài khoản</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-mono" value={invitation.bankInfo.accountNumber} onChange={e => handleBankChange('accountNumber', e.target.value)} placeholder="0123456789" />
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Số tài khoản</label>
+                                    <input className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm font-mono bg-gray-50 focus:bg-white" value={invitation.bankInfo.accountNumber} onChange={e => handleBankChange('accountNumber', e.target.value)} placeholder="0123456789" />
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Tên chủ tài khoản (Không dấu)</label>
-                                    <input className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm uppercase" value={invitation.bankInfo.accountName} onChange={e => handleBankChange('accountName', e.target.value.toUpperCase())} placeholder="NGUYEN VAN A" />
+                                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Tên chủ tài khoản (Không dấu)</label>
+                                    <input className="w-full mt-1 p-2.5 border border-gray-200 rounded-lg focus:border-rose-500 outline-none text-sm uppercase bg-gray-50 focus:bg-white" value={invitation.bankInfo.accountName} onChange={e => handleBankChange('accountName', e.target.value.toUpperCase())} placeholder="NGUYEN VAN A" />
                                 </div>
                             </div>
                         )}
@@ -289,7 +395,7 @@ const InvitationBuilder: React.FC = () => {
                             <div className="space-y-6 animate-fadeIn">
                                 {/* UPLOAD BUTTON */}
                                 <div
-                                    className="border-2 border-dashed border-rose-200 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-rose-400 hover:bg-rose-50 transition-all group"
+                                    className="border-2 border-dashed border-rose-200 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-rose-400 hover:bg-rose-50 transition-all group bg-gray-50/50"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
                                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
@@ -308,10 +414,10 @@ const InvitationBuilder: React.FC = () => {
                                         </div>
 
                                         {/* ZOOM SLIDER */}
-                                        <div>
-                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                            <div className="flex justify-between text-xs text-gray-500 mb-2">
                                                 <span>Thu nhỏ</span>
-                                                <span className="font-bold flex items-center gap-1"><Maximize className="w-3 h-3" /> Phóng to ({invitation.photoConfig?.scale || 1}x)</span>
+                                                <span className="font-bold flex items-center gap-1 text-gray-800"><Maximize className="w-3 h-3" /> Zoom ({invitation.photoConfig?.scale || 1}x)</span>
                                             </div>
                                             <input
                                                 type="range" min="1" max="3" step="0.1"
@@ -322,14 +428,14 @@ const InvitationBuilder: React.FC = () => {
                                         </div>
 
                                         {/* X POSITION SLIDER */}
-                                        <div>
-                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                            <div className="flex justify-between text-xs text-gray-500 mb-2">
                                                 <span>Trái</span>
-                                                <span className="font-bold flex items-center gap-1"><ArrowRightLeft className="w-3 h-3" /> Di chuyển Ngang</span>
+                                                <span className="font-bold flex items-center gap-1 text-gray-800"><ArrowRightLeft className="w-3 h-3" /> Ngang</span>
                                                 <span>Phải</span>
                                             </div>
                                             <input
-                                                type="range" min="-50" max="50" step="1"
+                                                type="range" min="-100" max="100" step="1"
                                                 className="w-full accent-rose-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                                 value={invitation.photoConfig?.x || 0}
                                                 onChange={(e) => handlePhotoConfigChange('x', parseFloat(e.target.value))}
@@ -337,14 +443,14 @@ const InvitationBuilder: React.FC = () => {
                                         </div>
 
                                         {/* Y POSITION SLIDER */}
-                                        <div>
-                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                            <div className="flex justify-between text-xs text-gray-500 mb-2">
                                                 <span>Lên</span>
-                                                <span className="font-bold flex items-center gap-1"><ArrowUp className="w-3 h-3" /> Di chuyển Dọc</span>
+                                                <span className="font-bold flex items-center gap-1 text-gray-800"><ArrowUp className="w-3 h-3" /> Dọc</span>
                                                 <span>Xuống</span>
                                             </div>
                                             <input
-                                                type="range" min="-50" max="50" step="1"
+                                                type="range" min="-100" max="100" step="1"
                                                 className="w-full accent-rose-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                                 value={invitation.photoConfig?.y || 0}
                                                 onChange={(e) => handlePhotoConfigChange('y', parseFloat(e.target.value))}
@@ -357,26 +463,38 @@ const InvitationBuilder: React.FC = () => {
                     </div>
                 </div>
 
-                {/* RIGHT: Preview (Enhanced with Modern Look) */}
-                <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[700px]">
-                    <div className="bg-white p-2 rounded-[2.5rem] shadow-sm mb-4 border-[8px] border-white">
+                {/* RIGHT: Preview (Fixed Desktop Layout) */}
+                <div className={`flex-1 bg-gray-100/50 relative overflow-hidden flex flex-col items-center justify-center min-h-[calc(100vh-64px)] ${mobileView === 'EDIT' ? 'hidden lg:flex' : 'flex'}`}>
+                    
+                    {/* Background Pattern for Laptop View */}
+                    <div className="absolute inset-0 z-0 opacity-30 pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, #e11d48 1px, transparent 0)`, backgroundSize: '40px 40px' }}></div>
+                    
+                    {/* Scale Wrapper for Mobile */}
+                    <div 
+                        className="bg-white p-2 rounded-[2.5rem] shadow-2xl mb-4 border-[8px] border-gray-900 origin-center transition-transform duration-300 relative z-10"
+                        style={{ 
+                            transform: `scale(${previewScale})`,
+                        }}
+                    >
+                        {/* Status Bar Mockup */}
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-b-xl z-20"></div>
 
-                        {/* CARD PREVIEW CONTAINER (Mobile Size) */}
+                        {/* CARD PREVIEW CONTAINER (Standard Mobile 375x667) */}
                         <div
                             ref={marketingCardRef}
-                            className="w-[360px] bg-white relative flex flex-col overflow-hidden rounded-[2rem] shadow-lg"
-                            style={{ height: '740px' }} // Fixed height mobile view
+                            className="w-[375px] bg-white relative flex flex-col overflow-hidden rounded-[2rem]"
+                            style={{ height: '667px' }}
                         >
-                            {/* Main Photo Area (Full Bleed Top) */}
-                            <div className="h-[450px] w-full relative overflow-hidden bg-gray-200">
+                            {/* Photo Area - Top 55% */}
+                            <div className="h-[370px] w-full relative overflow-hidden bg-gray-100 border-b border-rose-50">
                                 {invitation.couplePhoto ? (
-                                    <img
-                                        src={invitation.couplePhoto}
-                                        className="absolute w-full h-full object-cover transition-transform duration-100"
+                                    /* Use div background for correct export rendering */
+                                    <div 
+                                        className="w-full h-full bg-cover bg-no-repeat bg-center"
                                         style={{
-                                            transform: `scale(${invitation.photoConfig?.scale || 1}) translate(${invitation.photoConfig?.x || 0}%, ${invitation.photoConfig?.y || 0}%)`
+                                            backgroundImage: `url(${invitation.couplePhoto})`,
+                                            transform: `scale(${invitation.photoConfig?.scale || 1}) translate(${invitation.photoConfig?.x || 0}px, ${invitation.photoConfig?.y || 0}px)`
                                         }}
-                                        alt="Wedding Couple"
                                     />
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-50">
@@ -385,86 +503,103 @@ const InvitationBuilder: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/* Modern Overlay Gradient */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70"></div>
+                                {/* Overlay Gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30 pointer-events-none"></div>
 
-                                {/* BRANDING WATERMARK (Top Right) */}
+                                {/* Watermark (Top Right) - Perfectly Aligned */}
                                 <div className="absolute top-4 right-4 z-20">
-                                    <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5 shadow-lg">
-                                        <Heart className="w-3 h-3 text-rose-400 fill-current" />
-                                        <span className="text-white text-[10px] font-bold tracking-wide uppercase font-be-vietnam">WedPlan AI</span>
-                                    </div>
-                                </div>
-
-                                {/* Text Overlay on Image */}
-                                <div className="absolute bottom-0 w-full p-6 text-center text-white pb-8">
-                                    <p className="font-be-vietnam text-xs tracking-[0.3em] uppercase opacity-90 mb-2 font-bold">Save The Date</p>
-                                    <h2 className="font-['Great_Vibes',cursive] text-5xl leading-tight mb-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-                                        {invitation.groomName || 'Chú Rể'} <br />
-                                        <span className="text-2xl font-serif text-rose-200">&</span> <br />
-                                        {invitation.brideName || 'Cô Dâu'}
-                                    </h2>
-                                    <div className="w-8 h-8 mx-auto mt-2 animate-bounce">
-                                        <ChevronDown className="w-full h-full text-white/80" />
+                                    <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/50 flex items-center gap-2 shadow-lg">
+                                        <Heart className="w-3.5 h-3.5 text-rose-500 fill-current" />
+                                        <span className="text-rose-900 text-[10px] font-bold tracking-wider uppercase font-be-vietnam flex items-center h-full pt-0.5">WedPlan AI</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Info Section */}
-                            <div className="flex-1 px-6 py-6 flex flex-col items-center text-center bg-white relative">
+                            {/* Content Area */}
+                            <div className="flex-1 px-5 py-4 flex flex-col bg-white relative justify-between">
                                 <FloralCorner position="tl" />
                                 <FloralCorner position="tr" />
+                                
+                                {/* Date / Time Display (Clean Style) */}
+                                <div className="w-full relative z-10 flex items-center justify-between">
+                                     <div className="text-left">
+                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Save The Date</p>
+                                         <div className="text-4xl font-black text-gray-800 font-serif leading-none tracking-tight">
+                                            {dateObj.day}
+                                         </div>
+                                         <div className="text-[10px] font-bold text-rose-500 uppercase font-be-vietnam tracking-wide">
+                                            Tháng {dateObj.month}, {dateObj.year}
+                                         </div>
+                                     </div>
+                                     
+                                     <div className="h-8 w-px bg-gray-200 mx-4"></div>
 
-                                <div className="space-y-4 mb-4 w-full relative z-10">
-                                    <div>
-                                        <h3 className="font-be-vietnam text-lg font-bold text-gray-800 uppercase tracking-widest mb-1">Thành Hôn</h3>
-                                        <p className="text-gray-500 font-be-vietnam italic text-xs">Trân trọng kính mời quý khách tới dự lễ chung vui</p>
-                                    </div>
-
-                                    <div className="flex items-center justify-center gap-3 bg-white/50 backdrop-blur p-3 rounded-xl border border-rose-100 shadow-sm">
-                                        <div className="text-right">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Giờ</p>
-                                            <p className="font-bold text-xl text-rose-600 font-be-vietnam">{invitation.time || '00:00'}</p>
-                                        </div>
-                                        <div className="w-px h-8 bg-rose-200"></div>
-                                        <div className="text-left">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Ngày</p>
-                                            <p className="font-bold text-sm text-gray-800 font-be-vietnam uppercase">{invitation.date ? new Date(invitation.date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'DD/MM/YYYY'}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-xs text-gray-600 font-be-vietnam leading-relaxed px-2">
-                                        Tại <span className="font-bold">{invitation.location || 'Địa điểm tổ chức'}</span>
-                                    </div>
+                                     <div className="text-right">
+                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Giờ đón khách</p>
+                                         <div className="text-3xl font-black text-rose-600 font-mono leading-none tracking-tight">
+                                            {invitation.time || '00:00'}
+                                         </div>
+                                     </div>
                                 </div>
 
-                                {/* QR Code Compact + BRANDING FOOTER */}
-                                <div className="mt-auto w-full relative z-10 flex flex-col gap-2">
-                                    <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-dashed border-gray-300 w-full justify-center">
-                                        <QRCodeCanvas
-                                            value={publicLink}
-                                            size={40}
-                                            bgColor={"#ffffff"}
-                                            fgColor={primaryColor}
-                                            level={"M"}
-                                        />
-                                        <div className="text-left">
-                                            <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Quét mã QR</p>
-                                            <p className="text-[8px] text-gray-500 font-be-vietnam">Xem bản đồ & Mừng cưới</p>
-                                        </div>
-                                    </div>
+                                {/* Names & Location */}
+                                <div className="space-y-1 text-center relative z-10 my-2">
+                                     <h2 className="font-['Great_Vibes'] text-5xl text-gray-800 leading-tight">
+                                        {invitation.groomName} <span className="text-rose-400 text-3xl font-serif">&</span> {invitation.brideName}
+                                     </h2>
+                                     <div className="pt-2">
+                                        <p className="text-xs font-black text-gray-700 font-be-vietnam uppercase tracking-widest line-clamp-1">
+                                            {invitation.location || 'Tên nhà hàng'}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 italic mt-0.5 line-clamp-1 px-2">
+                                            {invitation.address || 'Địa chỉ tổ chức...'}
+                                        </p>
+                                     </div>
+                                </div>
 
-                                    {/* BRANDING FOOTER */}
-                                    <div className="flex items-center justify-center gap-1.5 text-[8px] text-gray-400 font-be-vietnam mt-1 uppercase tracking-widest opacity-80">
-                                        <Sparkles className="w-2.5 h-2.5 text-rose-400" />
-                                        Powered by <span className="font-bold text-rose-500">WedPlan AI</span>
+                                {/* QR & Footer */}
+                                <div className="w-full relative z-10">
+                                    <div className="flex items-center justify-between bg-white p-2 rounded-xl border-2 border-dashed border-rose-200">
+                                         <div className="flex items-center gap-3 text-left">
+                                             <div className="bg-rose-50 p-1 rounded-lg">
+                                                <QRCodeCanvas value={publicLink} size={48} />
+                                             </div>
+                                             <div>
+                                                 <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Mừng cưới</p>
+                                                 <p className="text-[9px] text-gray-500 font-be-vietnam">Quét mã QR</p>
+                                             </div>
+                                         </div>
+                                         {/* Footer Branding Aligned */}
+                                         <div className="flex flex-col items-end opacity-80 pr-1">
+                                             <span className="text-[7px] text-gray-400 font-be-vietnam uppercase tracking-wider font-bold">Powered by</span>
+                                             <span className="text-[9px] font-black text-rose-600 font-be-vietnam">WEDPLAN AI</span>
+                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <p className="text-xs text-gray-400 font-medium font-be-vietnam">Kéo thả ảnh để căn chỉnh vị trí</p>
+                    <p className="text-xs text-gray-400 font-medium font-be-vietnam hidden lg:block mt-2">Mẹo: Kéo thả ảnh ở tab "Ảnh Cưới" để căn chỉnh khuôn mặt</p>
                 </div>
+            </div>
+
+            {/* MOBILE BOTTOM NAVIGATION */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] safe-area-bottom">
+                <button 
+                    onClick={() => setMobileView('EDIT')}
+                    className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-colors ${mobileView === 'EDIT' ? 'text-rose-600 bg-rose-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                >
+                    <Edit3 className="w-5 h-5" />
+                    <span className="text-[10px] font-bold uppercase">Nhập thông tin</span>
+                </button>
+                <div className="w-px bg-gray-200"></div>
+                <button 
+                    onClick={() => setMobileView('PREVIEW')}
+                    className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-colors ${mobileView === 'PREVIEW' ? 'text-rose-600 bg-rose-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                >
+                    <LayoutTemplate className="w-5 h-5" />
+                    <span className="text-[10px] font-bold uppercase">Xem thiệp</span>
+                </button>
             </div>
 
             <style>{`
@@ -475,6 +610,12 @@ const InvitationBuilder: React.FC = () => {
                 .font-merriweather { font-family: 'Merriweather', serif; }
                 .font-cinzel { font-family: 'Cinzel', serif; }
                 .font-be-vietnam { font-family: 'Be Vietnam Pro', sans-serif; }
+                .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+                
+                /* Custom Scrollbar for form area */
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 20px; }
             `}</style>
         </div>
     );
