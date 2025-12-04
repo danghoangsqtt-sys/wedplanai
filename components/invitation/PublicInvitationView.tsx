@@ -396,9 +396,9 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
                             <p className="text-[10px] md:text-xs text-gray-500 font-be-vietnam uppercase tracking-widest max-w-[240px] leading-relaxed">
                                 Professional Wedding Planner & Invitation Creator
                             </p>
-                            
-                            <a 
-                                href="https://wedplanai.io.vn" 
+
+                            <a
+                                href="https://wedplanai.io.vn"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="mt-6 px-8 py-3 bg-gray-900 text-white border border-gray-900 rounded-full text-xs font-bold hover:bg-gray-800 hover:scale-105 transition-all shadow-lg uppercase tracking-wide flex items-center gap-2"
@@ -412,8 +412,8 @@ const PublicInvitationView: React.FC<Props> = ({ uid }) => {
 
             {/* FLOATING BADGE (Bottom Right) - Optimized for Mobile */}
             <div className="fixed bottom-4 right-4 z-50 animate-fadeIn delay-1000 safe-area-bottom">
-                <a 
-                    href="/" 
+                <a
+                    href="/"
                     className="flex items-center gap-3 bg-white/95 backdrop-blur-xl px-4 py-2 rounded-full shadow-2xl border border-rose-100 hover:scale-105 transition-transform group ring-1 ring-black/5"
                 >
                     <div className="bg-rose-50 p-1.5 rounded-full"><Heart className="w-3.5 h-3.5 text-rose-500 fill-current" /></div>

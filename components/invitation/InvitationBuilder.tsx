@@ -5,11 +5,10 @@ import {
     Heart, Download, Eye,
     Info, Image as ImageIcon,
     Move, Upload, Trash2, Maximize, ArrowRightLeft, ArrowUp,
-    Palette, Edit3, LayoutTemplate, FileText, Loader2
+    Palette, Edit3, LayoutTemplate, FileText, Loader2, ZoomIn
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { BankInfo } from '../../types';
 
 // Danh sách ngân hàng phổ biến cho VietQR
@@ -34,13 +33,13 @@ const FloralCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => 
 
     return (
         <div className={`absolute w-32 h-32 pointer-events-none z-10 opacity-60 mix-blend-multiply ${classes[position]}`}>
-             <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-rose-200">
-                <path d="M20 20C50 20 80 40 100 80C120 40 150 20 180 20" stroke="currentColor" strokeWidth="2" className="text-rose-300"/>
-                <path d="M20 20C20 50 40 80 80 100C40 120 20 150 20 180" stroke="currentColor" strokeWidth="2" className="text-rose-300"/>
-                <circle cx="20" cy="20" r="8" fill="currentColor" className="text-rose-300"/>
-                <path d="M100 80C110 110 140 130 180 130" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200"/>
-                <path d="M80 100C110 110 130 140 130 180" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200"/>
-             </svg>
+            <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-rose-200">
+                <path d="M20 20C50 20 80 40 100 80C120 40 150 20 180 20" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
+                <path d="M20 20C20 50 40 80 80 100C40 120 20 150 20 180" stroke="currentColor" strokeWidth="2" className="text-rose-300" />
+                <circle cx="20" cy="20" r="8" fill="currentColor" className="text-rose-300" />
+                <path d="M100 80C110 110 140 130 180 130" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
+                <path d="M80 100C110 110 130 140 130 180" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" className="text-rose-200" />
+            </svg>
         </div>
     );
 };
@@ -50,7 +49,7 @@ const parseDate = (dateStr: string) => {
     if (!dateStr) return { day: '01', month: '01', year: '2026', full: '01/01/2026' };
     const parts = dateStr.split('-');
     if (parts.length !== 3) return { day: '01', month: '01', year: '2026', full: '01/01/2026' };
-    
+
     return {
         day: parts[2],
         month: parts[1],
@@ -65,7 +64,7 @@ const InvitationBuilder: React.FC = () => {
     const [mobileView, setMobileView] = useState<'EDIT' | 'PREVIEW'>('EDIT');
     const [previewScale, setPreviewScale] = useState(1);
     const [isExporting, setIsExporting] = useState(false);
-    
+
     const marketingCardRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,13 +81,19 @@ const InvitationBuilder: React.FC = () => {
 
         const handleResize = () => {
             const width = window.innerWidth;
+            const height = window.innerHeight;
+
             if (width < 1024) {
-                // Mobile scaling logic
-                const availableWidth = width - 32; 
-                const scale = Math.min(1, availableWidth / 390); 
+                // Mobile scaling
+                const availableWidth = width - 40;
+                const scale = Math.min(1, availableWidth / 375);
                 setPreviewScale(scale);
             } else {
-                setPreviewScale(1);
+                // Desktop/Laptop scaling - fit height
+                // Available height roughly: 100vh - 64px (header) - 40px (padding)
+                const availableHeight = height - 120;
+                const scaleH = Math.min(1, availableHeight / 700); // 700 is approx phone height with frame
+                setPreviewScale(scaleH);
             }
         };
 
@@ -124,7 +129,7 @@ const InvitationBuilder: React.FC = () => {
         // Điều này giúp tránh việc 'transform: scale()' của giao diện làm lệch ảnh chụp
         const originalElement = marketingCardRef.current;
         const clone = originalElement.cloneNode(true) as HTMLElement;
-        
+
         // Setup container cho bản sao (Reset transform, cố định kích thước)
         const exportContainer = document.createElement('div');
         exportContainer.style.position = 'absolute';
@@ -164,7 +169,7 @@ const InvitationBuilder: React.FC = () => {
         }
     };
 
-    const handleExportPDF = async () => {
+    const handleDownloadImage = async () => {
         setIsExporting(true);
         // Chuyển sang Preview mode nếu đang ở Edit mobile để đảm bảo DOM tồn tại (dù mình dùng clone nhưng cần ref gốc)
         if (window.innerWidth < 1024 && mobileView === 'EDIT') {
@@ -176,25 +181,18 @@ const InvitationBuilder: React.FC = () => {
             const imgData = await generateImage();
             if (!imgData) throw new Error("Không thể tạo hình ảnh.");
 
-            // Tạo PDF kích thước A5 hoặc Custom phù hợp với tỉ lệ điện thoại
-            // Kích thước thiệp 375x667 ~ tỉ lệ 9:16
-            // A4 là 210x297mm. Ta sẽ set kích thước PDF vừa khít ảnh để share đẹp nhất
-            const pdfWidth = 100; // mm
-            const pdfHeight = (667/375) * 100; // Tính chiều cao tương ứng tỉ lệ
+            // Download PNG directly
+            const link = document.createElement('a');
+            link.href = imgData;
+            link.download = `Thiep_Cuoi_${user?.displayName || 'WedPlan'}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: [pdfWidth, pdfHeight]
-            });
-
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Thiep_Cuoi_${user?.displayName || 'WedPlan'}.pdf`);
-            
-            addNotification('SUCCESS', 'Đã xuất file PDF thành công!');
+            addNotification('SUCCESS', 'Đã lưu ảnh thiệp về máy!');
         } catch (err: any) {
             console.error(err);
-            alert("Lỗi xuất PDF: " + err.message);
+            alert("Lỗi tải ảnh: " + err.message);
         } finally {
             setIsExporting(false);
         }
@@ -239,7 +237,7 @@ const InvitationBuilder: React.FC = () => {
             const base64String = await resizeAndConvertToBase64(file, 800);
             updateInvitation({
                 couplePhoto: base64String,
-                photoConfig: { scale: 1, x: 0, y: 0 } 
+                photoConfig: { scale: 1, x: 0, y: 0 }
             });
             addNotification('SUCCESS', 'Đã tải ảnh lên thành công!');
         } catch (err) {
@@ -272,19 +270,19 @@ const InvitationBuilder: React.FC = () => {
                         <Eye className="w-4 h-4" /> <span className="hidden md:inline">Xem Demo</span>
                     </a>
                     <button
-                        onClick={handleExportPDF}
+                        onClick={handleDownloadImage}
                         disabled={isExporting}
                         className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 shadow-md transition-colors disabled:opacity-70"
                     >
-                        {isExporting ? <Loader2 className="w-4 h-4 animate-spin"/> : <FileText className="w-4 h-4" />} 
-                        <span className="hidden sm:inline">Xuất PDF</span>
+                        {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        <span className="hidden sm:inline">Tải Ảnh</span>
                         <span className="sm:hidden">Lưu</span>
                     </button>
                 </div>
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-                
+
                 {/* LEFT: Controls (Scrollable) */}
                 <div className={`w-full lg:w-[450px] xl:w-[500px] bg-white border-r border-rose-100 flex flex-col h-full z-10 ${mobileView === 'PREVIEW' ? 'hidden lg:flex' : 'flex'}`}>
                     {/* Tabs */}
@@ -417,7 +415,7 @@ const InvitationBuilder: React.FC = () => {
                                         <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
                                             <div className="flex justify-between text-xs text-gray-500 mb-2">
                                                 <span>Thu nhỏ</span>
-                                                <span className="font-bold flex items-center gap-1 text-gray-800"><Maximize className="w-3 h-3" /> Zoom ({invitation.photoConfig?.scale || 1}x)</span>
+                                                <span className="font-bold flex items-center gap-1 text-gray-800"><ZoomIn className="w-3 h-3" /> Zoom ({invitation.photoConfig?.scale || 1}x)</span>
                                             </div>
                                             <input
                                                 type="range" min="1" max="3" step="0.1"
@@ -465,14 +463,14 @@ const InvitationBuilder: React.FC = () => {
 
                 {/* RIGHT: Preview (Fixed Desktop Layout) */}
                 <div className={`flex-1 bg-gray-100/50 relative overflow-hidden flex flex-col items-center justify-center min-h-[calc(100vh-64px)] ${mobileView === 'EDIT' ? 'hidden lg:flex' : 'flex'}`}>
-                    
+
                     {/* Background Pattern for Laptop View */}
                     <div className="absolute inset-0 z-0 opacity-30 pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, #e11d48 1px, transparent 0)`, backgroundSize: '40px 40px' }}></div>
-                    
+
                     {/* Scale Wrapper for Mobile */}
-                    <div 
+                    <div
                         className="bg-white p-2 rounded-[2.5rem] shadow-2xl mb-4 border-[8px] border-gray-900 origin-center transition-transform duration-300 relative z-10"
-                        style={{ 
+                        style={{
                             transform: `scale(${previewScale})`,
                         }}
                     >
@@ -482,6 +480,7 @@ const InvitationBuilder: React.FC = () => {
                         {/* CARD PREVIEW CONTAINER (Standard Mobile 375x667) */}
                         <div
                             ref={marketingCardRef}
+                            id="invitation-card"
                             className="w-[375px] bg-white relative flex flex-col overflow-hidden rounded-[2rem]"
                             style={{ height: '667px' }}
                         >
@@ -489,7 +488,7 @@ const InvitationBuilder: React.FC = () => {
                             <div className="h-[370px] w-full relative overflow-hidden bg-gray-100 border-b border-rose-50">
                                 {invitation.couplePhoto ? (
                                     /* Use div background for correct export rendering */
-                                    <div 
+                                    <div
                                         className="w-full h-full bg-cover bg-no-repeat bg-center"
                                         style={{
                                             backgroundImage: `url(${invitation.couplePhoto})`,
@@ -519,61 +518,61 @@ const InvitationBuilder: React.FC = () => {
                             <div className="flex-1 px-5 py-4 flex flex-col bg-white relative justify-between">
                                 <FloralCorner position="tl" />
                                 <FloralCorner position="tr" />
-                                
+
                                 {/* Date / Time Display (Clean Style) */}
                                 <div className="w-full relative z-10 flex items-center justify-between">
-                                     <div className="text-left">
-                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Save The Date</p>
-                                         <div className="text-4xl font-black text-gray-800 font-serif leading-none tracking-tight">
+                                    <div className="text-left">
+                                        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Save The Date</p>
+                                        <div className="text-4xl font-black text-gray-800 font-serif leading-none tracking-tight">
                                             {dateObj.day}
-                                         </div>
-                                         <div className="text-[10px] font-bold text-rose-500 uppercase font-be-vietnam tracking-wide">
+                                        </div>
+                                        <div className="text-[10px] font-bold text-rose-500 uppercase font-be-vietnam tracking-wide">
                                             Tháng {dateObj.month}, {dateObj.year}
-                                         </div>
-                                     </div>
-                                     
-                                     <div className="h-8 w-px bg-gray-200 mx-4"></div>
+                                        </div>
+                                    </div>
 
-                                     <div className="text-right">
-                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Giờ đón khách</p>
-                                         <div className="text-3xl font-black text-rose-600 font-mono leading-none tracking-tight">
+                                    <div className="h-8 w-px bg-gray-200 mx-4"></div>
+
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-be-vietnam font-bold mb-0.5">Giờ đón khách</p>
+                                        <div className="text-3xl font-black text-rose-600 font-mono leading-none tracking-tight">
                                             {invitation.time || '00:00'}
-                                         </div>
-                                     </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Names & Location */}
                                 <div className="space-y-1 text-center relative z-10 my-2">
-                                     <h2 className="font-['Great_Vibes'] text-5xl text-gray-800 leading-tight">
+                                    <h2 className="font-['Great_Vibes'] text-5xl text-gray-800 leading-tight">
                                         {invitation.groomName} <span className="text-rose-400 text-3xl font-serif">&</span> {invitation.brideName}
-                                     </h2>
-                                     <div className="pt-2">
+                                    </h2>
+                                    <div className="pt-2">
                                         <p className="text-xs font-black text-gray-700 font-be-vietnam uppercase tracking-widest line-clamp-1">
                                             {invitation.location || 'Tên nhà hàng'}
                                         </p>
                                         <p className="text-[10px] text-gray-500 italic mt-0.5 line-clamp-1 px-2">
                                             {invitation.address || 'Địa chỉ tổ chức...'}
                                         </p>
-                                     </div>
+                                    </div>
                                 </div>
 
                                 {/* QR & Footer */}
                                 <div className="w-full relative z-10">
                                     <div className="flex items-center justify-between bg-white p-2 rounded-xl border-2 border-dashed border-rose-200">
-                                         <div className="flex items-center gap-3 text-left">
-                                             <div className="bg-rose-50 p-1 rounded-lg">
+                                        <div className="flex items-center gap-3 text-left">
+                                            <div className="bg-rose-50 p-1 rounded-lg">
                                                 <QRCodeCanvas value={publicLink} size={48} />
-                                             </div>
-                                             <div>
-                                                 <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Mừng cưới</p>
-                                                 <p className="text-[9px] text-gray-500 font-be-vietnam">Quét mã QR</p>
-                                             </div>
-                                         </div>
-                                         {/* Footer Branding Aligned */}
-                                         <div className="flex flex-col items-end opacity-80 pr-1">
-                                             <span className="text-[7px] text-gray-400 font-be-vietnam uppercase tracking-wider font-bold">Powered by</span>
-                                             <span className="text-[9px] font-black text-rose-600 font-be-vietnam">WEDPLAN AI</span>
-                                         </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-800 uppercase font-be-vietnam">Mừng cưới</p>
+                                                <p className="text-[9px] text-gray-500 font-be-vietnam">Quét mã QR</p>
+                                            </div>
+                                        </div>
+                                        {/* Footer Branding Aligned */}
+                                        <div className="flex flex-col items-end opacity-80 pr-1">
+                                            <span className="text-[7px] text-gray-400 font-be-vietnam uppercase tracking-wider font-bold">Powered by</span>
+                                            <span className="text-[9px] font-black text-rose-600 font-be-vietnam">WEDPLAN AI</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -585,7 +584,7 @@ const InvitationBuilder: React.FC = () => {
 
             {/* MOBILE BOTTOM NAVIGATION */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] safe-area-bottom">
-                <button 
+                <button
                     onClick={() => setMobileView('EDIT')}
                     className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-colors ${mobileView === 'EDIT' ? 'text-rose-600 bg-rose-50' : 'text-gray-500 hover:bg-gray-50'}`}
                 >
@@ -593,7 +592,7 @@ const InvitationBuilder: React.FC = () => {
                     <span className="text-[10px] font-bold uppercase">Nhập thông tin</span>
                 </button>
                 <div className="w-px bg-gray-200"></div>
-                <button 
+                <button
                     onClick={() => setMobileView('PREVIEW')}
                     className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 transition-colors ${mobileView === 'PREVIEW' ? 'text-rose-600 bg-rose-50' : 'text-gray-500 hover:bg-gray-50'}`}
                 >
