@@ -10,7 +10,16 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+
+# Environment variables (SECURITY: never commit API keys)
+.env
+.env.local
+.env.*.local
 *.local
+
+# GSD Planning artifacts
+.agent/
+.planning/
 
 # Editor directories and files
 .vscode/*

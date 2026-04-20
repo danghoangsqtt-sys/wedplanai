@@ -1,6 +1,7 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,7 +17,10 @@ export default defineConfig(({ mode }) => {
         "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
       },
     },
-    plugins: [react()],
+    plugins: [
+      react(),
+      tailwindcss(),
+    ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY)
@@ -24,8 +28,20 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
       }
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+            'vendor-charts': ['recharts'],
+            'vendor-utils': ['jspdf', 'html2canvas', 'pptxgenjs'],
+          }
+        }
+      },
+      chunkSizeWarningLimit: 600,
     },
   };
 });

@@ -1,22 +1,80 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { AttendanceProbability, DashboardStats, TaskStatus } from './types';
-import GuestManager from './components/GuestManager';
-import AIAdvisor from './components/AIAdvisor';
-import DetailedBudgetPlanner from './components/DetailedBudgetPlanner';
 import LoginPage from './components/auth/LoginPage';
 import Sidebar from './components/layout/Sidebar';
-import UserManagement from './components/admin/UserManagement';
 import Dashboard from './components/Dashboard';
-import ProcessGuide from './components/ProcessGuide';
-import FengShuiConsultant from './components/fengshui/FengShuiConsultant';
-import SettingsPage, { SettingsTab } from './components/SettingsPage';
-import InvitationManager from './components/invitation/InvitationManager';
-import PublicInvitationView from './components/invitation/PublicInvitationView';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
-import { Menu, ShieldAlert, LogIn, AlertTriangle } from 'lucide-react';
+import { Menu, LogIn, AlertTriangle, Loader2 } from 'lucide-react';
 import { logAppVisit } from './services/cloudService';
+
+// --- Lazy-loaded components for code splitting ---
+const GuestManager = lazy(() => import('./components/GuestManager'));
+const AIAdvisor = lazy(() => import('./components/AIAdvisor'));
+const DetailedBudgetPlanner = lazy(() => import('./components/DetailedBudgetPlanner'));
+const UserManagement = lazy(() => import('./components/admin/UserManagement'));
+const ProcessGuide = lazy(() => import('./components/ProcessGuide'));
+const FengShuiConsultant = lazy(() => import('./components/fengshui/FengShuiConsultant'));
+const SettingsPage = lazy(() => import('./components/SettingsPage').then(mod => ({ default: mod.default })));
+const InvitationManager = lazy(() => import('./components/invitation/InvitationManager'));
+const PublicInvitationView = lazy(() => import('./components/invitation/PublicInvitationView'));
+
+// --- Loading Fallback ---
+const PageLoader = () => (
+  <div className="flex-1 flex items-center justify-center h-64">
+    <div className="flex flex-col items-center gap-3 text-gray-400">
+      <Loader2 className="w-8 h-8 animate-spin text-rose-400" />
+      <span className="text-sm">Đang tải...</span>
+    </div>
+  </div>
+);
+
+// --- Error Boundary ---
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Component Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        this.props.fallback || (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6 max-w-md text-center">
+              <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+              <h3 className="font-bold text-gray-800 mb-2">Đã xảy ra lỗi</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {this.state.error?.message || 'Một lỗi không mong muốn đã xảy ra.'}
+              </p>
+              <button
+                onClick={() => this.setState({ hasError: false })}
+                className="px-4 py-2 bg-rose-500 text-white text-sm rounded-lg hover:bg-rose-600 transition-colors"
+              >
+                Thử lại
+              </button>
+            </div>
+          </div>
+        )
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
 function App() {
   const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile, addNotification } = useStore();
@@ -98,7 +156,13 @@ function App() {
 
   // --- RENDER: PUBLIC VIEW ---
   if (isPublicView) {
-    return <PublicInvitationView />;
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <PublicInvitationView />
+        </Suspense>
+      </ErrorBoundary>
+    );
   }
 
   // --- RENDER: APP VIEW ---
@@ -178,82 +242,76 @@ function App() {
         <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeTab === 'invitation' ? 'p-0' : 'p-3 md:p-6 lg:p-8'} bg-[#FDF2F8]`}>
           <div className={`h-full flex flex-col ${activeTab === 'invitation' ? 'w-full' : 'max-w-7xl mx-auto'}`}>
 
-            {activeTab === 'dashboard' && (
-              <Dashboard
-                stats={stats}
-                user={user}
-                isSyncing={isSyncing}
-                setActiveTab={setActiveTab}
-              />
-            )}
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
+                {activeTab === 'dashboard' && (
+                  <Dashboard
+                    stats={stats}
+                    user={user}
+                    isSyncing={isSyncing}
+                    setActiveTab={setActiveTab}
+                  />
+                )}
 
-            {activeTab === 'process' && (
-              <ProcessGuide />
-            )}
+                {activeTab === 'process' && (
+                  <ProcessGuide />
+                )}
 
-            {activeTab === 'fengshui' && (
-              <div className="h-full flex-1 min-h-[500px] lg:min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
-                <FengShuiConsultant isRestricted={isRestricted} />
-              </div>
-            )}
-
-            {activeTab === 'invitation' && (
-              <div className="h-full flex-1 min-h-[600px] bg-white lg:rounded-xl shadow-sm border border-rose-100 overflow-hidden">
-                <InvitationManager />
-              </div>
-            )}
-
-            {activeTab === 'guests' && <GuestManager />}
-
-            {activeTab === 'budget' && (
-              <div className="flex-1 flex flex-col h-full min-h-[500px] lg:min-h-[600px] overflow-hidden rounded-xl border border-gray-200">
-                <DetailedBudgetPlanner />
-              </div>
-            )}
-
-            {activeTab === 'ai' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6">
-                <div className="lg:col-span-1 space-y-4">
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-rose-100">
-                    <h3 className="font-bold text-gray-700 mb-2">Trạng thái AI</h3>
-                    <div className={`p-3 rounded-lg text-sm ${isRestricted
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : user.role === 'ADMIN'
-                          ? 'bg-purple-50 text-purple-700'
-                          : 'bg-blue-50 text-blue-700'
-                      }`}>
-                      {isRestricted
-                        ? "Đang dùng thử miễn phí"
-                        : user.role === 'ADMIN'
-                          ? "Bạn đang dùng Google Gemini (System Key)."
-                          : "Bạn đang dùng Google Gemini (Personal Key)."
-                      }
-                    </div>
-                    {user.role === 'USER' && !user.allowCustomApiKey && !isRestricted && (
-                      <div className="mt-2 text-xs text-red-500 flex items-center gap-1">
-                        <ShieldAlert className="w-3 h-3" /> Bạn chưa được cấp quyền nhập Key.
-                      </div>
-                    )}
-                    {user.role === 'USER' && user.allowCustomApiKey && !settings.geminiApiKey && !isRestricted && (
-                      <div className="mt-2 text-xs text-red-500">
-                        ⚠️ Chưa có API Key. Vui lòng vào Cài Đặt.
-                      </div>
-                    )}
+                {activeTab === 'fengshui' && (
+                  <div className="h-full flex-1 min-h-[500px] lg:min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
+                    <FengShuiConsultant isRestricted={isRestricted} />
                   </div>
-                </div>
-                <div className="lg:col-span-2">
-                  <AIAdvisor stats={stats} isRestricted={isRestricted} />
-                </div>
-              </div>
-            )}
+                )}
 
-            {activeTab === 'admin' && user.role === 'ADMIN' && (
-              <UserManagement />
-            )}
+                {activeTab === 'invitation' && (
+                  <div className="h-full flex-1 min-h-[600px] bg-white lg:rounded-xl shadow-sm border border-rose-100 overflow-hidden">
+                    <InvitationManager />
+                  </div>
+                )}
 
-            {activeTab === 'settings' && (
-              <SettingsPage defaultTab={settingsDefaultTab} />
-            )}
+                {activeTab === 'guests' && <GuestManager />}
+
+                {activeTab === 'budget' && (
+                  <div className="flex-1 flex flex-col h-full min-h-[500px] lg:min-h-[600px] overflow-hidden rounded-xl border border-gray-200">
+                    <DetailedBudgetPlanner />
+                  </div>
+                )}
+
+                {activeTab === 'ai' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6">
+                    <div className="lg:col-span-1 space-y-4">
+                      <div className="bg-white p-4 rounded-xl shadow-sm border border-rose-100">
+                        <h3 className="font-bold text-gray-700 mb-2">Trạng thái AI</h3>
+                        <div className={`p-3 rounded-lg text-sm ${isRestricted
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : user.role === 'ADMIN'
+                              ? 'bg-purple-50 text-purple-700'
+                              : 'bg-blue-50 text-blue-700'
+                          }`}>
+                          {isRestricted
+                            ? "Đang dùng thử miễn phí"
+                            : user.role === 'ADMIN'
+                              ? "Bạn đang dùng Google Gemini (System Key)."
+                              : "Bạn đang dùng Google Gemini (Personal Key)."
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <div className="lg:col-span-2">
+                      <AIAdvisor stats={stats} isRestricted={isRestricted} />
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'admin' && user.role === 'ADMIN' && (
+                  <UserManagement />
+                )}
+
+                {activeTab === 'settings' && (
+                  <SettingsPage defaultTab={settingsDefaultTab} />
+                )}
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
       </div>
