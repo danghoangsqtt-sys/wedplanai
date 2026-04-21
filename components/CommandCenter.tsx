@@ -247,16 +247,19 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
     });
   }, []);
 
+  const [aiKeyWarning, setAiKeyWarning] = useState(false);
+
   const genTip = useCallback(async (msId: string, task: MilestoneTask, msLabel: string) => {
     if (!settings.geminiApiKey) {
-      setActiveTab('settings');
+      setAiKeyWarning(true);
       return;
     }
+    setAiKeyWarning(false);
     setGeneratingTip(task.id);
     const tip = await generateAITip(task.title, msLabel, settings.geminiApiKey);
     if (tip) patchTask(msId, task.id, { tips: tip });
     setGeneratingTip(null);
-  }, [settings.geminiApiKey, patchTask, setActiveTab]);
+  }, [settings.geminiApiKey, patchTask]);
 
   // ── Wedding date ──
   const weddingDateStr = user?.weddingDate || invitation?.date || '';
@@ -683,11 +686,19 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
                     <Plus className="w-3.5 h-3.5" /> Thêm
                   </button>
                 </div>
-                {!settings.geminiApiKey && (
-                  <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
-                    <Lightbulb className="w-3 h-3" />
-                    Cấu hình <button type="button" onClick={() => setActiveTab('settings')} className="text-violet-500 underline">Gemini API Key</button> để dùng tính năng AI gợi ý mẹo
-                  </p>
+                {aiKeyWarning && !settings.geminiApiKey && (
+                  <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 animate-fadeIn">
+                    <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-amber-800">Cần cấu hình API Key</p>
+                      <p className="text-[10px] text-amber-600 mt-0.5">
+                        Vào <button type="button" onClick={() => setActiveTab('settings')} className="text-violet-600 font-bold underline hover:text-violet-800">Cài đặt</button> → nhập Gemini API Key để sử dụng tính năng AI gợi ý.
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => setAiKeyWarning(false)} className="p-1 text-amber-400 hover:text-amber-600 rounded transition-colors" aria-label="Đóng">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
