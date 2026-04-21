@@ -232,11 +232,26 @@ export const useStore = create<AppState>()(
       },
 
       updateUser: async (uid, data) => {
-        try {
-          await databases.updateDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid, data as Record<string, any>);
-        } catch (e: any) {
-          console.error('Update User Error:', e);
+        // Only send fields that exist in Appwrite public_profiles schema
+        const APPWRITE_PROFILE_FIELDS = new Set([
+          'uid', 'email', 'displayName', 'photoURL', 'role',
+          'isActive', 'joinedAt', 'lastSeen', 'enableCloudStorage', 'allowCustomApiKey'
+        ]);
+        const cloudData: Record<string, any> = {};
+        for (const [key, value] of Object.entries(data)) {
+          if (APPWRITE_PROFILE_FIELDS.has(key)) {
+            cloudData[key] = value;
+          }
         }
+        // Only call Appwrite if there are cloud-compatible fields
+        if (Object.keys(cloudData).length > 0) {
+          try {
+            await databases.updateDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid, cloudData);
+          } catch (e: any) {
+            console.error('Update User Error:', e);
+          }
+        }
+        // Always update local state with ALL fields (including local-only ones)
         const currentUser = get().user;
         if (currentUser && currentUser.uid === uid) {
           set({ user: { ...currentUser, ...data } });
