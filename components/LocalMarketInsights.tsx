@@ -97,6 +97,7 @@ const BudgetApplyModal: React.FC<{
   const [selected, setSelected] = useState<string[]>(report.sections.map(s => s.id));
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [mode, setMode] = useState<'detail' | 'total'>('detail');
+  const [clearAll, setClearAll] = useState(false);
   const { budgetItems } = useStore();
 
   const toggle = (id: string) =>
@@ -141,8 +142,28 @@ const BudgetApplyModal: React.FC<{
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-2">
+          {/* New Reset Option Box */}
+          <label className={`flex items-start gap-3 p-4 mb-4 rounded-xl border cursor-pointer transition-colors ${
+            clearAll ? 'border-rose-300 bg-rose-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+          }`}>
+            <input
+              type="checkbox"
+              checked={clearAll}
+              onChange={(e) => setClearAll(e.target.checked)}
+              className="w-5 h-5 accent-rose-600 mt-0.5 rounded cursor-pointer"
+            />
+            <div className="flex-1">
+              <p className={`text-sm font-bold ${clearAll ? 'text-rose-800' : 'text-gray-700'}`}>
+                Xóa toàn bộ ngân sách cũ hiện có
+              </p>
+              <p className={`text-xs mt-1 ${clearAll ? 'text-rose-600' : 'text-gray-500'}`}>
+                Sẽ xóa trắng danh sách ngân sách hiện tại và tạo mới hoàn toàn từ danh sách dưới đây.
+              </p>
+            </div>
+          </label>
+
           {report.sections.map(section => {
-            const currentTotal = budgetItems
+            const currentTotal = clearAll ? 0 : budgetItems
               .filter(b => section.budgetCategories.includes(b.category))
               .reduce((sum, b) => sum + b.estimatedCost, 0);
             const recommended = section.budgetRecommendation.estimatedCost;
@@ -217,7 +238,7 @@ const BudgetApplyModal: React.FC<{
             </button>
             <button
               type="button"
-              onClick={() => onApply(selected, mode)}
+              onClick={() => onApply(selected, mode, clearAll)}
               disabled={selected.length === 0}
               className="flex-1 py-2.5 rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
@@ -298,11 +319,13 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
   const toggleCategory = (id: string) =>
     setSelectedCategories(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-  const handleApplyBudget = useCallback((sectionIds: string[], mode: 'detail' | 'total') => {
+  const handleApplyBudget = useCallback((sectionIds: string[], mode: 'detail' | 'total', clearAll: boolean = false) => {
     if (!localMarketReport) return;
     let createdCount = 0;
     let updatedCount = 0;
     const newItems: any[] = []; // Collect new items for bulk add
+
+    let currentBudgetItems = clearAll ? [] : budgetItems;
 
     for (const sid of sectionIds) {
       const section = localMarketReport.sections.find(s => s.id === sid);
@@ -333,7 +356,7 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
           if (cost <= 0) continue;
 
           // Check if a similar item already exists (by name match)
-          const existing = budgetItems.find(
+          const existing = currentBudgetItems.find(
             b => b.category === category && b.itemName.toLowerCase().includes(item.name.toLowerCase().slice(0, 10))
           );
 
@@ -363,8 +386,25 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
       } else {
         // --- TOTAL MODE: Scale existing items proportionally (legacy behavior) ---
         const recommended = section.budgetRecommendation.estimatedCost;
-        const matchingItems = budgetItems.filter(b => section.budgetCategories.includes(b.category));
-        if (!matchingItems.length) continue;
+        const category = section.budgetCategories[0] || section.label;
+        const matchingItems = currentBudgetItems.filter(b => section.budgetCategories.includes(b.category));
+        
+        if (!matchingItems.length) {
+            // No matching items exist, we just create a single summary item for this section
+            newItems.push({
+              id: `market_${sid}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              category,
+              itemName: section.label,
+              assignee: '',
+              side: 'BOTH' as const,
+              status: TaskStatus.PENDING,
+              estimatedCost: recommended,
+              actualCost: 0,
+              note: `${section.budgetRecommendation.note} (Giá ${localMarketReport.province})`,
+            });
+            createdCount++;
+            continue;
+        }
 
         const currentTotal = matchingItems.reduce((sum, b) => sum + b.estimatedCost, 0);
         if (currentTotal === 0) {
@@ -382,8 +422,9 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
       }
     }
 
-    // Bulk add all new items at once (no per-item notification)
-    if (newItems.length > 0) {
+    if (clearAll) {
+      setBudgetItems(newItems);
+    } else if (newItems.length > 0) {
       setBudgetItems([...budgetItems, ...newItems]);
     }
 
