@@ -8,8 +8,7 @@ import {
   Loader2, X, Banknote, Gift, Target,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { DashboardStats, BudgetItem, TaskStatus, UserProfile } from '../types';
-import { generateAIContent } from '../services/aiService';
+import { DashboardStats, BudgetItem, TaskStatus } from '../types';
 
 interface CommandCenterProps {
   stats: DashboardStats;
@@ -21,7 +20,6 @@ interface MilestoneTask {
   id: string;
   title: string;
   notes: string;
-  tips: string;
   done: boolean;
 }
 
@@ -185,29 +183,6 @@ function isDueThisWeek(i: BudgetItem) {
   return diff >= 0 && diff <= 7;
 }
 
-// ── AI tip generator ───────────────────────────────────────────────────────
-async function generateAITip(title: string, msLabel: string, user: UserProfile | null): Promise<string> {
-  const prompt = `Bạn là chuyên gia tư vấn tổ chức đám cưới tại Việt Nam với hơn 10 năm kinh nghiệm.
-
-Công việc cần tư vấn: "${title}"
-Giai đoạn: ${msLabel} (trước ngày cưới)
-
-Hãy đưa ra lời khuyên CHI TIẾT và THỰC TẾ gồm:
-• 3-5 mẹo cụ thể (có số liệu, mức giá tham khảo nếu liên quan)
-• Lưu ý quan trọng hoặc sai lầm cần tránh
-• Mẹo tiết kiệm chi phí (nếu có)
-• Thời điểm tốt nhất để thực hiện
-
-Viết bằng tiếng Việt, dùng gạch đầu dòng (•), ngắn gọn nhưng đầy đủ thông tin. Không thêm tiêu đề.`;
-
-  try {
-    const aiResponse = await generateAIContent(user, prompt, "Hãy tư vấn giúp tôi công việc này.");
-    return aiResponse.trim();
-  } catch (error: any) {
-    if (error.message) return error.message;
-    return '⚠️ Không thể kết nối AI lúc này. Vui lòng thử lại sau.';
-  }
-}
 
 // ══════════════════════════════════════════════════════════════════════════
 const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) => {
@@ -217,7 +192,6 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
   const [msTasks, setMsTasks] = useState<TaskStore>(initTaskStore);
   const [selectedMs, setSelectedMs]   = useState<string | null>(null);
   const [newTitle, setNewTitle]       = useState('');
-  const [generatingTip, setGeneratingTip] = useState<string | null>(null);
   const [expandedTask, setExpandedTask]   = useState<string | null>(null);
   const [editingNotes, setEditingNotes]   = useState<string | null>(null);
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -234,7 +208,7 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
   const addTask = useCallback((msId: string) => {
     const title = newTitle.trim();
     if (!title) return;
-    const task: MilestoneTask = { id: `${msId}_u_${Date.now()}`, title, notes: '', tips: '', done: false };
+    const task: MilestoneTask = { id: `${msId}_u_${Date.now()}`, title, notes: '', done: false };
     setMsTasks(prev => {
       const next = { ...prev, [msId]: [...(prev[msId] ?? []), task] };
       saveTaskStore(next);
@@ -251,20 +225,6 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
       return next;
     });
   }, []);
-
-  const [aiKeyWarning, setAiKeyWarning] = useState(false);
-
-  const genTip = useCallback(async (msId: string, task: MilestoneTask, msLabel: string) => {
-    setAiKeyWarning(false);
-    setGeneratingTip(task.id);
-    const tip = await generateAITip(task.title, msLabel, user);
-    if (tip) {
-      patchTask(msId, task.id, { tips: tip });
-    } else {
-      setAiKeyWarning(true);
-    }
-    setGeneratingTip(null);
-  }, [user, patchTask]);
 
   // ── Wedding date ──
   const weddingDateStr = user?.weddingDate || invitation?.date || '';
@@ -604,43 +564,7 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
                                 )}
                               </div>
 
-                              {/* Tips */}
-                              <div>
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  <p className="text-[10px] font-bold text-amber-600">💡 MẸO HAY</p>
-                                  <button
-                                    type="button"
-                                    onClick={() => genTip(activeMs.id, task, activeMs.label)}
-                                    disabled={!!generatingTip}
-                                    className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-100 hover:bg-violet-200 text-violet-700 font-semibold transition-colors disabled:opacity-50"
-                                  >
-                                    {generatingTip === task.id
-                                      ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Đang tạo...</>
-                                      : <><Sparkles className="w-2.5 h-2.5" /> AI gợi ý</>
-                                    }
-                                  </button>
-                                  {task.tips && (
-                                    <button
-                                      type="button"
-                                      title="Xóa mẹo"
-                                      aria-label="Xóa mẹo AI"
-                                      onClick={() => patchTask(activeMs.id, task.id, { tips: '' })}
-                                      className="text-[10px] text-gray-400 hover:text-red-400 transition-colors"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  )}
-                                </div>
-                                {task.tips ? (
-                                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 leading-relaxed">
-                                    {task.tips}
-                                  </p>
-                                ) : (
-                                  <p className="text-xs text-gray-300 italic px-2.5 py-1">
-                                    Nhấn "AI gợi ý" để nhận mẹo cụ thể cho công việc này
-                                  </p>
-                                )}
-                              </div>
+
                             </div>
                           )}
                         </div>
@@ -691,20 +615,7 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
                     <Plus className="w-3.5 h-3.5" /> Thêm
                   </button>
                 </div>
-                {aiKeyWarning && !settings.geminiApiKey && (
-                  <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 animate-fadeIn">
-                    <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-amber-800">Cần cấu hình API Key</p>
-                      <p className="text-[10px] text-amber-600 mt-0.5">
-                        Vào <button type="button" onClick={() => setActiveTab('settings')} className="text-violet-600 font-bold underline hover:text-violet-800">Cài đặt</button> → nhập Gemini API Key để sử dụng tính năng AI gợi ý.
-                      </p>
-                    </div>
-                    <button type="button" onClick={() => setAiKeyWarning(false)} className="p-1 text-amber-400 hover:text-amber-600 rounded transition-colors" aria-label="Đóng">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
+
               </div>
             </div>
           )}
