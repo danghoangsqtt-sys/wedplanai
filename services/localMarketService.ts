@@ -74,15 +74,63 @@ const SYSTEM_PROMPT = `Bạn là chuyên gia tư vấn dịch vụ đám cưới
 Bạn nắm rõ mức giá, thị trường, phong tục và đặc điểm của từng tỉnh thành trên khắp 3 miền Bắc - Trung - Nam.
 Chỉ trả về JSON hợp lệ, không có markdown, không có text ngoài JSON.`;
 
-export async function generateLocalMarketReport(
-  province: string,
-  selectedCategoryIds: string[],
-  user: UserProfile
-): Promise<LocalMarketReport> {
-  const categories = MARKET_CATEGORIES.filter(c => selectedCategoryIds.includes(c.id));
-  if (!categories.length) throw new Error('Chưa chọn danh mục nào.');
+// --- HELPERS ---
 
-  const prompt = `Cung cấp thông tin thị trường dịch vụ cưới tại "${province}" cho các danh mục sau:
+/** Safely extract JSON from AI response (handles fences, thinking tokens, truncation) */
+function extractJSON(raw: string | undefined): any {
+  let text = (raw || '').trim();
+  if (!text) throw new Error('AI trả về kết quả rỗng. Vui lòng thử lại.');
+
+  // Strip markdown code fences
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+  // Strip leading non-JSON characters (thinking tokens, preamble...)
+  const jsonStart = text.indexOf('{');
+  const jsonEnd = text.lastIndexOf('}');
+  if (jsonStart === -1 || jsonEnd === -1) {
+    throw new Error('AI không trả về JSON hợp lệ. Vui lòng thử lại.');
+  }
+  text = text.slice(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Attempt to fix common truncation issues (missing closing brackets)
+    let fixed = text;
+    const opens = (fixed.match(/\[/g) || []).length;
+    const closes = (fixed.match(/\]/g) || []).length;
+    for (let i = 0; i < opens - closes; i++) fixed += ']';
+    const openBraces = (fixed.match(/\{/g) || []).length;
+    const closeBraces = (fixed.match(/\}/g) || []).length;
+    for (let i = 0; i < openBraces - closeBraces; i++) fixed += '}';
+
+    try {
+      return JSON.parse(fixed);
+    } catch {
+      throw new Error('Dữ liệu từ AI không hợp lệ (JSON parse thất bại). Thử giảm số danh mục hoặc thử lại.');
+    }
+  }
+}
+
+/** Validate that parsed report has the expected structure */
+function validateReport(parsed: any, province: string): void {
+  if (!parsed.sections || !Array.isArray(parsed.sections)) {
+    throw new Error('AI trả về dữ liệu thiếu mục "sections". Vui lòng thử lại.');
+  }
+  if (parsed.sections.length === 0) {
+    throw new Error('AI trả về danh sách sections rỗng. Vui lòng thử lại.');
+  }
+  // Ensure required top-level fields exist with fallbacks
+  if (!parsed.province) parsed.province = province;
+  if (!parsed.region) parsed.region = 'SOUTH';
+  if (!parsed.economicLevel) parsed.economicLevel = 'MID';
+  if (!parsed.generalTips) parsed.generalTips = [];
+  if (!parsed.bestTimeToBook) parsed.bestTimeToBook = 'Nên đặt trước 3-6 tháng';
+}
+
+/** Build the prompt for a set of categories */
+function buildPrompt(province: string, categories: MarketCategory[]): string {
+  return `Cung cấp thông tin thị trường dịch vụ cưới tại "${province}" cho các danh mục sau:
 ${categories.map(c => `- ${c.id}: ${c.label}`).join('\n')}
 
 Trả về JSON với cấu trúc CHÍNH XÁC sau (không thêm trường nào khác):
@@ -125,21 +173,58 @@ Quan trọng:
 - avgLow và avgHigh là số nguyên VNĐ (ví dụ: 5000000 là 5 triệu)
 - budgetCategories cho mỗi section: ${categories.map(c => `"${c.id}" -> ${JSON.stringify(c.budgetCategories)}`).join(', ')}
 - Đưa section "budgetCategories" đúng với mapping trên cho mỗi section`;
+}
 
-  const raw = await generateAIContent(user, SYSTEM_PROMPT, prompt, true);
-  let parsed: any;
-  try {
-    let text = (raw || '').trim();
-    // Strip markdown code fences if the model included them despite JSON mode
-    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    // Strip any leading non-JSON characters (thinking tokens, etc.)
-    const jsonStart = text.indexOf('{');
-    const jsonEnd = text.lastIndexOf('}');
-    if (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error('Dữ liệu từ AI không hợp lệ (JSON parse thất bại). Thử giảm số danh mục hoặc thử lại.');
+// --- MAX CATEGORIES PER BATCH (avoid output token overflow) ---
+const MAX_CATEGORIES_PER_BATCH = 5;
+
+export async function generateLocalMarketReport(
+  province: string,
+  selectedCategoryIds: string[],
+  user: UserProfile
+): Promise<LocalMarketReport> {
+  const categories = MARKET_CATEGORIES.filter(c => selectedCategoryIds.includes(c.id));
+  if (!categories.length) throw new Error('Chưa chọn danh mục nào.');
+
+  // If categories fit in one batch, call once
+  if (categories.length <= MAX_CATEGORIES_PER_BATCH) {
+    return await fetchAndParse(province, categories, user);
   }
+
+  // Split into batches to avoid output token overflow
+  const batches: MarketCategory[][] = [];
+  for (let i = 0; i < categories.length; i += MAX_CATEGORIES_PER_BATCH) {
+    batches.push(categories.slice(i, i + MAX_CATEGORIES_PER_BATCH));
+  }
+
+  // Fetch all batches (sequentially to be gentle on rate limits)
+  let mergedReport: LocalMarketReport | null = null;
+
+  for (const batch of batches) {
+    const partial = await fetchAndParse(province, batch, user);
+
+    if (!mergedReport) {
+      mergedReport = partial;
+    } else {
+      // Merge sections from subsequent batches
+      mergedReport.sections.push(...partial.sections);
+    }
+  }
+
+  return mergedReport!;
+}
+
+/** Fetch one batch of categories and return a parsed, validated report */
+async function fetchAndParse(
+  province: string,
+  categories: MarketCategory[],
+  user: UserProfile
+): Promise<LocalMarketReport> {
+  const prompt = buildPrompt(province, categories);
+  const raw = await generateAIContent(user, SYSTEM_PROMPT, prompt, true);
+
+  const parsed = extractJSON(raw);
+  validateReport(parsed, province);
 
   // Enrich sections with budgetCategories from our mapping (in case AI omits)
   if (parsed.sections) {
