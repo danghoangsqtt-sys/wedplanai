@@ -192,21 +192,40 @@ async function generateAITip(title: string, msLabel: string, userApiKey?: string
   if (!apiKey) return '';
 
   const prompt = `Bạn là chuyên gia tư vấn cưới hỏi tại Việt Nam. Viết 1-2 câu mẹo ngắn gọn, cụ thể và thực tế cho công việc: "${title}" trong giai đoạn ${msLabel} chuẩn bị đám cưới. Chỉ trả lời nội dung mẹo, không thêm tiêu đề.`;
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 150, temperature: 0.7 },
-        }),
+  
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 150, temperature: 0.7 },
+          }),
+        }
+      );
+
+      if (res.status === 429) {
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+        return '⏳ Hệ thống AI đang bận, vui lòng thử lại sau 30 giây.';
       }
-    );
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-  } catch { return ''; }
+
+      if (!res.ok) return '⚠️ Không thể kết nối AI. Vui lòng thử lại.';
+
+      const data = await res.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    } catch {
+      if (attempt === maxRetries) return '⚠️ Lỗi kết nối. Vui lòng kiểm tra mạng.';
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
+  }
+  return '';
 }
 
 // ══════════════════════════════════════════════════════════════════════════
