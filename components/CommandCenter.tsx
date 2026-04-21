@@ -8,7 +8,8 @@ import {
   Loader2, X, Banknote, Gift, Target,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { DashboardStats, BudgetItem, TaskStatus } from '../types';
+import { DashboardStats, BudgetItem, TaskStatus, UserProfile } from '../types';
+import { generateAIContent } from '../services/aiService';
 
 interface CommandCenterProps {
   stats: DashboardStats;
@@ -185,12 +186,7 @@ function isDueThisWeek(i: BudgetItem) {
 }
 
 // ── AI tip generator ───────────────────────────────────────────────────────
-async function generateAITip(title: string, msLabel: string, userApiKey?: string): Promise<string> {
-  // @ts-ignore
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY;
-  const apiKey = userApiKey || envKey;
-  if (!apiKey) return '';
-
+async function generateAITip(title: string, msLabel: string, user: UserProfile | null): Promise<string> {
   const prompt = `Bạn là chuyên gia tư vấn tổ chức đám cưới tại Việt Nam với hơn 10 năm kinh nghiệm.
 
 Công việc cần tư vấn: "${title}"
@@ -203,40 +199,14 @@ Hãy đưa ra lời khuyên CHI TIẾT và THỰC TẾ gồm:
 • Thời điểm tốt nhất để thực hiện
 
 Viết bằng tiếng Việt, dùng gạch đầu dòng (•), ngắn gọn nhưng đầy đủ thông tin. Không thêm tiêu đề.`;
-  
-  const maxRetries = 3;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 800, temperature: 0.7 },
-          }),
-        }
-      );
 
-      if (res.status === 429 || res.status >= 500) {
-        if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 2000 * attempt));
-          continue;
-        }
-        return '⏳ Hệ thống AI đang bận (hoặc quá tải), vui lòng thử lại sau giây lát.';
-      }
-
-      if (!res.ok) return '⚠️ Không thể kết nối AI. Vui lòng thử lại.';
-
-      const data = await res.json();
-      return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    } catch {
-      if (attempt === maxRetries) return '⚠️ Lỗi kết nối. Vui lòng kiểm tra mạng.';
-      await new Promise(r => setTimeout(r, 1000 * attempt));
-    }
+  try {
+    const aiResponse = await generateAIContent(user, prompt, "Hãy tư vấn giúp tôi công việc này.");
+    return aiResponse.trim();
+  } catch (error: any) {
+    if (error.message) return error.message;
+    return '⚠️ Không thể kết nối AI lúc này. Vui lòng thử lại sau.';
   }
-  return '';
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -287,15 +257,14 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
   const genTip = useCallback(async (msId: string, task: MilestoneTask, msLabel: string) => {
     setAiKeyWarning(false);
     setGeneratingTip(task.id);
-    const tip = await generateAITip(task.title, msLabel, settings.geminiApiKey || undefined);
+    const tip = await generateAITip(task.title, msLabel, user);
     if (tip) {
       patchTask(msId, task.id, { tips: tip });
     } else {
-      // No env key AND no user key
       setAiKeyWarning(true);
     }
     setGeneratingTip(null);
-  }, [settings.geminiApiKey, patchTask]);
+  }, [user, patchTask]);
 
   // ── Wedding date ──
   const weddingDateStr = user?.weddingDate || invitation?.date || '';
