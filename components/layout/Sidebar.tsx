@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   BookOpen,
   Compass,
-  QrCode
+  QrCode,
+  TrendingUp
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { DashboardStats } from '../../types';
@@ -47,6 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'process', label: 'Quy Trình', icon: BookOpen, roles: ['ADMIN', 'USER', 'GUEST'] },
     { id: 'invitation', label: 'Thiệp Cưới', icon: QrCode, roles: ['ADMIN', 'USER', 'GUEST'] }, // NEW ITEM
     { id: 'fengshui', label: 'Phong Thủy', icon: Compass, roles: ['ADMIN', 'USER', 'GUEST'] },
+    { id: 'local', label: 'Thị Trường', icon: TrendingUp, roles: ['ADMIN', 'USER', 'GUEST'] },
     { id: 'budget', label: 'Ngân Sách', icon: ListTodo, roles: ['ADMIN', 'USER', 'GUEST'] },
     { id: 'guests', label: 'Khách Mời', icon: Users, roles: ['ADMIN', 'USER', 'GUEST'] },
     { id: 'ai', label: 'Cố Vấn AI', icon: MessageSquareText, roles: ['ADMIN', 'USER', 'GUEST'] },

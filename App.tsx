@@ -21,6 +21,7 @@ const FengShuiConsultant = lazy(() => import('./components/fengshui/FengShuiCons
 const SettingsPage = lazy(() => import('./components/SettingsPage').then(mod => ({ default: mod.default })));
 const InvitationManager = lazy(() => import('./components/invitation/InvitationManager'));
 const PublicInvitationView = lazy(() => import('./components/invitation/PublicInvitationView'));
+const LocalMarketInsights = lazy(() => import('./components/LocalMarketInsights'));
 
 // --- Loading Fallback ---
 const PageLoader = () => (
@@ -80,7 +81,7 @@ export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
 function App() {
   const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile, addNotification, login, logout } = useStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'process' | 'fengshui' | 'guests' | 'budget' | 'ai' | 'admin' | 'settings' | 'invitation'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'process' | 'fengshui' | 'guests' | 'budget' | 'ai' | 'admin' | 'settings' | 'invitation' | 'local'>('dashboard');
 
   // UI State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -359,6 +360,10 @@ function App() {
                       <AIAdvisor stats={stats} isRestricted={isRestricted} />
                     </div>
                   </div>
+                )}
+
+                {activeTab === 'local' && (
+                  <LocalMarketInsights onNavigateBudget={() => setActiveTab('budget')} />
                 )}
 
                 {activeTab === 'admin' && user.role === 'ADMIN' && (

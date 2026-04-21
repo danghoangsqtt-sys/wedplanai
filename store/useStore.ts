@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep, InvitationData } from '../types';
+import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep, InvitationData, LocalMarketReport } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { saveUserDataToCloud, loadUserDataFromCloud, syncUserProfile, getUserPublicProfile } from '../services/cloudService';
 import { fetchAllProfiles, fetchAnalyticsData, AdminAnalytics } from '../services/adminService';
@@ -66,6 +66,12 @@ interface AppState {
 
   // Guest Usage Tracking
   guestUsage: GuestUsage;
+
+  // Local Market Intelligence
+  localProvince: string;
+  localMarketReport: LocalMarketReport | null;
+  setLocalProvince: (province: string) => void;
+  setLocalMarketReport: (report: LocalMarketReport | null) => void;
 
   // Actions
   login: (user: UserProfile) => Promise<void>;
@@ -160,6 +166,11 @@ export const useStore = create<AppState>()(
       users: INITIAL_USERS,
       guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
       invitation: DEFAULT_INVITATION,
+      localProvince: '',
+      localMarketReport: null,
+
+      setLocalProvince: (province) => set({ localProvince: province }),
+      setLocalMarketReport: (report) => set({ localMarketReport: report }),
 
       login: async (user) => {
         set({ user, isSyncing: true });

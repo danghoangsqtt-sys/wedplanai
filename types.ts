@@ -186,3 +186,40 @@ export interface InvitationData {
   petalEffect?: 'none' | 'petals' | 'hearts' | 'sparkles';
   guestWishes?: GuestWish[]; // Lời chúc từ khách (stored locally)
 }
+
+// --- Local Market Intelligence Types ---
+
+export interface LocalMarketItem {
+  name: string;
+  priceRange: string;
+  description: string;
+  tips?: string;
+}
+
+export interface LocalMarketBudgetRec {
+  estimatedCost: number;
+  note: string;
+}
+
+export interface LocalMarketSection {
+  id: string;
+  label: string;
+  emoji: string;
+  summary: string;
+  avgLow: number;
+  avgHigh: number;
+  priceNote: string;
+  items: LocalMarketItem[];
+  budgetRecommendation: LocalMarketBudgetRec;
+  budgetCategories: string[]; // matching BudgetItem.category values
+}
+
+export interface LocalMarketReport {
+  province: string;
+  region: 'NORTH' | 'CENTRAL' | 'SOUTH';
+  economicLevel: 'HIGH' | 'MID' | 'LOW';
+  generatedAt: string;
+  sections: LocalMarketSection[];
+  generalTips: string[];
+  bestTimeToBook: string;
+}
