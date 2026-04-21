@@ -332,8 +332,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, user, isSyncing, setActive
                         <h3 className="font-bold text-gray-800 text-base md:text-lg">Chi Tiêu Top 5</h3>
                     </div>
                  </div>
-                 <div className="flex-1 w-full text-xs">
-                     <ResponsiveContainer width="100%" height="100%">
+                 <div className="flex-1 min-h-0 w-full text-xs">
+                     <ResponsiveContainer width="99%" height="100%">
                         <BarChart data={barData} layout="vertical" margin={{ top: 0, right: 30, left: 20, bottom: 0 }} barGap={4} barCategoryGap="20%">
                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6"/>
                            <XAxis type="number" hide />
@@ -377,8 +377,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, user, isSyncing, setActive
                     </div>
                     <h3 className="font-bold text-gray-800 text-base">Cơ Cấu Khách</h3>
                  </div>
-                 <div className="flex-1 relative">
-                     <ResponsiveContainer width="100%" height="100%">
+                 <div className="flex-1 min-h-0 relative">
+                     <ResponsiveContainer width="99%" height="100%">
                         <PieChart>
                            <Pie
                               data={pieData}

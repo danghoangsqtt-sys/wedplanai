@@ -7,7 +7,9 @@ import Dashboard from './components/Dashboard';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import { Menu, LogIn, AlertTriangle, Loader2 } from 'lucide-react';
-import { logAppVisit } from './services/cloudService';
+import { logAppVisit, getUserPublicProfile, syncUserProfile } from './services/cloudService';
+import { account } from './lib/appwrite';
+import { UserProfile } from './types';
 
 // --- Lazy-loaded components for code splitting ---
 const GuestManager = lazy(() => import('./components/GuestManager'));
@@ -77,7 +79,7 @@ class ErrorBoundary extends React.Component<
 export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
 function App() {
-  const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile, addNotification } = useStore();
+  const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile, addNotification, login, logout } = useStore();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'process' | 'fengshui' | 'guests' | 'budget' | 'ai' | 'admin' | 'settings' | 'invitation'>('dashboard');
 
   // UI State
@@ -89,11 +91,67 @@ function App() {
   // Public View State
   const [isPublicView, setIsPublicView] = useState(false);
 
+  // --- Appwrite Session Check (runs on mount + after OAuth redirect) ---
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        const appwriteUser = await account.get();
+        if (user?.role === 'GUEST') {
+          // New session detected (e.g. just came back from Google OAuth redirect)
+          const isAdminEmail = appwriteUser.email === 'danghoang.sqtt@gmail.com';
+          let profile = await getUserPublicProfile(appwriteUser.$id);
+          if (profile) {
+            // Existing user: merge latest Google display info
+            profile = {
+              ...profile,
+              email: appwriteUser.email,
+              displayName: appwriteUser.name || profile.displayName,
+              role: isAdminEmail ? 'ADMIN' : profile.role,
+              isActive: isAdminEmail ? true : profile.isActive,
+              allowCustomApiKey: isAdminEmail ? true : profile.allowCustomApiKey,
+            };
+            await syncUserProfile(profile);
+          } else {
+            // Brand new user
+            profile = {
+              uid: appwriteUser.$id,
+              email: appwriteUser.email,
+              displayName: appwriteUser.name || appwriteUser.email?.split('@')[0] || 'Người dùng',
+              photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(appwriteUser.name || '')}&background=e11d48&color=fff&size=128`,
+              role: isAdminEmail ? 'ADMIN' : 'USER',
+              isActive: isAdminEmail,
+              enableCloudStorage: true,
+              allowCustomApiKey: isAdminEmail,
+              joinedAt: new Date().toISOString(),
+            } as UserProfile;
+          }
+          await login(profile);
+          if (isAdminEmail) {
+            addNotification('SUCCESS', `Chào mừng Admin ${profile.displayName} quay trở lại!`);
+          } else if (!profile.isActive) {
+            addNotification('WARNING', 'Tài khoản chưa kích hoạt. Liên hệ Admin: 0343019101 hoặc danghoang.sqtt@gmail.com', 10000);
+          } else {
+            addNotification('SUCCESS', `Đăng nhập thành công! Xin chào ${profile.displayName}`);
+          }
+        }
+      } catch {
+        // No valid Appwrite session — if store still shows a real user, clear it
+        if (user && user.role !== 'GUEST') {
+          logout();
+        }
+      }
+    };
+    initSession();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // --- Check for Public URL Params ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'invitation' && params.get('uid')) {
       setIsPublicView(true);
+    }
+    if (params.get('auth_error') === '1') {
+      addNotification('ERROR', 'Đăng nhập Google thất bại. Vui lòng thử lại.', 6000);
     }
   }, []);
 

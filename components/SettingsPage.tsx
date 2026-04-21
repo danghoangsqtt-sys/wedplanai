@@ -2,8 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { validateGeminiKey } from '../services/aiService';
-import * as Storage from 'firebase/storage';
-import { storage } from '../lib/firebase';
+import { storage, BUCKET_ID, ID } from '../lib/appwrite';
 import {
    User, Calendar, Settings as SettingsIcon, Database,
    Key, Shield, Cloud, Download, Upload, Trash2,
@@ -11,8 +10,6 @@ import {
    Heart, Camera, X, Zap, Mail, Phone, MessageCircle, Server,
    Loader2, BookOpen, MousePointerClick
 } from 'lucide-react';
-
-const { ref, uploadBytes, getDownloadURL } = Storage;
 
 export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
@@ -98,27 +95,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
          return;
       }
 
-      // Check if storage is initialized
-      if (!storage) {
-         alert("Dịch vụ lưu trữ chưa được cấu hình (Thiếu Firebase Config). Không thể tải ảnh lên.");
-         return;
-      }
-
       setIsUploading(true);
       try {
-         // Path: wedplanai/${user.uid}/${fileName}
-         const storageRef = ref(storage, `wedplanai/${user!.uid}/${file.name}`);
-
-         // --- QUAN TRỌNG: Thêm Metadata để khớp với Rules ---
-         const metadata = {
-            contentType: file.type, // Ví dụ: 'image/jpeg'
-         };
-
-         // Truyền metadata vào hàm uploadBytes
-         const snapshot = await uploadBytes(storageRef, file, metadata);
-
-         const downloadURL = await getDownloadURL(snapshot.ref);
-
+         const result = await storage.createFile(BUCKET_ID, ID.unique(), file);
+         const downloadURL = storage.getFilePreview(BUCKET_ID, result.$id, 256, 256).toString();
          updateUser(user!.uid, { photoURL: downloadURL });
       } catch (error: any) {
          console.error("Upload error:", error);

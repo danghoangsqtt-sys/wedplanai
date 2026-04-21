@@ -13,9 +13,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
-      headers: {
-        "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
-      },
+      headers: {},
     },
     plugins: [
       react(),
@@ -35,7 +33,7 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom'],
-            'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+            'vendor-appwrite': ['appwrite'],
             'vendor-charts': ['recharts'],
             'vendor-utils': ['jspdf', 'html2canvas', 'pptxgenjs'],
           }

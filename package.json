@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
-    "firebase": "^12.6.0",
+    "appwrite": "^24.2.0",
     "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.2",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.555.0",
     "pptxgenjs": "^4.0.1",
     "qrcode.react": "^4.2.0",

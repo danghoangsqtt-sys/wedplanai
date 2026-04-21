@@ -6,8 +6,7 @@ import { saveUserDataToCloud, loadUserDataFromCloud, syncUserProfile, getUserPub
 import { fetchAllProfiles, fetchAnalyticsData, AdminAnalytics } from '../services/adminService';
 import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS } from '../data/initialData';
 import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
-import { db } from '../lib/firebase';
-import * as Firestore from 'firebase/firestore';
+import { account, databases, DB_ID, COLLECTIONS } from '../lib/appwrite';
 
 export interface GuestUsage {
   fengShuiCount: number;
@@ -187,6 +186,7 @@ export const useStore = create<AppState>()(
       },
 
       logout: () => {
+        account.deleteSession('current').catch(() => {});
         set({
           user: DEFAULT_GUEST_USER,
           guests: INITIAL_GUESTS,
@@ -221,13 +221,10 @@ export const useStore = create<AppState>()(
       },
 
       updateUser: async (uid, data) => {
-        if (db) {
-          try {
-            const userRef = Firestore.doc(db, "public_profiles", uid);
-            await Firestore.setDoc(userRef, data, { merge: true });
-          } catch (e: any) {
-            console.error("Update User Error (Firestore):", e);
-          }
+        try {
+          await databases.updateDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid, data as Record<string, any>);
+        } catch (e: any) {
+          console.error('Update User Error:', e);
         }
         const currentUser = get().user;
         if (currentUser && currentUser.uid === uid) {
@@ -239,12 +236,10 @@ export const useStore = create<AppState>()(
       },
 
       deleteUser: async (uid) => {
-        if (db) {
-          try {
-            await Firestore.deleteDoc(Firestore.doc(db, "public_profiles", uid));
-            await Firestore.deleteDoc(Firestore.doc(db, "userData", uid));
-          } catch (e) { console.error(e); }
-        }
+        try {
+          await databases.deleteDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid);
+          await databases.deleteDocument(DB_ID, COLLECTIONS.USER_DATA, uid).catch(() => {});
+        } catch (e) { console.error(e); }
         set((state) => ({
           adminUsers: state.adminUsers.filter(u => u.uid !== uid),
           users: state.users.filter(u => u.uid !== uid)

@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../../store/useStore';
-import { InvitationData, BankInfo, WeddingEvent } from '../../types';
+import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent } from '../../types';
 import InvitationPreview from './InvitationPreview';
 import {
-    Palette, MapPin, Calendar, Heart, QrCode, Download, Share2,
+    Palette, MapPin, Calendar, Heart, QrCode, Download,
     Save, Type, Image as ImageIcon, ExternalLink,
-    ChevronDown, ChevronUp, Check, Music, Layers, Smartphone, Eye, Layout, Sparkles, Upload, Users, List, Plus, Trash2, Clock
+    ChevronDown, ChevronUp, Check, Music, Layers, Smartphone, Eye, Layout, Sparkles, Upload, Users, List, Plus, Trash2, Clock,
+    Star, ToggleLeft, ToggleRight, BookOpen, Flower2, Feather, Timer
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -18,15 +19,26 @@ const BANKS = [
 ];
 
 const TEMPLATES = [
-    { id: 'modern', name: 'Hiện Đại (Modern)', color: 'bg-white border-gray-200' },
-    { id: 'luxury', name: 'Sang Trọng (Luxury)', color: 'bg-stone-900 border-yellow-600 text-white' },
-    { id: 'traditional', name: 'Truyền Thống', color: 'bg-red-50 border-red-300' },
-    { id: 'floral', name: 'Hoa Nhẹ Nhàng', color: 'bg-pink-50 border-pink-200' },
+    { id: 'modern',      name: 'Hiện Đại',      color: 'bg-white border-gray-200',           emoji: '✦' },
+    { id: 'luxury',      name: 'Sang Trọng',     color: 'bg-stone-900 border-yellow-600 text-white', emoji: '♛' },
+    { id: 'traditional', name: 'Truyền Thống',   color: 'bg-red-50 border-red-300',           emoji: '🀄' },
+    { id: 'floral',      name: 'Hoa Nhẹ Nhàng',  color: 'bg-pink-50 border-pink-200',         emoji: '🌸' },
+    { id: 'romantic',    name: 'Lãng Mạn',       color: 'bg-rose-50 border-rose-300',         emoji: '💕' },
+    { id: 'minimalist',  name: 'Tối Giản',        color: 'bg-white border-gray-900',           emoji: '◻' },
+    { id: 'vintage',     name: 'Vintage',         color: 'bg-amber-50 border-amber-400',       emoji: '📜' },
+    { id: 'garden',      name: 'Vườn Xanh',      color: 'bg-emerald-50 border-emerald-300',   emoji: '🌿' },
 ];
+
+const PETAL_EFFECTS = [
+    { id: 'none',     label: 'Không có',     emoji: '✕' },
+    { id: 'petals',   label: 'Cánh hoa',     emoji: '✿' },
+    { id: 'hearts',   label: 'Trái tim',     emoji: '❤' },
+    { id: 'sparkles', label: 'Sao nhấp nháy', emoji: '✦' },
+] as const;
 
 const InvitationManager: React.FC = () => {
     const { invitation, updateInvitation, user } = useStore();
-    const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS'>('GENERAL');
+    const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'LOVE_STORY' | null>('GENERAL');
     const [isExporting, setIsExporting] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
@@ -158,6 +170,29 @@ const InvitationManager: React.FC = () => {
         handleChange('events', [...(invitation.events || []), newEvent]);
     };
 
+    // --- LOVE STORY HANDLERS ---
+    const handleAddLoveStoryEvent = () => {
+        const newEvt: LoveStoryEvent = {
+            id: `ls-${Date.now()}`,
+            date: 'Tháng ...',
+            title: 'Kỷ niệm mới',
+            description: 'Mô tả khoảnh khắc...',
+        };
+        handleChange('loveStory', [...(invitation.loveStory || []), newEvt]);
+    };
+
+    const handleUpdateLoveStory = (idx: number, field: keyof LoveStoryEvent, value: string) => {
+        const updated = [...(invitation.loveStory || [])];
+        updated[idx] = { ...updated[idx], [field]: value };
+        handleChange('loveStory', updated);
+    };
+
+    const handleRemoveLoveStory = (idx: number) => {
+        const updated = [...(invitation.loveStory || [])];
+        updated.splice(idx, 1);
+        handleChange('loveStory', updated);
+    };
+
     const handleDownloadQR = async () => {
         if (!qrRef.current) return;
         setIsExporting(true);
@@ -215,7 +250,7 @@ const InvitationManager: React.FC = () => {
                         <p className="text-xs text-gray-500 mt-1">Chuyên nghiệp • Hiện đại • Trang trọng</p>
                     </div>
                     <div className="lg:hidden">
-                        <a href={publicLink} target="_blank" className="bg-rose-100 text-rose-600 p-2 rounded-lg"><Eye className="w-5 h-5" /></a>
+                        <a href={publicLink} target="_blank" rel="noopener noreferrer" title="Xem thiệp thực tế" aria-label="Xem thiệp thực tế" className="bg-rose-100 text-rose-600 p-2 rounded-lg"><Eye className="w-5 h-5" /></a>
                     </div>
                 </div>
 
@@ -226,14 +261,16 @@ const InvitationManager: React.FC = () => {
                         <div className="p-5 space-y-6 bg-gray-50 animate-fadeIn">
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase mb-2 block flex items-center gap-1"><Layout className="w-3 h-3" /> Chọn Phong Cách Thiệp</label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-2">
                                     {TEMPLATES.map(t => (
                                         <button
+                                            type="button"
                                             key={t.id}
                                             onClick={() => handleChange('templateId', t.id)}
-                                            className={`p-3 rounded-lg border-2 text-left transition-all ${invitation.templateId === t.id ? 'border-rose-500 ring-1 ring-rose-200 shadow-md' : 'border-gray-200 hover:border-gray-300'} ${t.color}`}
+                                            className={`p-2.5 rounded-lg border-2 text-left transition-all ${invitation.templateId === t.id ? 'border-rose-500 ring-1 ring-rose-200 shadow-md' : 'border-gray-200 hover:border-gray-300'} ${t.color}`}
                                         >
-                                            <span className="block text-xs font-bold">{t.name}</span>
+                                            <span className="text-base mr-1">{t.emoji}</span>
+                                            <span className="text-[11px] font-bold">{t.name}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -252,7 +289,7 @@ const InvitationManager: React.FC = () => {
                                         { hex: '#9f1239', name: 'Wine' },
                                         { hex: '#854d0e', name: 'Bronze' }
                                     ].map(color => (
-                                        <button key={color.hex} onClick={() => handleChange('themeColor', color.hex)}
+                                        <button type="button" key={color.hex} onClick={() => handleChange('themeColor', color.hex)}
                                             className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110 shadow-sm ${invitation.themeColor === color.hex ? 'border-gray-600 scale-110 ring-2 ring-gray-200' : 'border-transparent'}`}
                                             style={{ backgroundColor: color.hex }} title={color.name}>
                                             {invitation.themeColor === color.hex && <Check className="w-5 h-5 text-white" />}
@@ -270,6 +307,8 @@ const InvitationManager: React.FC = () => {
                                     ref={coverInputRef}
                                     className="hidden"
                                     accept="image/*"
+                                    aria-label="Tải ảnh cưới lên"
+                                    title="Tải ảnh cưới lên"
                                     onChange={handleCoverUpload}
                                 />
 
@@ -280,6 +319,7 @@ const InvitationManager: React.FC = () => {
                                             value={invitation.couplePhoto || ''} onChange={e => handleChange('couplePhoto', e.target.value)} placeholder="Nhập URL hoặc tải lên..." />
                                     </div>
                                     <button
+                                        type="button"
                                         onClick={() => coverInputRef.current?.click()}
                                         className="bg-white border border-gray-200 hover:border-rose-300 text-gray-600 hover:text-rose-500 px-3 rounded-lg shadow-sm transition-colors"
                                         title="Tải ảnh từ máy"
@@ -293,7 +333,10 @@ const InvitationManager: React.FC = () => {
                                     <div className="mt-2 w-full h-32 rounded-lg overflow-hidden border border-gray-200 relative group">
                                         <img src={invitation.couplePhoto} className="w-full h-full object-cover" alt="Preview" />
                                         <button
+                                            type="button"
                                             onClick={() => handleChange('couplePhoto', '')}
+                                            title="Xóa ảnh"
+                                            aria-label="Xóa ảnh"
                                             className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -333,12 +376,12 @@ const InvitationManager: React.FC = () => {
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Ngày Cưới (Dương)</label>
-                                    <input type="date" className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
+                                    <input type="date" title="Ngày cưới dương lịch" className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
                                         value={invitation.date} onChange={e => handleChange('date', e.target.value)} />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Giờ Đón Khách</label>
-                                    <input type="time" className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
+                                    <input type="time" title="Giờ đón khách" className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
                                         value={invitation.time} onChange={e => handleChange('time', e.target.value)} />
                                 </div>
                             </div>
@@ -385,6 +428,7 @@ const InvitationManager: React.FC = () => {
                             <div className="bg-rose-50 border border-rose-200 p-3 rounded-lg">
                                 <h4 className="text-sm font-bold text-rose-800 mb-2">Tạo lịch trình tự động</h4>
                                 <button
+                                    type="button"
                                     onClick={handleApplyNorthernTemplate}
                                     className="w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
                                 >
@@ -398,7 +442,7 @@ const InvitationManager: React.FC = () => {
                             <div className="space-y-4">
                                 {(invitation.events || []).map((evt, idx) => (
                                     <div key={evt.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm relative">
-                                        <button onClick={() => handleRemoveEvent(idx)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                                        <button type="button" onClick={() => handleRemoveEvent(idx)} title="Xóa sự kiện" aria-label="Xóa sự kiện" className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
 
@@ -442,6 +486,7 @@ const InvitationManager: React.FC = () => {
                                 ))}
 
                                 <button
+                                    type="button"
                                     onClick={handleAddEvent}
                                     className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-rose-300 hover:text-rose-500 text-xs font-bold flex items-center justify-center gap-1 transition-all"
                                 >
@@ -485,13 +530,13 @@ const InvitationManager: React.FC = () => {
                                 {(invitation.galleryImages || []).map((img, idx) => (
                                     <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
                                         <img src={img} className="w-full h-full object-cover" alt={`Gallery ${idx}`} />
-                                        <button onClick={() => handleRemoveGalleryImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button type="button" onClick={() => handleRemoveGalleryImage(idx)} title="Xóa ảnh" aria-label="Xóa ảnh" className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <span className="sr-only">Xóa</span>
                                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                         </button>
                                     </div>
                                 ))}
-                                <button onClick={handleAddGalleryImage} className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-rose-400 hover:text-rose-500 transition-colors bg-white">
+                                <button type="button" onClick={handleAddGalleryImage} className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-rose-400 hover:text-rose-500 transition-colors bg-white">
                                     <ImageIcon className="w-6 h-6 mb-1" />
                                     <span className="text-[10px] font-bold uppercase">Thêm ảnh</span>
                                 </button>
@@ -511,7 +556,10 @@ const InvitationManager: React.FC = () => {
 
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Ngân hàng</label>
-                                <select className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none bg-white"
+                                <select
+                                    title="Chọn ngân hàng"
+                                    aria-label="Chọn ngân hàng"
+                                    className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none bg-white"
                                     value={invitation.bankInfo.bankId} onChange={e => handleBankChange('bankId', e.target.value)}>
                                     <option value="">-- Chọn ngân hàng --</option>
                                     {BANKS.map(b => <option key={b.id} value={b.id}>{b.name} ({b.id})</option>)}
@@ -531,6 +579,152 @@ const InvitationManager: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* SECTION 6: FEATURES */}
+                    <SectionToggle id="FEATURES" label="Tính năng thiệp" icon={Sparkles} />
+                    {activeSection === 'FEATURES' && (
+                        <div className="p-5 space-y-5 bg-gray-50 animate-fadeIn">
+                            {/* Countdown Timer */}
+                            <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <Timer className="w-5 h-5 text-violet-500" />
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-800">Đếm Ngược</p>
+                                        <p className="text-[10px] text-gray-400">Đếm ngược đến ngày cưới</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChange('countdownEnabled', !invitation.countdownEnabled)}
+                                    className={`w-12 h-6 rounded-full transition-colors relative ${invitation.countdownEnabled ? 'bg-violet-500' : 'bg-gray-300'}`}
+                                    aria-label="Bật/tắt đếm ngược"
+                                >
+                                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${invitation.countdownEnabled ? 'translate-x-6' : 'translate-x-0.5'}`}></span>
+                                </button>
+                            </div>
+
+                            {/* RSVP */}
+                            <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <Calendar className="w-5 h-5 text-rose-500" />
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-800">Form RSVP</p>
+                                        <p className="text-[10px] text-gray-400">Khách xác nhận tham dự</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChange('rsvpEnabled', !invitation.rsvpEnabled)}
+                                    className={`w-12 h-6 rounded-full transition-colors relative ${invitation.rsvpEnabled ? 'bg-rose-500' : 'bg-gray-300'}`}
+                                    aria-label="Bật/tắt RSVP"
+                                >
+                                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${invitation.rsvpEnabled ? 'translate-x-6' : 'translate-x-0.5'}`}></span>
+                                </button>
+                            </div>
+                            {invitation.rsvpEnabled && (
+                                <div className="ml-2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Hạn chót xác nhận</label>
+                                    <input type="date" title="Hạn chót xác nhận RSVP"
+                                        className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
+                                        value={invitation.rsvpDeadline || ''}
+                                        onChange={e => handleChange('rsvpDeadline', e.target.value)} />
+                                </div>
+                            )}
+
+                            {/* Guestbook */}
+                            <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <BookOpen className="w-5 h-5 text-amber-500" />
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-800">Sổ Lưu Bút</p>
+                                        <p className="text-[10px] text-gray-400">Khách gửi lời chúc mừng</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChange('guestbookEnabled', !invitation.guestbookEnabled)}
+                                    className={`w-12 h-6 rounded-full transition-colors relative ${invitation.guestbookEnabled ? 'bg-amber-500' : 'bg-gray-300'}`}
+                                    aria-label="Bật/tắt sổ lưu bút"
+                                >
+                                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${invitation.guestbookEnabled ? 'translate-x-6' : 'translate-x-0.5'}`}></span>
+                                </button>
+                            </div>
+
+                            {/* Petal Effect */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block flex items-center gap-1">
+                                    <Flower2 className="w-3 h-3" /> Hiệu Ứng Bay
+                                </label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {PETAL_EFFECTS.map(fx => (
+                                        <button
+                                            type="button"
+                                            key={fx.id}
+                                            onClick={() => handleChange('petalEffect', fx.id)}
+                                            className={`p-2 rounded-lg border-2 text-center transition-all text-xs font-bold ${(invitation.petalEffect || 'none') === fx.id ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}
+                                        >
+                                            <span className="block text-xl mb-0.5">{fx.emoji}</span>
+                                            <span className="text-[10px] leading-tight">{fx.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SECTION 7: LOVE STORY */}
+                    <SectionToggle id="LOVE_STORY" label="Câu chuyện tình yêu" icon={Heart} />
+                    {activeSection === 'LOVE_STORY' && (
+                        <div className="p-5 space-y-4 bg-gray-50 animate-fadeIn">
+                            <div className="bg-pink-50 border border-pink-200 p-3 rounded-lg text-xs text-pink-800 flex gap-2">
+                                <Heart className="w-4 h-4 flex-shrink-0 mt-0.5 fill-current text-pink-400" />
+                                <p>Thêm các kỷ niệm quan trọng để tạo timeline "Câu chuyện tình yêu" trên thiệp.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                {(invitation.loveStory || []).map((evt, idx) => (
+                                    <div key={evt.id} className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm relative">
+                                        <button type="button" onClick={() => handleRemoveLoveStory(idx)} title="Xóa kỷ niệm" aria-label="Xóa kỷ niệm" className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                        <div className="pr-6 space-y-2">
+                                            <input
+                                                className="font-bold text-sm text-gray-800 w-full p-1.5 rounded border border-gray-100 focus:border-rose-300 outline-none bg-gray-50"
+                                                value={evt.title}
+                                                onChange={e => handleUpdateLoveStory(idx, 'title', e.target.value)}
+                                                placeholder="Tiêu đề kỷ niệm..."
+                                            />
+                                            <input
+                                                className="text-xs text-rose-600 w-full p-1.5 rounded border border-gray-100 focus:border-rose-300 outline-none bg-gray-50 font-medium"
+                                                value={evt.date}
+                                                onChange={e => handleUpdateLoveStory(idx, 'date', e.target.value)}
+                                                placeholder="Thời gian (vd: Tháng 3, 2022)..."
+                                            />
+                                            <textarea
+                                                className="w-full text-xs text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100 outline-none focus:border-rose-200 resize-none h-14"
+                                                value={evt.description}
+                                                onChange={e => handleUpdateLoveStory(idx, 'description', e.target.value)}
+                                                placeholder="Mô tả khoảnh khắc..."
+                                            />
+                                            <input
+                                                className="text-xs text-gray-500 w-full p-1.5 rounded border border-gray-100 focus:border-rose-300 outline-none bg-gray-50"
+                                                value={evt.photo || ''}
+                                                onChange={e => handleUpdateLoveStory(idx, 'photo', e.target.value)}
+                                                placeholder="URL ảnh (tùy chọn)..."
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={handleAddLoveStoryEvent}
+                                    className="w-full py-2 border-2 border-dashed border-pink-200 rounded-xl text-pink-500 hover:border-pink-400 text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                                >
+                                    <Plus className="w-3 h-3" /> Thêm kỷ niệm
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* SIDEBAR FOOTER */}
@@ -539,11 +733,13 @@ const InvitationManager: React.FC = () => {
                         <a
                             href={publicLink}
                             target="_blank"
+                            rel="noopener noreferrer"
                             className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm"
                         >
                             <ExternalLink className="w-4 h-4" /> Xem Thực Tế
                         </a>
                         <button
+                            type="button"
                             className="flex-1 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm"
                             onClick={() => alert("Đã lưu thay đổi!")}
                         >
@@ -627,6 +823,7 @@ const InvitationManager: React.FC = () => {
                         {/* ------------------------------- */}
 
                         <button
+                            type="button"
                             onClick={handleDownloadQR}
                             disabled={isExporting}
                             className="w-full mt-4 bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"

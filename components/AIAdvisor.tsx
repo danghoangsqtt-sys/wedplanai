@@ -169,9 +169,19 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats, isRestricted = false }) =>
                     : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
                   }
                 `}>
-                  {/* Message Content */}
+                  {/* Message Content with simple markdown */}
                   <div className="whitespace-pre-line">
-                    {msg.content}
+                    {isUser ? msg.content : msg.content.split('\n').map((line, lineIdx) => {
+                      // Bold text: **text**
+                      const parts = line.split(/(\*\*[^*]+\*\*)/g);
+                      const rendered = parts.map((part, partIdx) => {
+                        if (part.startsWith('**') && part.endsWith('**')) {
+                          return <strong key={partIdx} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>;
+                        }
+                        return <span key={partIdx}>{part}</span>;
+                      });
+                      return <span key={lineIdx}>{rendered}{lineIdx < msg.content.split('\n').length - 1 ? '\n' : ''}</span>;
+                    })}
                   </div>
 
                   {/* Timestamp/Status (Optional aesthetic detail) */}

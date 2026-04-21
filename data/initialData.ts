@@ -135,10 +135,18 @@ export const INITIAL_INVITATION: InvitationData = {
     bankId: '',
     accountNumber: '',
     accountName: '',
-    template: 'compact'
+    qrTemplate: 'compact2',
   },
   photoConfig: { scale: 1, x: 0, y: 0 },
-  themeColor: '#e11d48', // Rose-600
+  themeColor: '#e11d48',
   templateId: 'modern',
   musicUrl: '',
+  // Feature flags — off by default
+  countdownEnabled: false,
+  rsvpEnabled: false,
+  rsvpDeadline: '',
+  guestbookEnabled: false,
+  petalEffect: 'none',
+  loveStory: [],
+  guestWishes: [],
 };

@@ -331,7 +331,7 @@ const AdminDashboard: React.FC = () => {
                   {/* Chart 1: Daily Visits */}
                   <div className="flex flex-col min-h-[180px]">
                      <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase mb-2 md:mb-3 text-center">7 ngày qua</p>
-                     <div className="h-[180px] w-full flex-1">
+                     <div className="h-[180px] w-full flex-1 min-h-0">
                         {stats.dailyVisits.length > 0 ? (
                            <ResponsiveContainer width="99%" height="100%">
                               <AreaChart data={stats.dailyVisits} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -364,7 +364,7 @@ const AdminDashboard: React.FC = () => {
                         <Globe className="w-3 h-3 md:w-4 md:h-4 text-gray-300" />
                      </div>
                      <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase mb-2 md:mb-3 text-center">Nguồn Truy Cập</p>
-                     <div className="h-[180px] w-full flex-1 relative">
+                     <div className="h-[180px] w-full flex-1 min-h-0 relative">
                         {stats.trafficSources && stats.trafficSources.length > 0 ? (
                            <ResponsiveContainer width="99%" height="100%">
                               <PieChart>

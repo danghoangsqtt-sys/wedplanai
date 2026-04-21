@@ -5,8 +5,7 @@ import { useStore } from '../../store/useStore';
 import { getCulturalAdvice } from '../../services/geminiService';
 import { checkGuestIPLimit, incrementGuestIPUsage } from '../../services/cloudService';
 import { WEDDING_PROCEDURES } from '../../data/wedding-procedures';
-import { storage } from '../../lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage, BUCKET_ID, ID } from '../../lib/appwrite';
 import {
    Users, Gift, ScrollText, Mic, Copy,
    Check, Loader2, BookOpen,
@@ -235,11 +234,8 @@ const ProcedureDetail: React.FC<ProcedureDetailProps> = ({ step, region }) => {
       // Small delay to ensure state update
       try {
          // Lưu theo user ID để tránh conflict nếu nhiều người dùng chung
-         const userFolder = user?.uid || 'guest';
-         const storageRef = ref(storage, `procedure_images/${userFolder}/${region}/${step.id}/${itemName}_${Date.now()}`);
-         const metadata = { contentType: file.type };
-         const snapshot = await uploadBytes(storageRef, file, metadata);
-         const url = await getDownloadURL(snapshot.ref);
+         const result = await storage.createFile(BUCKET_ID, ID.unique(), file);
+         const url = storage.getFilePreview(BUCKET_ID, result.$id, 800).toString();
 
          setEditedStep(prev => ({
             ...prev,

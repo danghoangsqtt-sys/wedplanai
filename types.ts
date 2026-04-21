@@ -138,8 +138,23 @@ export interface WeddingEvent {
   description?: string; // Full phrasing template
 }
 
+export interface LoveStoryEvent {
+  id: string;
+  date: string; // Display string, e.g. "Tháng 3, 2022"
+  title: string; // e.g. "Lần đầu gặp nhau"
+  description: string;
+  photo?: string;
+}
+
+export interface GuestWish {
+  id: string;
+  name: string;
+  message: string;
+  createdAt: string;
+}
+
 export interface InvitationData {
-  templateId: 'modern' | 'traditional' | 'luxury' | 'floral';
+  templateId: 'modern' | 'traditional' | 'luxury' | 'floral' | 'romantic' | 'minimalist' | 'vintage' | 'garden';
   groomName: string;
   brideName: string;
   groomParents?: { father: string; mother: string };
@@ -161,5 +176,13 @@ export interface InvitationData {
     x: number;
     y: number;
   };
-  events?: WeddingEvent[]; // NEW: List of specific ceremonies
+  events?: WeddingEvent[];
+  // --- New feature fields ---
+  loveStory?: LoveStoryEvent[];
+  rsvpEnabled?: boolean;
+  rsvpDeadline?: string;
+  guestbookEnabled?: boolean;
+  countdownEnabled?: boolean;
+  petalEffect?: 'none' | 'petals' | 'hearts' | 'sparkles';
+  guestWishes?: GuestWish[]; // Lời chúc từ khách (stored locally)
 }
