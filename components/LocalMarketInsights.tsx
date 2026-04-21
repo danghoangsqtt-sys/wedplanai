@@ -92,7 +92,7 @@ const SectionCard: React.FC<{ section: LocalMarketSection; isOpen: boolean; onTo
 const BudgetApplyModal: React.FC<{
   report: LocalMarketReport;
   onClose: () => void;
-  onApply: (sectionIds: string[], mode: 'detail' | 'total') => void;
+  onApply: (sectionIds: string[], mode: 'detail' | 'total', clearAll?: boolean) => void;
 }> = ({ report, onClose, onApply }) => {
   const [selected, setSelected] = useState<string[]>(report.sections.map(s => s.id));
   const [expandedSection, setExpandedSection] = useState<string | null>(null);

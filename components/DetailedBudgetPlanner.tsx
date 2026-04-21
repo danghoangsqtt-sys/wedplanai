@@ -53,7 +53,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({ value, onChange, classNam
 };
 
 const DetailedBudgetPlanner: React.FC = () => {
-   const { budgetItems, addBudgetItem, updateBudgetItem, deleteBudgetItem } = useStore();
+   const { budgetItems, addBudgetItem, updateBudgetItem, deleteBudgetItem, setBudgetItems } = useStore();
 
    // Local UI State
    const [filterSide, setFilterSide] = useState<WeddingSide | 'ALL'>('ALL');
@@ -184,6 +184,13 @@ const DetailedBudgetPlanner: React.FC = () => {
       }
    };
 
+   const handleClearAll = () => {
+      if (budgetItems.length === 0) return;
+      if (confirm(`Xóa toàn bộ ${budgetItems.length} khoản chi? Hành động này không thể hoàn tác.`)) {
+         setBudgetItems([]);
+      }
+   };
+
    const [showFilters, setShowFilters] = useState(false);
 
    const STATUS_CYCLE: TaskStatus[] = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.DONE, TaskStatus.PAID];
@@ -229,10 +236,15 @@ const DetailedBudgetPlanner: React.FC = () => {
                      </div>
                   </div>
 
-                  {/* Mobile Export */}
-                  <button type="button" title="Xuất Excel" onClick={exportToCSV} className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg flex-shrink-0">
-                     <FileSpreadsheet className="w-5 h-5" />
-                  </button>
+                  {/* Mobile toolbar icons */}
+                  <div className="lg:hidden flex items-center gap-1 flex-shrink-0">
+                     <button type="button" title="Xuất Excel" onClick={exportToCSV} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+                        <FileSpreadsheet className="w-5 h-5" />
+                     </button>
+                     <button type="button" title="Xóa toàn bộ ngân sách" onClick={handleClearAll} disabled={budgetItems.length === 0} className="p-2 text-red-400 hover:bg-red-50 rounded-lg disabled:opacity-30">
+                        <Trash2 className="w-5 h-5" />
+                     </button>
+                  </div>
                </div>
 
                <div className="hidden lg:flex items-center gap-4">
@@ -254,6 +266,16 @@ const DetailedBudgetPlanner: React.FC = () => {
                   >
                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                      <span>Excel</span>
+                  </button>
+                  <button
+                     type="button"
+                     onClick={handleClearAll}
+                     disabled={budgetItems.length === 0}
+                     title="Xóa toàn bộ ngân sách"
+                     className="flex items-center gap-2 bg-white border border-red-200 text-red-500 hover:bg-red-50 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                     <Trash2 className="w-4 h-4" />
+                     <span>Xóa tất cả</span>
                   </button>
                </div>
             </div>
