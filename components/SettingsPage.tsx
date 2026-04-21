@@ -133,12 +133,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
       }
    };
 
+   const dateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+   const [tempWeddingDate, setTempWeddingDate] = useState(user?.weddingDate || '');
+
    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const date = e.target.value;
-      updateUser(user!.uid, { weddingDate: date });
-      if (date && confirm("Bạn có muốn tự động cập nhật lại hạn chót (deadline) cho các công việc dựa trên ngày cưới mới không?")) {
-         recalculateDeadlines(date);
-      }
+      setTempWeddingDate(date);
+
+      // Clear any pending save
+      if (dateTimeoutRef.current) clearTimeout(dateTimeoutRef.current);
+
+      // Only process when year has 4 digits (complete date entered)
+      // HTML date format: YYYY-MM-DD
+      const year = date.split('-')[0];
+      if (!date || !year || year.length !== 4 || parseInt(year) < 2024) return;
+
+      // Debounce: wait 800ms after last keystroke before saving + asking
+      dateTimeoutRef.current = setTimeout(() => {
+         updateUser(user!.uid, { weddingDate: date });
+         if (confirm("Bạn có muốn tự động cập nhật lại hạn chót (deadline) cho các công việc dựa trên ngày cưới mới không?")) {
+            recalculateDeadlines(date);
+         }
+      }, 800);
    };
 
    const handleSaveApiKey = async () => {
@@ -335,7 +351,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                  <input
                                     type="date"
                                     className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-rose-200 focus:border-rose-500 outline-none transition-all bg-white text-base md:text-sm"
-                                    value={user.weddingDate || ''}
+                                    value={tempWeddingDate}
+                                    min="2024-01-01"
+                                    max="2099-12-31"
                                     onChange={handleDateChange}
                                  />
                               </div>
