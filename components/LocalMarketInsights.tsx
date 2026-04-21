@@ -10,7 +10,7 @@ import {
   VIETNAM_PROVINCES, MARKET_CATEGORIES,
   detectLocation, generateLocalMarketReport
 } from '../services/localMarketService';
-import { LocalMarketReport, LocalMarketSection, TaskStatus } from '../types';
+import { LocalMarketReport, LocalMarketSection, TaskStatus, BudgetItem } from '../types';
 
 const fmt = (n: number) => {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)} tỷ`;
@@ -210,17 +210,48 @@ const BudgetApplyModal: React.FC<{
                 {mode === 'detail' && isExpanded && isSelected && (
                   <div className="px-3 pb-3 pt-1 border-t border-rose-100 space-y-1.5">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Sẽ tạo các mục ngân sách:</p>
-                    {section.items.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-gray-800 truncate">{item.name}</p>
-                          <p className="text-[10px] text-gray-400 truncate">{item.description}</p>
-                        </div>
-                        <span className="text-xs font-bold text-rose-600 flex-shrink-0 ml-2">
-                          {item.estimatedCost ? fmt(item.estimatedCost) : item.priceRange}
-                        </span>
-                      </div>
-                    ))}
+                    {(() => {
+                      const sectionTotal = section.budgetRecommendation.estimatedCost;
+                      const rawCosts = section.items.map(item => {
+                        let c = item.estimatedCost || 0;
+                        if (c <= 0) {
+                          const nums = item.priceRange.match(/[\d.,]+/g);
+                          if (nums && nums.length > 0) {
+                            const avg = nums.map(n => parseFloat(n.replace(/,/g, ''))).reduce((a, b) => a + b, 0) / nums.length;
+                            if (/tỷ/i.test(item.priceRange)) c = Math.round(avg * 1_000_000_000);
+                            else if (/triệu/i.test(item.priceRange)) c = Math.round(avg * 1_000_000);
+                            else if (/ngàn|nghìn|k\b/i.test(item.priceRange)) c = Math.round(avg * 1_000);
+                            else c = avg >= 1000 ? Math.round(avg) : Math.round(avg * 1_000_000);
+                          }
+                        }
+                        if (c <= 0) c = Math.round(sectionTotal / Math.max(section.items.length, 1));
+                        return c;
+                      });
+                      const rawSum = rawCosts.reduce((a, b) => a + b, 0);
+                      let remainingTarget = sectionTotal;
+
+                      return section.items.map((item, i) => {
+                        let finalCost = 0;
+                        if (rawSum > 0) {
+                          if (i === section.items.length - 1) finalCost = remainingTarget;
+                          else { finalCost = Math.round(rawCosts[i] * (sectionTotal / rawSum)); remainingTarget -= finalCost; }
+                        } else {
+                          finalCost = Math.round(sectionTotal / Math.max(section.items.length, 1));
+                        }
+
+                        return (
+                          <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-gray-800 truncate">{item.name}</p>
+                              <p className="text-[10px] text-gray-400 truncate">{item.description}</p>
+                            </div>
+                            <span className="text-xs font-bold text-rose-600 flex-shrink-0 ml-2">
+                              {fmt(finalCost)}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 )}
               </div>
@@ -265,7 +296,7 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
   const {
     user, localProvince, localDistrict, localMarketReport,
     setLocalProvince, setLocalDistrict, setLocalMarketReport,
-    budgetItems, setBudgetItems, updateBudgetItem, addNotification
+    budgetItems, setBudgetItems, addNotification
   } = useStore();
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>(MARKET_CATEGORIES.map(c => c.id));
@@ -323,120 +354,103 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
 
   const handleApplyBudget = useCallback((sectionIds: string[], mode: 'detail' | 'total', clearAll: boolean = false) => {
     if (!localMarketReport) return;
+
+    const makeId = () =>
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    // Work on a mutable copy — avoids stale-closure bugs from calling updateBudgetItem
+    // inside the loop and then overwriting those changes with a stale budgetItems spread.
+    const workingItems: BudgetItem[] = clearAll ? [] : budgetItems.map(i => ({ ...i }));
+
     let createdCount = 0;
     let updatedCount = 0;
-    const newItems: any[] = []; // Collect new items for bulk add
 
-    let currentBudgetItems = clearAll ? [] : budgetItems;
+    const parseCost = (range: string): number => {
+      const nums = range.match(/[\d.,]+/g);
+      if (!nums || nums.length === 0) return 0;
+      const values = nums.map(n => parseFloat(n.replace(/,/g, '')));
+      const avg = values.reduce((a, b) => a + b, 0) / values.length;
+      if (/tỷ/i.test(range)) return Math.round(avg * 1_000_000_000);
+      if (/triệu/i.test(range)) return Math.round(avg * 1_000_000);
+      if (/ngàn|nghìn|k\b/i.test(range)) return Math.round(avg * 1_000);
+      return avg >= 1000 ? Math.round(avg) : Math.round(avg * 1_000_000);
+    };
 
     for (const sid of sectionIds) {
       const section = localMarketReport.sections.find(s => s.id === sid);
       if (!section) continue;
+      const category = section.budgetCategories[0] || section.label;
 
       if (mode === 'detail') {
-        // --- DETAIL MODE: Create individual budget items for each sub-item ---
-        const category = section.budgetCategories[0] || section.label;
         const sectionTotal = section.budgetRecommendation.estimatedCost;
-
-        // Parse price from "15-40 triệu" → average in VNĐ
-        const parseCost = (range: string): number => {
-          const nums = range.match(/[\d.,]+/g);
-          if (!nums || nums.length === 0) return 0;
-          const values = nums.map(n => parseFloat(n.replace(/,/g, '')));
-          const avg = values.reduce((a, b) => a + b, 0) / values.length;
-          if (/tỷ/i.test(range)) return Math.round(avg * 1_000_000_000);
-          if (/triệu/i.test(range)) return Math.round(avg * 1_000_000);
-          if (/ngàn|nghìn|k\b/i.test(range)) return Math.round(avg * 1_000);
-          return avg >= 1000 ? Math.round(avg) : Math.round(avg * 1_000_000); // default triệu
-        };
-
-        for (const item of section.items) {
-          // Fallback chain: estimatedCost → parse priceRange → distribute total evenly
+        const rawCosts = section.items.map(item => {
           let cost = item.estimatedCost || 0;
           if (cost <= 0) cost = parseCost(item.priceRange);
           if (cost <= 0) cost = Math.round(sectionTotal / Math.max(section.items.length, 1));
+          return cost;
+        });
+        const rawSum = rawCosts.reduce((a, b) => a + b, 0);
+        let remaining = sectionTotal;
+
+        for (let i = 0; i < section.items.length; i++) {
+          const item = section.items[i];
+          let cost = rawSum > 0
+            ? (i === section.items.length - 1 ? remaining : Math.round(rawCosts[i] * (sectionTotal / rawSum)))
+            : Math.round(sectionTotal / Math.max(section.items.length, 1));
+          if (i < section.items.length - 1) remaining -= cost;
           if (cost <= 0) continue;
 
-          // Check if a similar item already exists (by name match)
-          const existing = currentBudgetItems.find(
+          const note = `${item.description}${item.tips ? ' · Tip: ' + item.tips : ''} (Giá ${localMarketReport.province}: ${item.priceRange})`;
+          const existingIdx = workingItems.findIndex(
             b => b.category === category && b.itemName.toLowerCase().includes(item.name.toLowerCase().slice(0, 10))
           );
 
-          if (existing) {
-            // Update existing item's cost and note
-            updateBudgetItem(existing.id, 'estimatedCost', cost);
-            updateBudgetItem(existing.id, 'note',
-              `${item.description}${item.tips ? ' · Tip: ' + item.tips : ''} (Giá ${localMarketReport.province}: ${item.priceRange})`
-            );
+          if (existingIdx >= 0) {
+            workingItems[existingIdx] = { ...workingItems[existingIdx], estimatedCost: cost, note };
             updatedCount++;
           } else {
-            // Collect new item for bulk add (avoids N separate cloud syncs)
-            newItems.push({
-              id: `market_${sid}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-              category,
-              itemName: item.name,
-              assignee: '',
-              side: 'BOTH' as const,
-              status: TaskStatus.PENDING,
-              estimatedCost: cost,
-              actualCost: 0,
-              note: `${item.description}${item.tips ? ' · Tip: ' + item.tips : ''} (Giá ${localMarketReport.province}: ${item.priceRange})`,
-            });
+            workingItems.push({ id: makeId(), category, itemName: item.name, assignee: '', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: cost, actualCost: 0, note });
             createdCount++;
           }
         }
       } else {
-        // --- TOTAL MODE: Scale existing items proportionally (legacy behavior) ---
+        // TOTAL mode: scale existing items proportionally
         const recommended = section.budgetRecommendation.estimatedCost;
-        const category = section.budgetCategories[0] || section.label;
-        const matchingItems = currentBudgetItems.filter(b => section.budgetCategories.includes(b.category));
-        
-        if (!matchingItems.length) {
-            // No matching items exist, we just create a single summary item for this section
-            newItems.push({
-              id: `market_${sid}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-              category,
-              itemName: section.label,
-              assignee: '',
-              side: 'BOTH' as const,
-              status: TaskStatus.PENDING,
-              estimatedCost: recommended,
-              actualCost: 0,
-              note: `${section.budgetRecommendation.note} (Giá ${localMarketReport.province})`,
-            });
-            createdCount++;
-            continue;
-        }
+        const matchingIdxs = workingItems.reduce<number[]>((acc, b, idx) => {
+          if (section.budgetCategories.includes(b.category)) acc.push(idx);
+          return acc;
+        }, []);
 
-        const currentTotal = matchingItems.reduce((sum, b) => sum + b.estimatedCost, 0);
-        if (currentTotal === 0) {
-          updateBudgetItem(matchingItems[0].id, 'estimatedCost', recommended);
-          updateBudgetItem(matchingItems[0].id, 'note',
-            `${section.budgetRecommendation.note} (Giá ${localMarketReport.province})`
-          );
+        if (!matchingIdxs.length) {
+          workingItems.push({ id: makeId(), category, itemName: section.label, assignee: '', side: 'BOTH', status: TaskStatus.PENDING, estimatedCost: recommended, actualCost: 0, note: `${section.budgetRecommendation.note} (Giá ${localMarketReport.province})` });
+          createdCount++;
         } else {
-          const ratio = recommended / currentTotal;
-          for (const item of matchingItems) {
-            updateBudgetItem(item.id, 'estimatedCost', Math.round(item.estimatedCost * ratio));
+          const currentTotal = matchingIdxs.reduce((sum, idx) => sum + workingItems[idx].estimatedCost, 0);
+          const ratio = currentTotal > 0 ? recommended / currentTotal : 0;
+          const noteStr = `${section.budgetRecommendation.note} (Giá ${localMarketReport.province})`;
+          if (ratio > 0) {
+            matchingIdxs.forEach(idx => {
+              workingItems[idx] = { ...workingItems[idx], estimatedCost: Math.round(workingItems[idx].estimatedCost * ratio) };
+            });
+          } else {
+            workingItems[matchingIdxs[0]] = { ...workingItems[matchingIdxs[0]], estimatedCost: recommended, note: noteStr };
           }
+          updatedCount++;
         }
-        updatedCount++;
       }
     }
 
-    if (clearAll) {
-      setBudgetItems(newItems);
-    } else if (newItems.length > 0) {
-      setBudgetItems([...budgetItems, ...newItems]);
-    }
-
+    // Single atomic state update — no stale closure, no partial writes
+    setBudgetItems(workingItems);
     setShowBudgetModal(false);
     const parts: string[] = [];
     if (createdCount > 0) parts.push(`tạo ${createdCount} mục mới`);
     if (updatedCount > 0) parts.push(`cập nhật ${updatedCount} mục`);
     addNotification('SUCCESS', `Đã ${parts.join(' và ')} theo giá ${localMarketReport.province}.`);
     if ((createdCount + updatedCount) > 0) onNavigateBudget?.();
-  }, [localMarketReport, budgetItems, setBudgetItems, updateBudgetItem, addNotification, onNavigateBudget]);
+  }, [localMarketReport, budgetItems, setBudgetItems, addNotification, onNavigateBudget]);
 
   const report = localMarketReport;
 

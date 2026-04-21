@@ -15,6 +15,23 @@ export interface GuestUsage {
   speechCount: number;
 }
 
+const makeId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+// Assigns unique IDs to any budget items that are missing one or have duplicates.
+const sanitizeBudgetIds = (items: BudgetItem[]): BudgetItem[] => {
+  const seen = new Set<string>();
+  return items.map(item => {
+    if (!item.id || seen.has(item.id)) {
+      return { ...item, id: makeId() };
+    }
+    seen.add(item.id);
+    return item;
+  });
+};
+
 const DEFAULT_INVITATION: InvitationData = {
   templateId: 'luxury',
   groomName: '',
@@ -225,7 +242,7 @@ export const useStore = create<AppState>()(
           if (cloudData) {
             set({
               guests: cloudData.guests,
-              budgetItems: cloudData.budgetItems,
+              budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
               procedures: cloudData.procedures || WEDDING_PROCEDURES,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
@@ -502,7 +519,7 @@ export const useStore = create<AppState>()(
       importData: (data: any) => {
         set({
           guests: data.guests || [],
-          budgetItems: data.budgetItems || [],
+          budgetItems: sanitizeBudgetIds(data.budgetItems || []),
           procedures: data.procedures || WEDDING_PROCEDURES,
           fengShuiProfile: data.fengShuiProfile || null,
           fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] },
@@ -590,7 +607,7 @@ export const useStore = create<AppState>()(
             if (cloudData) {
               set({
                 guests: cloudData.guests,
-                budgetItems: cloudData.budgetItems,
+                budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
                 procedures: cloudData.procedures || WEDDING_PROCEDURES,
                 fengShuiProfile: cloudData.fengShuiProfile || null,
                 fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
@@ -627,7 +644,7 @@ export const useStore = create<AppState>()(
             if (ownData) {
               set({
                 guests: ownData.guests,
-                budgetItems: ownData.budgetItems,
+                budgetItems: sanitizeBudgetIds(ownData.budgetItems),
                 procedures: ownData.procedures || WEDDING_PROCEDURES,
                 fengShuiProfile: ownData.fengShuiProfile || null,
                 fengShuiResults: ownData.fengShuiResults || { harmony: null, dates: [] },
@@ -664,7 +681,7 @@ export const useStore = create<AppState>()(
           if (cloudData) {
             set({
               guests: cloudData.guests,
-              budgetItems: cloudData.budgetItems,
+              budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
               procedures: cloudData.procedures || WEDDING_PROCEDURES,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
@@ -720,6 +737,10 @@ export const useStore = create<AppState>()(
         localDistrict: state.localDistrict,
         localMarketReport: state.localMarketReport,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.budgetItems = sanitizeBudgetIds(state.budgetItems);
+      },
     }
   )
 );
