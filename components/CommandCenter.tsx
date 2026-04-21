@@ -191,7 +191,18 @@ async function generateAITip(title: string, msLabel: string, userApiKey?: string
   const apiKey = userApiKey || envKey;
   if (!apiKey) return '';
 
-  const prompt = `Bạn là chuyên gia tư vấn cưới hỏi tại Việt Nam. Viết 1-2 câu mẹo ngắn gọn, cụ thể và thực tế cho công việc: "${title}" trong giai đoạn ${msLabel} chuẩn bị đám cưới. Chỉ trả lời nội dung mẹo, không thêm tiêu đề.`;
+  const prompt = `Bạn là chuyên gia tư vấn tổ chức đám cưới tại Việt Nam với hơn 10 năm kinh nghiệm.
+
+Công việc cần tư vấn: "${title}"
+Giai đoạn: ${msLabel} (trước ngày cưới)
+
+Hãy đưa ra lời khuyên CHI TIẾT và THỰC TẾ gồm:
+• 3-5 mẹo cụ thể (có số liệu, mức giá tham khảo nếu liên quan)
+• Lưu ý quan trọng hoặc sai lầm cần tránh
+• Mẹo tiết kiệm chi phí (nếu có)
+• Thời điểm tốt nhất để thực hiện
+
+Viết bằng tiếng Việt, dùng gạch đầu dòng (•), ngắn gọn nhưng đầy đủ thông tin. Không thêm tiêu đề.`;
   
   const maxRetries = 3;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -203,7 +214,7 @@ async function generateAITip(title: string, msLabel: string, userApiKey?: string
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 150, temperature: 0.7 },
+            generationConfig: { maxOutputTokens: 800, temperature: 0.7 },
           }),
         }
       );
