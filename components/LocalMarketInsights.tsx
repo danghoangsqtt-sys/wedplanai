@@ -97,7 +97,7 @@ const BudgetApplyModal: React.FC<{
   const [selected, setSelected] = useState<string[]>(report.sections.map(s => s.id));
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [mode, setMode] = useState<'detail' | 'total'>('detail');
-  const [clearAll, setClearAll] = useState(false);
+  const [clearAll, setClearAll] = useState(true);
   const { budgetItems } = useStore();
 
   const toggle = (id: string) =>
@@ -142,7 +142,7 @@ const BudgetApplyModal: React.FC<{
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-2">
-          {/* New Reset Option Box */}
+          {/* Reset option */}
           <label className={`flex items-start gap-3 p-4 mb-4 rounded-xl border cursor-pointer transition-colors ${
             clearAll ? 'border-rose-300 bg-rose-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
           }`}>
@@ -154,10 +154,12 @@ const BudgetApplyModal: React.FC<{
             />
             <div className="flex-1">
               <p className={`text-sm font-bold ${clearAll ? 'text-rose-800' : 'text-gray-700'}`}>
-                Xóa toàn bộ ngân sách cũ hiện có
+                Thay thế toàn bộ ngân sách hiện tại <span className="text-[10px] font-normal text-rose-400">(khuyến nghị)</span>
               </p>
               <p className={`text-xs mt-1 ${clearAll ? 'text-rose-600' : 'text-gray-500'}`}>
-                Sẽ xóa trắng danh sách ngân sách hiện tại và tạo mới hoàn toàn từ danh sách dưới đây.
+                {clearAll
+                  ? 'Xóa toàn bộ ngân sách cũ và tạo mới hoàn toàn từ dữ liệu thị trường — tổng ngân sách khớp với báo cáo.'
+                  : 'Giữ nguyên ngân sách hiện tại và thêm vào — tổng có thể bị nhân đôi nếu đã có dữ liệu cũ.'}
               </p>
             </div>
           </label>
