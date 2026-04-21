@@ -8,7 +8,7 @@ import {
    Key, Shield, Cloud, Download, Upload, Trash2,
    Save, Eye, EyeOff, Info, CheckCircle2, AlertTriangle,
    Heart, Camera, X, Zap, Mail, Phone, MessageCircle, Server,
-   Loader2, BookOpen, MousePointerClick
+   Loader2, BookOpen, MousePointerClick, Users, ListTodo, RefreshCw
 } from 'lucide-react';
 
 export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
@@ -18,7 +18,7 @@ interface SettingsPageProps {
 }
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) => {
-   const { user, updateUser, settings, updateSettings, setGeminiApiKey, resetData, importData, recalculateDeadlines, guests, budgetItems, fengShuiProfile, fengShuiResults, users } = useStore();
+   const { user, updateUser, settings, updateSettings, setGeminiApiKey, resetData, importData, recalculateDeadlines, guests, budgetItems, fengShuiProfile, fengShuiResults, users, addNotification } = useStore();
    const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab);
 
    // Local states for inputs
@@ -26,6 +26,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
    const [showApiKey, setShowApiKey] = useState(false);
    const [isValidatingKey, setIsValidatingKey] = useState(false);
    const [isUploading, setIsUploading] = useState(false);
+
+   // Inline confirm states (replaces browser confirm/alert/prompt)
+   const [showResetConfirm, setShowResetConfirm] = useState(false);
+   const [showImportConfirm, setShowImportConfirm] = useState(false);
+   const [pendingImportData, setPendingImportData] = useState<any>(null);
 
    // Guide State
    const [showApiGuide, setShowApiGuide] = useState(false);
@@ -55,34 +60,43 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addNotification('SUCCESS', `Đã xuất file backup (${guests.length} khách, ${budgetItems.length} hạng mục).`);
    };
 
-   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = (event) => {
          try {
             const json = JSON.parse(event.target?.result as string);
-            if (confirm(`Bạn có chắc chắn muốn khôi phục dữ liệu từ file này? \nDữ liệu hiện tại sẽ bị thay thế.`)) {
-               importData(json);
-               alert("Khôi phục dữ liệu thành công!");
+            if (!json.guests && !json.budgetItems) {
+               addNotification('ERROR', 'File không hợp lệ. Vui lòng chọn file backup từ WedPlan AI.');
+               return;
             }
-         } catch (err) {
-            alert("File không hợp lệ hoặc bị lỗi.");
+            setPendingImportData(json);
+            setShowImportConfirm(true);
+         } catch {
+            addNotification('ERROR', 'File JSON bị lỗi hoặc không đúng định dạng.');
          }
       };
       reader.readAsText(file);
       e.target.value = '';
    };
 
-   const handleResetData = () => {
-      const confirmText = prompt("Hành động này sẽ XÓA TOÀN BỘ dữ liệu khách mời, ngân sách và phong thủy.\nHãy nhập 'DELETE' để xác nhận:");
-      if (confirmText === 'DELETE') {
-         resetData();
-         alert("Đã xóa dữ liệu về mặc định.");
-      }
+   const handleConfirmImport = () => {
+      if (!pendingImportData) return;
+      importData(pendingImportData);
+      setPendingImportData(null);
+      setShowImportConfirm(false);
+      addNotification('SUCCESS', 'Khôi phục dữ liệu thành công!');
+   };
+
+   const handleConfirmReset = () => {
+      resetData();
+      setShowResetConfirm(false);
+      addNotification('SUCCESS', 'Đã đặt lại dữ liệu về mặc định.');
    };
 
    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -329,7 +343,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                            </div>
                            <div className="flex items-center">
                               <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white transition-colors w-full border border-transparent hover:border-rose-100">
-                                 <div className={`w-10 h-6 flex items-center bg-gray-300 rounded-full p-1 duration-300 ease-in-out ${user.showCountdown ? 'bg-rose-500' : ''}`}>
+                                 <div className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ${user.showCountdown ? 'bg-rose-500' : 'bg-gray-300'}`}>
                                     <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${user.showCountdown ? 'translate-x-4' : ''}`}></div>
                                  </div>
                                  <input
@@ -359,114 +373,162 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                      <div className="absolute right-0 top-0 opacity-10 p-4 md:p-6 pointer-events-none">
                         <Cloud className="w-24 h-24 md:w-32 md:h-32 text-blue-600" />
                      </div>
-
                      <div className="flex items-start gap-4 relative z-10">
-                        <div className="p-3 bg-white text-blue-600 rounded-xl shadow-sm hidden md:block">
+                        <div className="p-3 bg-white text-blue-600 rounded-xl shadow-sm hidden md:flex items-center justify-center">
                            <Server className="w-6 h-6" />
                         </div>
                         <div className="flex-1">
-                           <div className="flex justify-between items-start">
+                           <div className="flex justify-between items-start mb-1">
                               <h3 className="font-bold text-gray-800 text-lg">Đồng bộ đám mây (Cloud Sync)</h3>
-                              <span className={`px-2 py-0.5 text-xs font-bold rounded uppercase ${user.enableCloudStorage ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                              <span className={`px-2 py-0.5 text-xs font-bold rounded-full uppercase tracking-wide ${user.enableCloudStorage ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
                                  {user.enableCloudStorage ? 'Active' : 'Disabled'}
                               </span>
                            </div>
-                           <p className="text-sm text-gray-600 mt-2 mb-4 max-w-lg leading-relaxed">
+                           <p className="text-xs text-blue-600/70 font-semibold mb-2">Powered by Appwrite Cloud · Singapore</p>
+                           <p className="text-sm text-gray-600 mb-4 max-w-lg leading-relaxed">
                               {user.enableCloudStorage
-                                 ? "Dữ liệu của bạn được đồng bộ an toàn trên Firebase Cloud theo thời gian thực. Truy cập từ mọi thiết bị, không lo mất dữ liệu."
-                                 : "Dữ liệu chỉ lưu trên trình duyệt này. Nếu xóa cache hoặc đổi máy, bạn sẽ mất toàn bộ kế hoạch."}
+                                 ? "Dữ liệu của bạn được đồng bộ an toàn trên Appwrite Cloud theo thời gian thực. Truy cập từ mọi thiết bị, không lo mất dữ liệu."
+                                 : "Dữ liệu chỉ lưu trên trình duyệt này. Nếu xóa cache hoặc đổi máy, bạn sẽ mất toàn bộ kế hoạch cưới."}
                            </p>
-
-                           {user.role === 'GUEST' || (user.role === 'USER' && !user.isActive) ? (
+                           {(user.role === 'GUEST' || (user.role === 'USER' && !user.isActive)) ? (
                               <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 w-fit">
-                                 <AlertTriangle className="w-4 h-4" />
-                                 {user.role === 'GUEST' ? "Tính năng này yêu cầu tài khoản thành viên." : "Tài khoản chưa kích hoạt. Vui lòng liên hệ Admin."}
+                                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                                 {user.role === 'GUEST' ? "Tính năng này yêu cầu tài khoản thành viên đã kích hoạt." : "Tài khoản chưa kích hoạt. Vui lòng liên hệ Admin."}
                               </div>
                            ) : (
-                              <label className="flex items-center gap-3 cursor-pointer group">
-                                 <div className={`w-14 h-7 flex items-center bg-gray-200 rounded-full p-1 duration-300 ease-in-out ${user.enableCloudStorage ? 'bg-blue-600' : ''}`}>
-                                    <div className={`bg-white w-5 h-5 rounded-full shadow-md transform duration-300 ease-in-out ${user.enableCloudStorage ? 'translate-x-7' : ''}`}></div>
+                              <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                                 {/* FIX: conditional bg class instead of additive */}
+                                 <div className={`w-14 h-7 flex items-center rounded-full p-1 transition-colors duration-300 ${user.enableCloudStorage ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                                    <div className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300 ${user.enableCloudStorage ? 'translate-x-7' : 'translate-x-0'}`} />
                                  </div>
-                                 <span className="text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors">
+                                 <span className={`text-sm font-bold transition-colors ${user.enableCloudStorage ? 'text-blue-600' : 'text-gray-500 group-hover:text-blue-500'}`}>
                                     {user.enableCloudStorage ? "Đã bật đồng bộ" : "Bật đồng bộ đám mây"}
                                  </span>
-                                 <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={user.enableCloudStorage}
-                                    onChange={(e) => updateUser(user.uid, { enableCloudStorage: e.target.checked })}
-                                 />
+                                 <input type="checkbox" className="hidden" checked={user.enableCloudStorage}
+                                    onChange={(e) => updateUser(user.uid, { enableCloudStorage: e.target.checked })} />
                               </label>
                            )}
                         </div>
                      </div>
                   </section>
 
+                  {/* Data Stats */}
+                  <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                     {[
+                        { icon: Users, label: 'Khách mời', value: guests.length, color: 'text-blue-600 bg-blue-50' },
+                        { icon: ListTodo, label: 'Hạng mục NS', value: budgetItems.length, color: 'text-rose-600 bg-rose-50' },
+                        { icon: CheckCircle2, label: 'Đã thanh toán', value: budgetItems.filter(b => b.status === 'Đã thanh toán').length, color: 'text-green-600 bg-green-50' },
+                        { icon: RefreshCw, label: 'Đang thực hiện', value: budgetItems.filter(b => b.status === 'Đang tiến hành').length, color: 'text-amber-600 bg-amber-50' },
+                     ].map(({ icon: Icon, label, value, color }) => (
+                        <div key={label} className="bg-white rounded-xl border border-gray-100 p-3 flex items-center gap-3 shadow-sm">
+                           <div className={`p-2 rounded-lg ${color}`}><Icon className="w-4 h-4" /></div>
+                           <div>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{label}</p>
+                              <p className="text-xl font-black text-gray-800 leading-none mt-0.5">{value}</p>
+                           </div>
+                        </div>
+                     ))}
+                  </section>
+
                   {/* Backup & Restore */}
                   <section className="space-y-4">
                      <h4 className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Sao lưu thủ công (Local)</h4>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+                     {/* Import confirm banner */}
+                     {showImportConfirm && pendingImportData && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 animate-fadeIn">
+                           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                           <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-amber-800">Xác nhận khôi phục dữ liệu?</p>
+                              <p className="text-xs text-amber-700 mt-0.5">
+                                 File chứa <strong>{pendingImportData.guests?.length ?? 0} khách</strong> và <strong>{pendingImportData.budgetItems?.length ?? 0} hạng mục ngân sách</strong>.
+                                 Dữ liệu hiện tại sẽ bị thay thế hoàn toàn.
+                              </p>
+                           </div>
+                           <div className="flex gap-2 flex-shrink-0">
+                              <button type="button" onClick={() => { setShowImportConfirm(false); setPendingImportData(null); }}
+                                 className="px-3 py-1.5 text-xs font-bold border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors">
+                                 Hủy
+                              </button>
+                              <button type="button" onClick={handleConfirmImport}
+                                 className="px-3 py-1.5 text-xs font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+                                 Khôi phục
+                              </button>
+                           </div>
+                        </div>
+                     )}
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Export */}
                         <div className="p-4 md:p-5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all group">
                            <div className="flex items-center gap-3 mb-3">
-                              <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-gray-200 transition-colors">
-                                 <Download className="w-5 h-5 text-gray-600" />
+                              <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-green-100 transition-colors">
+                                 <Download className="w-5 h-5 text-gray-600 group-hover:text-green-600 transition-colors" />
                               </div>
-                              <h5 className="font-bold text-gray-800 text-sm md:text-base">Xuất file Backup</h5>
+                              <div>
+                                 <h5 className="font-bold text-gray-800 text-sm">Xuất file Backup</h5>
+                                 <p className="text-[10px] text-gray-400">{guests.length} khách · {budgetItems.length} hạng mục</p>
+                              </div>
                            </div>
-                           <p className="text-xs text-gray-500 mb-4 h-8 leading-tight">Tải về máy toàn bộ dữ liệu dưới dạng file .JSON để lưu trữ riêng.</p>
-                           <button
-                              onClick={handleExportData}
-                              className="w-full py-2.5 bg-gray-50 border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm"
-                           >
-                              Tải về (.json)
+                           <p className="text-xs text-gray-500 mb-4 leading-relaxed">Tải về máy toàn bộ dữ liệu dưới dạng file .JSON để lưu trữ riêng.</p>
+                           <button type="button" onClick={handleExportData}
+                              className="w-full py-2.5 bg-gray-50 border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-colors text-sm flex items-center justify-center gap-2">
+                              <Download className="w-4 h-4" /> Tải về (.json)
                            </button>
                         </div>
 
                         {/* Import */}
                         <div className="p-4 md:p-5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all group">
                            <div className="flex items-center gap-3 mb-3">
-                              <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-gray-200 transition-colors">
-                                 <Upload className="w-5 h-5 text-gray-600" />
+                              <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-blue-100 transition-colors">
+                                 <Upload className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
                               </div>
-                              <h5 className="font-bold text-gray-800 text-sm md:text-base">Khôi phục dữ liệu</h5>
+                              <div>
+                                 <h5 className="font-bold text-gray-800 text-sm">Khôi phục dữ liệu</h5>
+                                 <p className="text-[10px] text-gray-400">Từ file .json đã xuất trước đó</p>
+                              </div>
                            </div>
-                           <p className="text-xs text-gray-500 mb-4 h-8 leading-tight">Khôi phục từ file .JSON đã sao lưu trước đó. Dữ liệu hiện tại sẽ bị thay thế.</p>
-                           <input
-                              type="file"
-                              accept="application/json"
-                              ref={fileInputRef}
-                              className="hidden"
-                              onChange={handleImportData}
-                           />
-                           <button
-                              onClick={() => fileInputRef.current?.click()}
-                              className="w-full py-2.5 bg-gray-50 border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors text-sm"
-                           >
-                              Chọn file Backup
+                           <p className="text-xs text-gray-500 mb-4 leading-relaxed">Dữ liệu hiện tại sẽ bị thay thế. Nên xuất backup trước khi khôi phục.</p>
+                           <input type="file" accept="application/json" ref={fileInputRef} className="hidden"
+                              aria-label="Chọn file backup" onChange={handleImportFile} />
+                           <button type="button" onClick={() => fileInputRef.current?.click()}
+                              className="w-full py-2.5 bg-gray-50 border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors text-sm flex items-center justify-center gap-2">
+                              <Upload className="w-4 h-4" /> Chọn file Backup
                            </button>
                         </div>
                      </div>
                   </section>
 
                   {/* Danger Zone */}
-                  <section className="pt-4">
-                     <div className="bg-red-50 border border-red-200 rounded-xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div>
-                           <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1 text-sm md:text-base">
-                              <AlertTriangle className="w-5 h-5" /> Vùng Nguy Hiểm
-                           </h4>
-                           <p className="text-xs text-red-600 max-w-md">
-                              Hành động này sẽ xóa toàn bộ danh sách khách, ngân sách và thiết lập về trạng thái ban đầu. Không thể hoàn tác.
-                           </p>
+                  <section className="pt-2">
+                     <div className={`rounded-xl border transition-all ${showResetConfirm ? 'bg-red-50 border-red-300' : 'bg-red-50 border-red-200'} p-4 md:p-5`}>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                           <div>
+                              <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1 text-sm md:text-base">
+                                 <AlertTriangle className="w-5 h-5" /> Vùng Nguy Hiểm
+                              </h4>
+                              <p className="text-xs text-red-600 max-w-md">
+                                 Xóa toàn bộ danh sách khách ({guests.length}), ngân sách ({budgetItems.length} hạng mục) và thiết lập về mặc định. <strong>Không thể hoàn tác.</strong>
+                              </p>
+                           </div>
+                           {!showResetConfirm ? (
+                              <button type="button" onClick={() => setShowResetConfirm(true)}
+                                 className="w-full md:w-auto px-5 py-2.5 bg-white border border-red-300 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap shadow-sm">
+                                 <Trash2 className="w-4 h-4" /> Reset Dữ Liệu
+                              </button>
+                           ) : (
+                              <div className="flex gap-2 w-full md:w-auto">
+                                 <button type="button" onClick={() => setShowResetConfirm(false)}
+                                    className="flex-1 md:flex-none px-4 py-2.5 bg-white border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                                    Hủy
+                                 </button>
+                                 <button type="button" onClick={handleConfirmReset}
+                                    className="flex-1 md:flex-none px-4 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2">
+                                    <Trash2 className="w-4 h-4" /> Xác nhận xóa
+                                 </button>
+                              </div>
+                           )}
                         </div>
-                        <button
-                           onClick={handleResetData}
-                           className="w-full md:w-auto px-5 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap shadow-sm"
-                        >
-                           <Trash2 className="w-4 h-4" /> Reset Dữ Liệu
-                        </button>
                      </div>
                   </section>
                </div>
