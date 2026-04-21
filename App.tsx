@@ -11,17 +11,36 @@ import { logAppVisit, getUserPublicProfile, syncUserProfile } from './services/c
 import { account } from './lib/appwrite';
 import { UserProfile } from './types';
 
+// --- Helper to handle lazy loading chunk errors (Vite cached index.html issue) ---
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+  lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        window.location.reload();
+      }
+      throw error;
+    }
+  });
+
 // --- Lazy-loaded components for code splitting ---
-const GuestManager = lazy(() => import('./components/GuestManager'));
-const AIAdvisor = lazy(() => import('./components/AIAdvisor'));
-const DetailedBudgetPlanner = lazy(() => import('./components/DetailedBudgetPlanner'));
-const UserManagement = lazy(() => import('./components/admin/UserManagement'));
-const ProcessGuide = lazy(() => import('./components/ProcessGuide'));
-const FengShuiConsultant = lazy(() => import('./components/fengshui/FengShuiConsultant'));
-const SettingsPage = lazy(() => import('./components/SettingsPage').then(mod => ({ default: mod.default })));
-const InvitationManager = lazy(() => import('./components/invitation/InvitationManager'));
-const PublicInvitationView = lazy(() => import('./components/invitation/PublicInvitationView'));
-const LocalMarketInsights = lazy(() => import('./components/LocalMarketInsights'));
+const GuestManager = lazyWithRetry(() => import('./components/GuestManager'));
+const AIAdvisor = lazyWithRetry(() => import('./components/AIAdvisor'));
+const DetailedBudgetPlanner = lazyWithRetry(() => import('./components/DetailedBudgetPlanner'));
+const UserManagement = lazyWithRetry(() => import('./components/admin/UserManagement'));
+const ProcessGuide = lazyWithRetry(() => import('./components/ProcessGuide'));
+const FengShuiConsultant = lazyWithRetry(() => import('./components/fengshui/FengShuiConsultant'));
+const SettingsPage = lazyWithRetry(() => import('./components/SettingsPage').then(mod => ({ default: mod.default })));
+const InvitationManager = lazyWithRetry(() => import('./components/invitation/InvitationManager'));
+const PublicInvitationView = lazyWithRetry(() => import('./components/invitation/PublicInvitationView'));
+const LocalMarketInsights = lazyWithRetry(() => import('./components/LocalMarketInsights'));
 
 // --- Loading Fallback ---
 const PageLoader = () => (
