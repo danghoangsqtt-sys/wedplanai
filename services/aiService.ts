@@ -55,7 +55,7 @@ const callGeminiDirect = async (
   userMessage: string,
   isJson: boolean = false,
   customApiKey?: string,
-  maxRetries: number = isJson ? 3 : 1 // JSON mode gets more retries
+  maxRetries: number = 3 // Always default to 3 retries (to handle 503 Service Unavailable properly)
 ) => {
   // @ts-ignore
   const envKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
