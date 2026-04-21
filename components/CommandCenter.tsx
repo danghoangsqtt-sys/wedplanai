@@ -219,12 +219,12 @@ Viết bằng tiếng Việt, dùng gạch đầu dòng (•), ngắn gọn như
         }
       );
 
-      if (res.status === 429) {
+      if (res.status === 429 || res.status >= 500) {
         if (attempt < maxRetries) {
           await new Promise(r => setTimeout(r, 2000 * attempt));
           continue;
         }
-        return '⏳ Hệ thống AI đang bận, vui lòng thử lại sau 30 giây.';
+        return '⏳ Hệ thống AI đang bận (hoặc quá tải), vui lòng thử lại sau giây lát.';
       }
 
       if (!res.ok) return '⚠️ Không thể kết nối AI. Vui lòng thử lại.';
