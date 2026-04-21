@@ -229,6 +229,89 @@ const RSVPSection: React.FC<{ deadline?: string; fontTitle: string; fontScript: 
     </section>
 );
 
+// --- STICKER DECORATION ---
+const StickerDecor: React.FC<{ emoji?: string; size?: string; className?: string }> = ({ emoji, size = 'text-3xl', className = '' }) => {
+    if (!emoji) return null;
+    return (
+        <div className={`flex items-center justify-center select-none pointer-events-none ${className}`} aria-hidden>
+            <span className={`${size} animate-pulse`} style={{ animationDuration: '3s' }}>{emoji}</span>
+        </div>
+    );
+};
+
+// --- TEMPLATE-SPECIFIC DECORATIVE ELEMENTS ---
+const TemplateDecor: React.FC<{ templateId: string; position: 'corners' | 'header' | 'divider' | 'footer' }> = ({ templateId, position }) => {
+    const decorMap: Record<string, Record<string, React.ReactNode>> = {
+        floral: {
+            corners: (
+                <>
+                    <div className="absolute top-0 left-0 text-4xl opacity-30 pointer-events-none select-none" style={{ transform: 'rotate(0deg)' }}>🌸</div>
+                    <div className="absolute top-0 right-0 text-4xl opacity-30 pointer-events-none select-none" style={{ transform: 'rotate(90deg)' }}>🌸</div>
+                    <div className="absolute bottom-0 left-0 text-3xl opacity-20 pointer-events-none select-none" style={{ transform: 'rotate(-45deg)' }}>🌷</div>
+                    <div className="absolute bottom-0 right-0 text-3xl opacity-20 pointer-events-none select-none" style={{ transform: 'rotate(45deg)' }}>🌷</div>
+                </>
+            ),
+            header: <div className="text-center text-2xl opacity-40 mb-2 select-none">🌸 🌿 🌸</div>,
+            divider: <div className="flex items-center justify-center gap-2 py-1 opacity-40 select-none"><span>🌿</span><span>✿</span><span>🌿</span></div>,
+            footer: <div className="text-center text-xl opacity-30 mt-2 select-none">🌷 💐 🌷</div>,
+        },
+        romantic: {
+            corners: (
+                <>
+                    <div className="absolute top-3 left-3 text-2xl opacity-20 pointer-events-none select-none">💕</div>
+                    <div className="absolute top-3 right-3 text-2xl opacity-20 pointer-events-none select-none">💕</div>
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-3xl opacity-15 pointer-events-none select-none">🎀</div>
+                </>
+            ),
+            header: <div className="text-center text-2xl opacity-40 mb-2 select-none">💕 ✨ 💕</div>,
+            divider: <div className="flex items-center justify-center gap-2 py-1 opacity-35 select-none"><span>♥</span><span>⋆</span><span>♥</span></div>,
+            footer: <div className="text-center text-xl opacity-30 mt-2 select-none">💗 🎀 💗</div>,
+        },
+        luxury: {
+            corners: (
+                <>
+                    <div className="absolute top-2 left-2 text-xl opacity-30 pointer-events-none select-none text-yellow-500">⚜</div>
+                    <div className="absolute top-2 right-2 text-xl opacity-30 pointer-events-none select-none text-yellow-500">⚜</div>
+                    <div className="absolute bottom-2 left-2 text-xl opacity-20 pointer-events-none select-none text-yellow-500" style={{ transform: 'rotate(180deg)' }}>⚜</div>
+                    <div className="absolute bottom-2 right-2 text-xl opacity-20 pointer-events-none select-none text-yellow-500" style={{ transform: 'rotate(180deg)' }}>⚜</div>
+                </>
+            ),
+            header: <div className="text-center text-xl opacity-50 mb-2 select-none text-yellow-500">👑 ✦ 👑</div>,
+            divider: <div className="flex items-center justify-center gap-2 py-1 opacity-40 select-none text-yellow-500"><span>✦</span><span>◆</span><span>✦</span></div>,
+            footer: <div className="text-center text-xl opacity-30 mt-2 select-none text-yellow-500">⚜ 💎 ⚜</div>,
+        },
+        garden: {
+            corners: (
+                <>
+                    <div className="absolute top-2 left-2 text-3xl opacity-25 pointer-events-none select-none">🌿</div>
+                    <div className="absolute top-2 right-2 text-3xl opacity-25 pointer-events-none select-none" style={{ transform: 'scaleX(-1)' }}>🌿</div>
+                    <div className="absolute bottom-2 left-2 text-2xl opacity-20 pointer-events-none select-none">🍃</div>
+                    <div className="absolute bottom-2 right-2 text-2xl opacity-20 pointer-events-none select-none" style={{ transform: 'scaleX(-1)' }}>🍃</div>
+                </>
+            ),
+            header: <div className="text-center text-2xl opacity-35 mb-2 select-none">🌿 🌸 🌿</div>,
+            divider: <div className="flex items-center justify-center gap-2 py-1 opacity-35 select-none"><span>🍃</span><span>✿</span><span>🍃</span></div>,
+            footer: <div className="text-center text-xl opacity-25 mt-2 select-none">🌿 🦋 🌿</div>,
+        },
+        modern: {
+            corners: null,
+            header: <div className="text-center text-sm opacity-20 mb-2 select-none tracking-[1em]">◇ ◇ ◇</div>,
+            divider: <div className="flex items-center justify-center gap-3 py-1 opacity-25 select-none"><span className="w-8 h-px bg-current inline-block" /><span>◇</span><span className="w-8 h-px bg-current inline-block" /></div>,
+            footer: null,
+        },
+        minimalist: {
+            corners: null,
+            header: null,
+            divider: <div className="flex items-center justify-center py-1 opacity-15 select-none"><span className="w-12 h-px bg-current inline-block" /></div>,
+            footer: null,
+        },
+    };
+
+    const decors = decorMap[templateId];
+    if (!decors) return null;
+    return <>{decors[position]}</>;
+};
+
 // =====================================================================
 // MAIN COMPONENT
 // =====================================================================
@@ -239,6 +322,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
         bankInfo, couplePhoto, galleryImages, events,
         loveStory, rsvpEnabled, rsvpDeadline, guestbookEnabled,
         countdownEnabled, petalEffect, guestWishes,
+        headerSticker, dividerSticker, footerSticker,
     } = data;
 
     const vietQrUrl = useMemo(() => {
@@ -271,6 +355,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     <div className="corner-tl"></div><div className="corner-tr"></div>
                     <div className="corner-bl"></div><div className="corner-br"></div>
                     <p className="font-cinzel text-xs uppercase tracking-[0.35em] mb-4 opacity-60">Trân Trọng Kính Mời</p>
+                    <StickerDecor emoji={headerSticker} size="text-4xl" className="mb-3" />
                     <div className="flex flex-col items-center justify-center mb-4">
                         <span className="font-handwriting text-4xl text-[#9B1C1C] mb-1 leading-tight break-words max-w-full px-2 text-center">{groomName || 'Chú Rể'}</span>
                         <span className="text-[#C9A24D] text-xl my-1">❧ ❤ ❧</span>
@@ -319,6 +404,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         </div>
                     </div>
                     <p className="text-sm italic leading-relaxed px-4 opacity-90 font-serif">Trân trọng kính mời Quý vị tới dự lễ thành hôn<br />Sự hiện diện của Quý vị là niềm vinh hạnh cho gia đình chúng tôi</p>
+                    <StickerDecor emoji={footerSticker} size="text-3xl" className="mt-4" />
                     {vietQrUrl && (
                         <div className="mt-8 pt-6 border-t border-[#C9A24D]/30">
                             <div className="w-32 h-32 mx-auto bg-white p-2 border border-[#C9A24D] shadow-inner mb-2">
@@ -484,6 +570,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     return (
         <div className={`w-full min-h-[800px] ${s.bg} ${s.textMain} ${s.container} relative flex flex-col shadow-2xl overflow-hidden`}>
             {petalEffect && petalEffect !== 'none' && <FloatingEffect type={petalEffect} />}
+            <TemplateDecor templateId={templateId || 'modern'} position="corners" />
             <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@300;400;600&display=swap');
       `}</style>
@@ -516,11 +603,14 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         <>
                             <p className={`uppercase tracking-[0.3em] text-[10px] mb-3 opacity-80 ${s.fontBody}`}>Trân trọng báo tin vui</p>
                             <div className={`flex flex-col items-center gap-1 ${templateId === 'luxury' ? 'text-yellow-100' : ''}`}>
+                                <StickerDecor emoji={headerSticker} size="text-4xl" className="mb-2" />
+                                <TemplateDecor templateId={templateId || 'modern'} position="header" />
                                 <h1 className={`${s.fontScript} text-4xl leading-tight ${s.textAccent} break-words max-w-full text-center`}>{groomName || 'Chú Rể'}</h1>
                                 <span className={`${s.fontScript} text-xl opacity-60 my-0.5`}>&</span>
                                 <h1 className={`${s.fontScript} text-4xl leading-tight ${s.textAccent} break-words max-w-full text-center`}>{brideName || 'Cô Dâu'}</h1>
                             </div>
                             <div className={`w-16 h-px mx-auto my-4 ${s.divider}`}></div>
+                            {dividerSticker ? <StickerDecor emoji={dividerSticker} size="text-2xl" className="-mt-2 -mb-1" /> : <TemplateDecor templateId={templateId || 'modern'} position="divider" />}
                             <div className={`${s.fontTitle} text-base tracking-widest uppercase font-bold flex items-center gap-2 justify-center`}>
                                 {isValidDate ? (
                                     <><span>{day}</span><span className="text-[9px] opacity-60">Tháng</span><span>{month}</span><span className="text-[9px] opacity-60">Năm</span><span>{year}</span></>
@@ -682,7 +772,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             {guestbookEnabled && <GuestbookSection wishes={guestWishes || []} fontTitle={s.fontTitle} fontScript={s.fontScript} textAccent={s.textAccent} divider={s.divider} onGuestbook={onGuestbook} />}
 
             {/* --- FOOTER --- */}
-            <footer className="py-8 bg-black text-white text-center border-t border-gray-800">
+            <footer className="py-8 bg-black text-white text-center border-t border-gray-800 relative overflow-hidden">
+                <TemplateDecor templateId={templateId || 'modern'} position="footer" />
+                <StickerDecor emoji={footerSticker} size="text-3xl" className="mb-3" />
                 <div className="opacity-80 mb-2">
                     <span className={`${s.fontScript} text-2xl`}>{groomName}</span>
                     <span className="mx-2 text-rose-500">&hearts;</span>

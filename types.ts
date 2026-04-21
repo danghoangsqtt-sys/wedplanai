@@ -213,6 +213,10 @@ export interface InvitationData {
   countdownEnabled?: boolean;
   petalEffect?: 'none' | 'petals' | 'hearts' | 'sparkles';
   guestWishes?: GuestWish[]; // Lời chúc từ khách (stored locally)
+  // --- Sticker decoration fields ---
+  headerSticker?: string;   // Emoji sticker for header area
+  dividerSticker?: string;  // Emoji sticker for divider areas
+  footerSticker?: string;   // Emoji sticker for footer area
 }
 
 // --- Local Market Intelligence Types ---

@@ -38,7 +38,7 @@ const PETAL_EFFECTS = [
 
 const InvitationManager: React.FC = () => {
     const { invitation, updateInvitation, user } = useStore();
-    const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'LOVE_STORY' | null>('GENERAL');
+    const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'STICKERS' | 'LOVE_STORY' | null>('GENERAL');
     const [isExporting, setIsExporting] = useState(false);
     const [showQRPanel, setShowQRPanel] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
@@ -673,7 +673,76 @@ const InvitationManager: React.FC = () => {
                         </div>
                     )}
 
-                    {/* SECTION 7: LOVE STORY */}
+                    {/* SECTION 7: STICKERS */}
+                    <SectionToggle id="STICKERS" label="Trang trí & Sticker" icon={Sparkles} />
+                    {activeSection === 'STICKERS' && (
+                        <div className="p-5 space-y-5 bg-gray-50 animate-fadeIn">
+                            <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-800 flex gap-2">
+                                <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <p>Chọn sticker trang trí cho thiệp. Sticker sẽ hiện ở 3 vị trí: trên header, giữa thiệp và cuối thiệp.</p>
+                            </div>
+
+                            {/* Sticker categories */}
+                            {[
+                                { position: 'headerSticker', label: '🎀 Trên Header', desc: 'Hiển thị phía trên tên cô dâu chú rể' },
+                                { position: 'dividerSticker', label: '✨ Giữa Thiệp (Divider)', desc: 'Trang trí các đường phân cách' },
+                                { position: 'footerSticker', label: '💕 Cuối Thiệp', desc: 'Trang trí phần chân thiệp' },
+                            ].map(slot => {
+                                const STICKER_GROUPS = [
+                                    { label: 'Cặp đôi', items: ['👰', '🤵', '💑', '👫', '💏', '👩‍❤️‍👨'] },
+                                    { label: 'Hoa', items: ['🌸', '🌹', '🌷', '💐', '🌺', '🪷', '🌻', '🪻', '💮'] },
+                                    { label: 'Trái tim', items: ['❤️', '💕', '💖', '💗', '💝', '💞', '🩷', '🤍', '♥️'] },
+                                    { label: 'Trang trí', items: ['✨', '🎀', '🎊', '🕊️', '🦋', '💎', '👑', '🔔', '🎵'] },
+                                    { label: 'Cưới', items: ['💍', '💒', '🥂', '🍾', '🎂', '🕯️', '📿', '🎶', '🌿'] },
+                                ];
+                                const currentValue = invitation[slot.position as keyof typeof invitation] as string || '';
+                                return (
+                                    <div key={slot.position} className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-800">{slot.label}</p>
+                                                <p className="text-[10px] text-gray-400">{slot.desc}</p>
+                                            </div>
+                                            {currentValue && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleChange(slot.position as keyof InvitationData, '')}
+                                                    className="text-[10px] text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors"
+                                                >
+                                                    Xóa
+                                                </button>
+                                            )}
+                                        </div>
+                                        {currentValue && (
+                                            <div className="mb-2 text-center py-2 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                                <span className="text-4xl">{currentValue}</span>
+                                                <p className="text-[10px] text-gray-400 mt-1">Đang sử dụng</p>
+                                            </div>
+                                        )}
+                                        {STICKER_GROUPS.map(group => (
+                                            <div key={group.label} className="mb-2">
+                                                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{group.label}</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {group.items.map(emoji => (
+                                                        <button
+                                                            type="button"
+                                                            key={emoji}
+                                                            onClick={() => handleChange(slot.position as keyof InvitationData, emoji)}
+                                                            className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg transition-all hover:scale-110 ${currentValue === emoji ? 'bg-rose-100 ring-2 ring-rose-500 scale-110' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* SECTION 8: LOVE STORY */}
                     <SectionToggle id="LOVE_STORY" label="Câu chuyện tình yêu" icon={Heart} />
                     {activeSection === 'LOVE_STORY' && (
                         <div className="p-5 space-y-4 bg-gray-50 animate-fadeIn">
