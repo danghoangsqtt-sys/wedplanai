@@ -185,7 +185,12 @@ function isDueThisWeek(i: BudgetItem) {
 }
 
 // ── AI tip generator ───────────────────────────────────────────────────────
-async function generateAITip(title: string, msLabel: string, apiKey: string): Promise<string> {
+async function generateAITip(title: string, msLabel: string, userApiKey?: string): Promise<string> {
+  // @ts-ignore
+  const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = userApiKey || envKey;
+  if (!apiKey) return '';
+
   const prompt = `Bạn là chuyên gia tư vấn cưới hỏi tại Việt Nam. Viết 1-2 câu mẹo ngắn gọn, cụ thể và thực tế cho công việc: "${title}" trong giai đoạn ${msLabel} chuẩn bị đám cưới. Chỉ trả lời nội dung mẹo, không thêm tiêu đề.`;
   try {
     const res = await fetch(
@@ -250,14 +255,15 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
   const [aiKeyWarning, setAiKeyWarning] = useState(false);
 
   const genTip = useCallback(async (msId: string, task: MilestoneTask, msLabel: string) => {
-    if (!settings.geminiApiKey) {
-      setAiKeyWarning(true);
-      return;
-    }
     setAiKeyWarning(false);
     setGeneratingTip(task.id);
-    const tip = await generateAITip(task.title, msLabel, settings.geminiApiKey);
-    if (tip) patchTask(msId, task.id, { tips: tip });
+    const tip = await generateAITip(task.title, msLabel, settings.geminiApiKey || undefined);
+    if (tip) {
+      patchTask(msId, task.id, { tips: tip });
+    } else {
+      // No env key AND no user key
+      setAiKeyWarning(true);
+    }
     setGeneratingTip(null);
   }, [settings.geminiApiKey, patchTask]);
 
