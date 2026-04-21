@@ -38,40 +38,54 @@ export const MARKET_CATEGORIES: MarketCategory[] = [
   { id: 'engagement', emoji: '💍', label: 'Sính lễ & mâm quả lễ hỏi', budgetCategories: ['Lễ Ăn Hỏi'] },
 ];
 
-export async function detectProvince(): Promise<string | null> {
+export interface DetectedLocation {
+  province: string | null;
+  district: string | null;
+}
+
+export async function detectLocation(): Promise<DetectedLocation> {
   return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(null); return; }
+    if (!navigator.geolocation) { resolve({ province: null, district: null }); return; }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           const { latitude, longitude } = pos.coords;
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=vi`,
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=vi&addressdetails=1`,
             { headers: { 'Accept-Language': 'vi' } }
           );
           const data = await res.json();
-          const raw = data.address?.state || data.address?.city || data.address?.county || '';
-          // Normalize: strip "Tỉnh ", "Thành phố " prefix
-          const normalized = raw.replace(/^(Tỉnh|Thành phố)\s+/i, '').trim();
-          // Match against our known list (fuzzy: includes check)
-          const match = VIETNAM_PROVINCES.find(p =>
-            p === normalized ||
-            p.includes(normalized) ||
-            normalized.includes(p.replace('TP. ', ''))
+          // Province
+          const rawProvince = data.address?.state || data.address?.city || '';
+          const normalizedProvince = rawProvince.replace(/^(Tỉnh|Thành phố)\s+/i, '').trim();
+          const matchProvince = VIETNAM_PROVINCES.find(p =>
+            p === normalizedProvince ||
+            p.includes(normalizedProvince) ||
+            normalizedProvince.includes(p.replace('TP. ', ''))
           );
-          resolve(match || normalized || null);
+          // District
+          const rawDistrict = data.address?.county || data.address?.city_district || data.address?.town || data.address?.suburb || '';
+          const normalizedDistrict = rawDistrict
+            .replace(/^(Huyện|Quận|Thị xã|Thành phố)\s+/i, '')
+            .trim();
+
+          resolve({
+            province: matchProvince || normalizedProvince || null,
+            district: normalizedDistrict || null
+          });
         } catch {
-          resolve(null);
+          resolve({ province: null, district: null });
         }
       },
-      () => resolve(null),
+      () => resolve({ province: null, district: null }),
       { timeout: 8000 }
     );
   });
 }
 
 const SYSTEM_PROMPT = `Bạn là chuyên gia tư vấn dịch vụ đám cưới tại Việt Nam với 20 năm kinh nghiệm thực tế.
-Bạn nắm rõ mức giá, thị trường, phong tục và đặc điểm của từng tỉnh thành trên khắp 3 miền Bắc - Trung - Nam.
+Bạn nắm rõ mức giá, thị trường, phong tục và đặc điểm chi tiết đến CẤP HUYỆN/QUẬN/THỊ XÃ của từng tỉnh thành trên khắp 3 miền Bắc - Trung - Nam.
+Bạn hiểu sự khác biệt giá giữa trung tâm thành phố và vùng huyện ngoại thành.
 Chỉ trả về JSON hợp lệ, không có markdown, không có text ngoài JSON.`;
 
 // --- HELPERS ---
@@ -128,14 +142,25 @@ function validateReport(parsed: any, province: string): void {
   if (!parsed.bestTimeToBook) parsed.bestTimeToBook = 'Nên đặt trước 3-6 tháng';
 }
 
+/** Build location label for display and prompts */
+function locationLabel(province: string, district?: string): string {
+  return district ? `${district}, ${province}` : province;
+}
+
 /** Build the prompt for a set of categories */
-function buildPrompt(province: string, categories: MarketCategory[]): string {
-  return `Cung cấp thông tin thị trường dịch vụ cưới tại "${province}" cho các danh mục sau:
+function buildPrompt(province: string, categories: MarketCategory[], district?: string): string {
+  const loc = locationLabel(province, district);
+  const districtNote = district
+    ? `\n- ĐÂY LÀ YÊU CẦU CẤP HUYỆN/QUẬN: Giá phải phản ánh chính xác mức giá tại "${district}" thuộc "${province}", KHÔNG dùng giá trung bình toàn tỉnh.\n- Nếu "${district}" là huyện ngoại thành / vùng nông thôn → giá thường THẤP HƠN trung tâm tỉnh.\n- Nếu "${district}" là quận nội thành / thị xã phát triển → giá có thể TƯƠNG ĐƯƠNG hoặc CAO HƠN.\n- Đề cập nhà cung cấp, studio, nhà hàng PHỔ BIẾN tại ${district} nếu biết.`
+    : '';
+
+  return `Cung cấp thông tin thị trường dịch vụ cưới CHI TIẾT tại "${loc}" cho các danh mục sau:
 ${categories.map(c => `- ${c.id}: ${c.label}`).join('\n')}
 
 Trả về JSON với cấu trúc CHÍNH XÁC sau (không thêm trường nào khác):
 {
   "province": "${province}",
+  "district": "${district || ''}",
   "region": "NORTH" | "CENTRAL" | "SOUTH",
   "economicLevel": "HIGH" | "MID" | "LOW",
   "generatedAt": "${new Date().toISOString()}",
@@ -144,31 +169,31 @@ Trả về JSON với cấu trúc CHÍNH XÁC sau (không thêm trường nào k
       "id": "string (khớp id danh mục)",
       "label": "string",
       "emoji": "string",
-      "summary": "string (2-3 câu mô tả đặc điểm thị trường tại ${province}, đề cập giá cả, số lượng nhà cung cấp, lưu ý đặc thù địa phương)",
-      "avgLow": number (VNĐ, mức giá thấp điển hình),
-      "avgHigh": number (VNĐ, mức giá cao điển hình),
+      "summary": "string (2-3 câu mô tả đặc điểm thị trường tại ${loc}, đề cập giá cả CỤ THỂ cho khu vực này, số lượng nhà cung cấp, lưu ý đặc thù địa phương)",
+      "avgLow": number (VNĐ, mức giá thấp điển hình TẠI ${loc}),
+      "avgHigh": number (VNĐ, mức giá cao điển hình TẠI ${loc}),
       "priceNote": "string (ghi chú đơn vị tính, ví dụ: 'triệu/cặp', 'triệu/bộ ảnh')",
       "items": [
         {
-          "name": "string (tên dịch vụ/sản phẩm cụ thể)",
+          "name": "string (tên dịch vụ/sản phẩm cụ thể, ưu tiên nhà cung cấp tại ${loc})",
           "priceRange": "string (ví dụ: '3-8 triệu')",
-          "description": "string (mô tả ngắn, đặc điểm)",
-          "tips": "string (mẹo tiết kiệm hoặc lưu ý khi chọn)"
+          "description": "string (mô tả ngắn, đặc điểm tại ${loc})",
+          "tips": "string (mẹo tiết kiệm hoặc lưu ý khi chọn tại ${loc})"
         }
       ],
       "budgetRecommendation": {
-        "estimatedCost": number (VNĐ, mức đề xuất cho cặp đôi trung bình tại ${province}),
-        "note": "string (giải thích cơ sở đề xuất)"
+        "estimatedCost": number (VNĐ, mức đề xuất cho cặp đôi trung bình tại ${loc}),
+        "note": "string (giải thích cơ sở đề xuất, so sánh với trung tâm tỉnh nếu là huyện)"
       },
       "budgetCategories": ["ví dụ: Trang Sức"]
     }
   ],
-  "generalTips": ["string (3-5 tips tổng quát về cưới hỏi tại ${province})"],
-  "bestTimeToBook": "string (thời điểm lý tưởng để đặt dịch vụ, thường bao nhiêu tháng trước đám cưới)"
+  "generalTips": ["string (3-5 tips tổng quát về cưới hỏi tại ${loc})"],
+  "bestTimeToBook": "string (thời điểm lý tưởng để đặt dịch vụ tại ${loc})"
 }
 
 Quan trọng:
-- Giá phản ánh thực tế tại ${province}, KHÔNG dùng giá TPHCM/Hà Nội nếu tỉnh khác
+- Giá phản ánh thực tế tại ${loc}, KHÔNG dùng giá chung toàn quốc${districtNote}
 - Mỗi section có 3-4 items cụ thể
 - avgLow và avgHigh là số nguyên VNĐ (ví dụ: 5000000 là 5 triệu)
 - budgetCategories cho mỗi section: ${categories.map(c => `"${c.id}" -> ${JSON.stringify(c.budgetCategories)}`).join(', ')}
@@ -181,14 +206,15 @@ const MAX_CATEGORIES_PER_BATCH = 5;
 export async function generateLocalMarketReport(
   province: string,
   selectedCategoryIds: string[],
-  user: UserProfile
+  user: UserProfile,
+  district?: string
 ): Promise<LocalMarketReport> {
   const categories = MARKET_CATEGORIES.filter(c => selectedCategoryIds.includes(c.id));
   if (!categories.length) throw new Error('Chưa chọn danh mục nào.');
 
   // If categories fit in one batch, call once
   if (categories.length <= MAX_CATEGORIES_PER_BATCH) {
-    return await fetchAndParse(province, categories, user);
+    return await fetchAndParse(province, categories, user, district);
   }
 
   // Split into batches to avoid output token overflow
@@ -201,7 +227,7 @@ export async function generateLocalMarketReport(
   let mergedReport: LocalMarketReport | null = null;
 
   for (const batch of batches) {
-    const partial = await fetchAndParse(province, batch, user);
+    const partial = await fetchAndParse(province, batch, user, district);
 
     if (!mergedReport) {
       mergedReport = partial;
@@ -218,13 +244,17 @@ export async function generateLocalMarketReport(
 async function fetchAndParse(
   province: string,
   categories: MarketCategory[],
-  user: UserProfile
+  user: UserProfile,
+  district?: string
 ): Promise<LocalMarketReport> {
-  const prompt = buildPrompt(province, categories);
+  const prompt = buildPrompt(province, categories, district);
   const raw = await generateAIContent(user, SYSTEM_PROMPT, prompt, true);
 
   const parsed = extractJSON(raw);
   validateReport(parsed, province);
+
+  // Ensure district is preserved
+  if (district && !parsed.district) parsed.district = district;
 
   // Enrich sections with budgetCategories from our mapping (in case AI omits)
   if (parsed.sections) {

@@ -8,7 +8,7 @@ import {
 import { useStore } from '../store/useStore';
 import {
   VIETNAM_PROVINCES, MARKET_CATEGORIES,
-  detectProvince, generateLocalMarketReport
+  detectLocation, generateLocalMarketReport
 } from '../services/localMarketService';
 import { LocalMarketReport, LocalMarketSection } from '../types';
 
@@ -172,8 +172,8 @@ interface Props {
 
 const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
   const {
-    user, localProvince, localMarketReport,
-    setLocalProvince, setLocalMarketReport,
+    user, localProvince, localDistrict, localMarketReport,
+    setLocalProvince, setLocalDistrict, setLocalMarketReport,
     budgetItems, updateBudgetItem, addNotification
   } = useStore();
 
@@ -186,10 +186,15 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
   const handleAutoDetect = useCallback(async () => {
     setIsDetecting(true);
     try {
-      const province = await detectProvince();
-      if (province) {
-        setLocalProvince(province);
-        addNotification('SUCCESS', `Đã xác định vị trí: ${province}`);
+      const location = await detectLocation();
+      if (location.province) {
+        setLocalProvince(location.province);
+        if (location.district) {
+          setLocalDistrict(location.district);
+          addNotification('SUCCESS', `Đã xác định vị trí: ${location.district}, ${location.province}`);
+        } else {
+          addNotification('SUCCESS', `Đã xác định vị trí: ${location.province}. Bạn có thể nhập quận/huyện thủ công.`);
+        }
       } else {
         addNotification('WARNING', 'Không thể xác định vị trí. Vui lòng chọn tỉnh/thành phố thủ công.');
       }
@@ -198,7 +203,7 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
     } finally {
       setIsDetecting(false);
     }
-  }, [setLocalProvince, addNotification]);
+  }, [setLocalProvince, setLocalDistrict, addNotification]);
 
   const handleGenerate = useCallback(async () => {
     if (!localProvince) { addNotification('WARNING', 'Vui lòng chọn tỉnh/thành phố.'); return; }
@@ -206,18 +211,18 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
     if (!user) { addNotification('ERROR', 'Vui lòng đăng nhập.'); return; }
 
     setIsGenerating(true);
-    // Don't clear existing report immediately — keep it visible during load
     try {
-      const newReport = await generateLocalMarketReport(localProvince, selectedCategories, user);
+      const newReport = await generateLocalMarketReport(localProvince, selectedCategories, user, localDistrict || undefined);
       setLocalMarketReport(newReport);
       setOpenSections([newReport.sections[0]?.id ?? '']);
-      addNotification('SUCCESS', `Đã tổng hợp & lưu dữ liệu thị trường ${localProvince}!`);
+      const locLabel = localDistrict ? `${localDistrict}, ${localProvince}` : localProvince;
+      addNotification('SUCCESS', `Đã tổng hợp & lưu dữ liệu thị trường ${locLabel}!`);
     } catch (err: any) {
       addNotification('ERROR', err.message || 'Lỗi tạo báo cáo. Vui lòng thử lại.');
     } finally {
       setIsGenerating(false);
     }
-  }, [localProvince, selectedCategories, user, setLocalMarketReport, addNotification]);
+  }, [localProvince, localDistrict, selectedCategories, user, setLocalMarketReport, addNotification]);
 
   const toggleSection = (id: string) =>
     setOpenSections(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -288,7 +293,7 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
           </button>
           <select
             value={localProvince}
-            onChange={e => setLocalProvince(e.target.value)}
+            onChange={e => { setLocalProvince(e.target.value); setLocalDistrict(''); }}
             title="Chọn tỉnh/thành phố"
             aria-label="Chọn tỉnh/thành phố"
             className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 text-gray-700"
@@ -299,10 +304,25 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
             ))}
           </select>
         </div>
+
+        {/* District input */}
+        {localProvince && (
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Quận / Huyện / Thị xã <span className="text-gray-400">(tùy chọn — cho kết quả chi tiết hơn)</span></label>
+            <input
+              type="text"
+              value={localDistrict}
+              onChange={e => setLocalDistrict(e.target.value)}
+              placeholder={`VD: Quận 1, Huyện Bình Chánh, TP. Thủ Đức...`}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 text-gray-700 placeholder-gray-400"
+            />
+          </div>
+        )}
+
         {localProvince && (
           <div className="mt-3 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Đã chọn: <strong>{localProvince}</strong></span>
+            <span>Đã chọn: <strong>{localDistrict ? `${localDistrict}, ${localProvince}` : localProvince}</strong></span>
           </div>
         )}
       </div>

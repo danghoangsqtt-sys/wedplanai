@@ -69,8 +69,10 @@ interface AppState {
 
   // Local Market Intelligence
   localProvince: string;
+  localDistrict: string;
   localMarketReport: LocalMarketReport | null;
   setLocalProvince: (province: string) => void;
+  setLocalDistrict: (district: string) => void;
   setLocalMarketReport: (report: LocalMarketReport | null) => void;
 
   // Actions
@@ -167,9 +169,11 @@ export const useStore = create<AppState>()(
       guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
       invitation: DEFAULT_INVITATION,
       localProvince: '',
+      localDistrict: '',
       localMarketReport: null,
 
       setLocalProvince: (province) => set({ localProvince: province }),
+      setLocalDistrict: (district) => set({ localDistrict: district }),
       setLocalMarketReport: (report) => set({ localMarketReport: report }),
 
       login: async (user) => {
@@ -497,6 +501,7 @@ export const useStore = create<AppState>()(
         users: state.users,
         guestUsage: state.guestUsage,
         localProvince: state.localProvince,
+        localDistrict: state.localDistrict,
         localMarketReport: state.localMarketReport,
       }),
     }
