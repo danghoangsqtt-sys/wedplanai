@@ -19,10 +19,15 @@ interface CurrencyInputProps {
 
 const CurrencyInput: React.FC<CurrencyInputProps> = ({ value, onChange, className, placeholder, autoFocus }) => {
    const [displayValue, setDisplayValue] = useState('');
+   const [isFocused, setIsFocused] = useState(false);
+   const pendingValue = React.useRef<number | null>(null);
 
+   // Only sync from prop when the input is NOT focused (avoids overwriting user's typing)
    useEffect(() => {
-      setDisplayValue(value === 0 ? '' : new Intl.NumberFormat('vi-VN').format(value));
-   }, [value]);
+      if (!isFocused) {
+         setDisplayValue(value === 0 ? '' : new Intl.NumberFormat('vi-VN').format(value));
+      }
+   }, [value, isFocused]);
 
    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const rawInput = e.target.value;
@@ -30,13 +35,26 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({ value, onChange, classNam
 
       if (!numericString) {
          setDisplayValue('');
-         onChange(0);
+         pendingValue.current = 0;
          return;
       }
 
       const numberValue = parseInt(numericString, 10);
       setDisplayValue(new Intl.NumberFormat('vi-VN').format(numberValue));
-      onChange(numberValue);
+      pendingValue.current = numberValue;
+   };
+
+   const handleFocus = () => {
+      setIsFocused(true);
+      pendingValue.current = null;
+   };
+
+   const handleBlur = () => {
+      setIsFocused(false);
+      if (pendingValue.current !== null) {
+         onChange(pendingValue.current);
+         pendingValue.current = null;
+      }
    };
 
    return (
@@ -45,6 +63,8 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({ value, onChange, classNam
          inputMode="numeric"
          value={displayValue}
          onChange={handleChange}
+         onFocus={handleFocus}
+         onBlur={handleBlur}
          className={className}
          placeholder={placeholder}
          autoFocus={autoFocus}
@@ -143,7 +163,7 @@ const DetailedBudgetPlanner: React.FC = () => {
          groups[item.category].subTotalAct += item.actualCost;
       });
 
-      return Object.entries(groups).sort(([, a], [, b]) => b.subTotalEst - a.subTotalEst);
+      return Object.entries(groups);
    }, [filteredItems]);
 
    const stats = useMemo(() => {
