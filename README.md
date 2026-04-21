@@ -1,8 +1,6 @@
 <div align="center">
   <img src="./picture/banner.jpg" alt="WedPlan AI Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px" />
-  
-  <img src="./picture/WEDPLAN AI.png" alt="WedPlan AI Logo" width="150" />
-  
+
   <h1>💍 WedPlan AI</h1>
   
   <p><strong>Nền tảng lập kế hoạch cưới hỏi thông minh tích hợp trí tuệ nhân tạo (AI)</strong></p>
