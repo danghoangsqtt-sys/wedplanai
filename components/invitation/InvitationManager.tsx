@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore';
 import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent } from '../../types';
 import InvitationPreview from './InvitationPreview';
 import {
-    Palette, MapPin, Calendar, Heart, QrCode, Download,
+    Palette, MapPin, Calendar, Heart, QrCode, Download, X,
     Save, Type, Image as ImageIcon, ExternalLink,
     ChevronDown, ChevronUp, Check, Music, Layers, Smartphone, Eye, Layout, Sparkles, Upload, Users, List, Plus, Trash2, Clock,
     Star, ToggleLeft, ToggleRight, BookOpen, Flower2, Feather, Timer
@@ -40,6 +40,7 @@ const InvitationManager: React.FC = () => {
     const { invitation, updateInvitation, user } = useStore();
     const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'LOVE_STORY' | null>('GENERAL');
     const [isExporting, setIsExporting] = useState(false);
+    const [showQRPanel, setShowQRPanel] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -756,81 +757,122 @@ const InvitationManager: React.FC = () => {
                     <span className="text-sm font-bold text-gray-500 flex items-center gap-2">
                         <Smartphone className="w-4 h-4" /> Xem trước giao diện điện thoại
                     </span>
-                    <span className="text-xs text-rose-500 font-medium px-3 py-1 bg-rose-50 rounded-full animate-pulse">
-                        Live Preview
-                    </span>
-                </div>
-
-                {/* Phone Container */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-start justify-center relative">
-                    {/* Phone Frame Mockup */}
-                    <div className="w-[375px] h-[812px] bg-black rounded-[3rem] border-[8px] border-black shadow-2xl overflow-hidden relative ring-4 ring-gray-300 shrink-0 my-auto">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-2xl z-50"></div>
-                        <div className="w-full h-full bg-white overflow-y-auto no-scrollbar">
-                            <InvitationPreview data={invitation} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* EXPORT QR CARD (Customized for Request) */}
-                <div className="absolute top-20 right-8 z-30 hidden xl:block animate-fade-in-left">
-                    <div className="bg-white p-4 rounded-2xl shadow-2xl border border-gray-100 w-80 backdrop-blur-xl bg-white/95">
-                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2"><Download className="w-4 h-4 text-rose-500" /> QR Check-in</h4>
-
-                        {/* --- THE CARD TO BE EXPORTED --- */}
-                        <div ref={qrRef} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 relative flex flex-col h-[400px]">
-                            {/* Image Background Header */}
-                            <div className="h-1/2 relative bg-gray-100 overflow-hidden">
-                                {invitation.couplePhoto ? (
-                                    <img
-                                        src={invitation.couplePhoto}
-                                        className="w-full h-full object-cover"
-                                        crossOrigin="anonymous" // IMPORTANT FOR HTML2CANVAS
-                                        alt="Cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-rose-100 text-rose-300"><Heart className="w-12 h-12 fill-current" /></div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2">
-                                    <p className="text-white font-bold text-xs uppercase tracking-widest text-shadow opacity-90">Save The Date</p>
-                                </div>
-                            </div>
-
-                            {/* QR Code Section */}
-                            <div className="h-1/2 bg-white flex flex-col items-center justify-center p-4 relative">
-                                {/* QR */}
-                                <div className="border-4 border-rose-500 rounded-lg p-1 mb-2 bg-white shadow-md -mt-12 relative z-10">
-                                    <img
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(publicLink)}&color=000000`}
-                                        alt="QR Code"
-                                        className="w-24 h-24 object-contain"
-                                        crossOrigin="anonymous"
-                                    />
-                                </div>
-
-                                {/* Text: NO NAMES, Just Generic Title as requested */}
-                                <h3 className="text-rose-600 font-bold text-lg uppercase tracking-wide mb-1">Thiệp Mời Cưới Online</h3>
-                                <p className="text-[10px] text-gray-400 mb-3">Quét mã để xem thiệp & gửi lời chúc</p>
-
-                                {/* Footer Ads */}
-                                <div className="mt-auto pt-2 border-t border-gray-100 w-full text-center">
-                                    <p className="text-[8px] text-gray-400 font-bold flex items-center justify-center gap-1">
-                                        <Sparkles className="w-2 h-2 text-rose-500" /> wedplanai.io.vn
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        {/* ------------------------------- */}
-
+                    <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={handleDownloadQR}
-                            disabled={isExporting}
-                            className="w-full mt-4 bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                            onClick={() => setShowQRPanel(prev => !prev)}
+                            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-all ${showQRPanel ? 'bg-rose-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-rose-50 hover:text-rose-600'}`}
                         >
-                            {isExporting ? "Đang xử lý..." : "Tải ảnh QR về máy"}
+                            <Download className="w-3.5 h-3.5" />
+                            QR Check-in
                         </button>
+                        <span className="text-xs text-rose-500 font-medium px-3 py-1 bg-rose-50 rounded-full animate-pulse">
+                            Live Preview
+                        </span>
                     </div>
+                </div>
+
+                {/* Main content area: Phone + optional QR panel side by side */}
+                <div className="flex-1 overflow-y-auto flex relative">
+                    {/* Phone Container */}
+                    <div className={`flex-1 p-4 md:p-8 flex items-start justify-center transition-all duration-300 ${showQRPanel ? 'xl:mr-0' : ''}`}>
+                        {/* Phone Frame Mockup */}
+                        <div className="w-[375px] h-[812px] bg-black rounded-[3rem] border-[8px] border-black shadow-2xl overflow-hidden relative ring-4 ring-gray-300 shrink-0 my-auto">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-2xl z-50"></div>
+                            <div className="w-full h-full bg-white overflow-y-auto no-scrollbar">
+                                <InvitationPreview data={invitation} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* QR Panel - slides in from right */}
+                    {showQRPanel && (
+                        <div className="hidden xl:flex w-[320px] flex-shrink-0 bg-white border-l border-gray-200 flex-col animate-fadeIn overflow-y-auto">
+                            <div className="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                                <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <Download className="w-4 h-4 text-rose-500" /> QR Check-in
+                                </h4>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowQRPanel(false)}
+                                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                    aria-label="Đóng"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="p-4">
+                                {/* --- THE CARD TO BE EXPORTED --- */}
+                                <div ref={qrRef} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 relative flex flex-col h-[400px]">
+                                    {/* Image Background Header */}
+                                    <div className="h-1/2 relative bg-gray-100 overflow-hidden">
+                                        {invitation.couplePhoto ? (
+                                            <img
+                                                src={invitation.couplePhoto}
+                                                className="w-full h-full object-cover"
+                                                crossOrigin="anonymous"
+                                                alt="Cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-rose-100 text-rose-300"><Heart className="w-12 h-12 fill-current" /></div>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2">
+                                            <p className="text-white font-bold text-xs uppercase tracking-widest text-shadow opacity-90">Save The Date</p>
+                                        </div>
+                                    </div>
+
+                                    {/* QR Code Section */}
+                                    <div className="h-1/2 bg-white flex flex-col items-center justify-center p-4 relative">
+                                        <div className="border-4 border-rose-500 rounded-lg p-1 mb-2 bg-white shadow-md -mt-12 relative z-10">
+                                            <img
+                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(publicLink)}&color=000000`}
+                                                alt="QR Code"
+                                                className="w-24 h-24 object-contain"
+                                                crossOrigin="anonymous"
+                                            />
+                                        </div>
+                                        <h3 className="text-rose-600 font-bold text-lg uppercase tracking-wide mb-1">Thiệp Mời Cưới Online</h3>
+                                        <p className="text-[10px] text-gray-400 mb-3">Quét mã để xem thiệp & gửi lời chúc</p>
+                                        <div className="mt-auto pt-2 border-t border-gray-100 w-full text-center">
+                                            <p className="text-[8px] text-gray-400 font-bold flex items-center justify-center gap-1">
+                                                <Sparkles className="w-2 h-2 text-rose-500" /> wedplanai.io.vn
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadQR}
+                                    disabled={isExporting}
+                                    className="w-full mt-4 bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                                >
+                                    {isExporting ? "Đang xử lý..." : "Tải ảnh QR về máy"}
+                                </button>
+
+                                {/* Public link copy */}
+                                <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase mb-1.5">Link thiệp cưới</p>
+                                    <div className="flex gap-1.5">
+                                        <input
+                                            readOnly
+                                            value={publicLink}
+                                            className="flex-1 text-[11px] bg-white border border-gray-200 rounded-lg px-2.5 py-2 text-blue-600 font-mono truncate outline-none"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => { navigator.clipboard.writeText(publicLink); }}
+                                            className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:text-rose-500 hover:border-rose-300 transition-colors text-xs font-bold"
+                                            title="Sao chép link"
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
