@@ -206,13 +206,12 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
     if (!user) { addNotification('ERROR', 'Vui lòng đăng nhập.'); return; }
 
     setIsGenerating(true);
-    setLocalMarketReport(null);
-    setOpenSections([]);
+    // Don't clear existing report immediately — keep it visible during load
     try {
-      const report = await generateLocalMarketReport(localProvince, selectedCategories, user);
-      setLocalMarketReport(report);
-      setOpenSections([report.sections[0]?.id ?? '']);
-      addNotification('SUCCESS', `Đã tổng hợp dữ liệu thị trường ${localProvince}!`);
+      const newReport = await generateLocalMarketReport(localProvince, selectedCategories, user);
+      setLocalMarketReport(newReport);
+      setOpenSections([newReport.sections[0]?.id ?? '']);
+      addNotification('SUCCESS', `Đã tổng hợp & lưu dữ liệu thị trường ${localProvince}!`);
     } catch (err: any) {
       addNotification('ERROR', err.message || 'Lỗi tạo báo cáo. Vui lòng thử lại.');
     } finally {
@@ -374,7 +373,16 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
 
       {/* Report */}
       {report && (
-        <>
+        <div className={`relative space-y-3 transition-opacity duration-300 ${isGenerating ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+          {isGenerating && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl">
+              <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+              <p className="text-sm font-semibold text-rose-600 animate-pulse bg-white/90 px-4 py-2 rounded-xl shadow">
+                Đang cập nhật dữ liệu thị trường {localProvince}...
+              </p>
+            </div>
+          )}
+          <>
           {/* Overview */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
@@ -383,17 +391,23 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
                   <BarChart3 className="inline w-5 h-5 mr-2 text-rose-500" />
                   Báo cáo thị trường: {report.province}
                 </h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  Tổng hợp lúc {new Date(report.generatedAt).toLocaleString('vi-VN')}
-                </p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <p className="text-xs text-gray-400">
+                    Tổng hợp lúc {new Date(report.generatedAt).toLocaleString('vi-VN')}
+                  </p>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-bold border border-emerald-100">
+                    ✓ Đã lưu cục bộ
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={handleGenerate}
+                disabled={isGenerating}
                 title="Cập nhật lại"
-                className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-30"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
               </button>
             </div>
 
@@ -483,7 +497,8 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
               )}
             </div>
           </div>
-        </>
+          </>
+        </div>
       )}
 
       {/* Empty state */}

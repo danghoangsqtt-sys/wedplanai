@@ -112,7 +112,7 @@ Trả về JSON với cấu trúc CHÍNH XÁC sau (không thêm trường nào k
         "estimatedCost": number (VNĐ, mức đề xuất cho cặp đôi trung bình tại ${province}),
         "note": "string (giải thích cơ sở đề xuất)"
       },
-      "budgetCategories": ${JSON.stringify(categories.find(c => c.id === 'placeholder')?.budgetCategories || [])}
+      "budgetCategories": ["ví dụ: Trang Sức"]
     }
   ],
   "generalTips": ["string (3-5 tips tổng quát về cưới hỏi tại ${province})"],
@@ -129,10 +129,16 @@ Quan trọng:
   const raw = await generateAIContent(user, SYSTEM_PROMPT, prompt, true);
   let parsed: any;
   try {
-    const text = (raw || '').trim();
+    let text = (raw || '').trim();
+    // Strip markdown code fences if the model included them despite JSON mode
+    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    // Strip any leading non-JSON characters (thinking tokens, etc.)
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) text = text.slice(jsonStart, jsonEnd + 1);
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('Dữ liệu từ AI không hợp lệ. Vui lòng thử lại.');
+    throw new Error('Dữ liệu từ AI không hợp lệ (JSON parse thất bại). Thử giảm số danh mục hoặc thử lại.');
   }
 
   // Enrich sections with budgetCategories from our mapping (in case AI omits)

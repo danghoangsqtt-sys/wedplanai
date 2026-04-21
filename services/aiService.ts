@@ -24,7 +24,7 @@ const callGeminiDirect = async (systemPrompt: string, userMessage: string, isJso
         responseMimeType: isJson ? "application/json" : "text/plain",
         temperature: isJson ? 0.3 : 0.85,
         topP: 0.95,
-        maxOutputTokens: 4096,
+        maxOutputTokens: isJson ? 16384 : 4096,
       }
     });
 

@@ -480,7 +480,9 @@ export const useStore = create<AppState>()(
         fengShuiResults: state.fengShuiResults,
         invitation: state.invitation,
         users: state.users,
-        guestUsage: state.guestUsage
+        guestUsage: state.guestUsage,
+        localProvince: state.localProvince,
+        localMarketReport: state.localMarketReport,
       }),
     }
   )
