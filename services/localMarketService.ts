@@ -177,6 +177,7 @@ Trả về JSON với cấu trúc CHÍNH XÁC sau (không thêm trường nào k
         {
           "name": "string (tên dịch vụ/sản phẩm cụ thể, ưu tiên nhà cung cấp tại ${loc})",
           "priceRange": "string (ví dụ: '3-8 triệu')",
+          "estimatedCost": number (VNĐ, giá ước tính trung bình cho mục này, ví dụ 5500000),
           "description": "string (mô tả ngắn, đặc điểm tại ${loc})",
           "tips": "string (mẹo tiết kiệm hoặc lưu ý khi chọn tại ${loc})"
         }
@@ -194,8 +195,9 @@ Trả về JSON với cấu trúc CHÍNH XÁC sau (không thêm trường nào k
 
 Quan trọng:
 - Giá phản ánh thực tế tại ${loc}, KHÔNG dùng giá chung toàn quốc${districtNote}
-- Mỗi section có 3-4 items cụ thể
+- Mỗi section có 3-5 items cụ thể
 - avgLow và avgHigh là số nguyên VNĐ (ví dụ: 5000000 là 5 triệu)
+- Mỗi item PHẢI có "estimatedCost" là số nguyên VNĐ (giá trung bình ước tính). Tổng estimatedCost các items trong 1 section nên xấp xỉ bằng budgetRecommendation.estimatedCost
 - budgetCategories cho mỗi section: ${categories.map(c => `"${c.id}" -> ${JSON.stringify(c.budgetCategories)}`).join(', ')}
 - Đưa section "budgetCategories" đúng với mapping trên cho mỗi section`;
 }

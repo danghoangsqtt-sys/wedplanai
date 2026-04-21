@@ -10,7 +10,7 @@ import {
   VIETNAM_PROVINCES, MARKET_CATEGORIES,
   detectLocation, generateLocalMarketReport
 } from '../services/localMarketService';
-import { LocalMarketReport, LocalMarketSection } from '../types';
+import { LocalMarketReport, LocalMarketSection, TaskStatus } from '../types';
 
 const fmt = (n: number) => {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)} tỷ`;
@@ -92,20 +92,52 @@ const SectionCard: React.FC<{ section: LocalMarketSection; isOpen: boolean; onTo
 const BudgetApplyModal: React.FC<{
   report: LocalMarketReport;
   onClose: () => void;
-  onApply: (sectionIds: string[]) => void;
+  onApply: (sectionIds: string[], mode: 'detail' | 'total') => void;
 }> = ({ report, onClose, onApply }) => {
   const [selected, setSelected] = useState<string[]>(report.sections.map(s => s.id));
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [mode, setMode] = useState<'detail' | 'total'>('detail');
   const { budgetItems } = useStore();
 
   const toggle = (id: string) =>
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
+  const totalItems = report.sections
+    .filter(s => selected.includes(s.id))
+    .reduce((sum, s) => sum + s.items.length, 0);
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
         <div className="p-5 border-b border-gray-100">
           <h3 className="font-bold text-gray-900 text-lg">Áp dụng giá địa phương vào Ngân sách</h3>
-          <p className="text-sm text-gray-500 mt-1">Chọn danh mục muốn cập nhật ước tính theo mức giá tại <strong>{report.province}</strong></p>
+          <p className="text-sm text-gray-500 mt-1">Chọn danh mục muốn cập nhật theo mức giá tại <strong>{report.province}</strong></p>
+
+          {/* Mode toggle */}
+          <div className="flex gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => setMode('detail')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                mode === 'detail'
+                  ? 'bg-rose-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              📋 Tạo chi tiết từng mục
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('total')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                mode === 'total'
+                  ? 'bg-rose-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              💰 Chỉ cập nhật tổng
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-2">
@@ -114,49 +146,85 @@ const BudgetApplyModal: React.FC<{
               .filter(b => section.budgetCategories.includes(b.category))
               .reduce((sum, b) => sum + b.estimatedCost, 0);
             const recommended = section.budgetRecommendation.estimatedCost;
-            const diff = recommended - currentTotal;
             const isSelected = selected.includes(section.id);
+            const isExpanded = expandedSection === section.id;
 
             return (
-              <label key={section.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'border-rose-300 bg-rose-50' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggle(section.id)}
-                  className="w-4 h-4 accent-rose-500 flex-shrink-0"
-                />
-                <span className="text-xl flex-shrink-0">{section.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{section.label}</p>
-                  <div className="flex items-center gap-2 text-xs mt-0.5">
-                    <span className="text-gray-400">Hiện: {currentTotal > 0 ? fmt(currentTotal) : 'Chưa có'}</span>
-                    <ArrowRight className="w-3 h-3 text-gray-300" />
-                    <span className="text-rose-600 font-bold">{fmt(recommended)}</span>
-                    {diff !== 0 && currentTotal > 0 && (
-                      <span className={`font-semibold ${diff > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                        ({diff > 0 ? '+' : ''}{fmt(diff)})
-                      </span>
-                    )}
+              <div key={section.id} className={`rounded-xl border transition-all ${
+                isSelected ? 'border-rose-300 bg-rose-50/50' : 'border-gray-100 bg-gray-50 opacity-60'
+              }`}>
+                <label className="flex items-center gap-3 p-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggle(section.id)}
+                    className="w-4 h-4 accent-rose-500 flex-shrink-0"
+                  />
+                  <span className="text-xl flex-shrink-0">{section.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{section.label}</p>
+                    <div className="flex items-center gap-2 text-xs mt-0.5">
+                      <span className="text-gray-400">Hiện: {currentTotal > 0 ? fmt(currentTotal) : 'Chưa có'}</span>
+                      <ArrowRight className="w-3 h-3 text-gray-300" />
+                      <span className="text-rose-600 font-bold">{fmt(recommended)}</span>
+                      {mode === 'detail' && (
+                        <span className="text-gray-400">({section.items.length} mục)</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </label>
+                  {mode === 'detail' && isSelected && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExpandedSection(isExpanded ? null : section.id); }}
+                      className="p-1 rounded-lg hover:bg-rose-100 text-gray-400 hover:text-rose-600 transition-colors"
+                    >
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                  )}
+                </label>
+
+                {/* Expanded sub-items preview */}
+                {mode === 'detail' && isExpanded && isSelected && (
+                  <div className="px-3 pb-3 pt-1 border-t border-rose-100 space-y-1.5">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Sẽ tạo các mục ngân sách:</p>
+                    {section.items.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-gray-800 truncate">{item.name}</p>
+                          <p className="text-[10px] text-gray-400 truncate">{item.description}</p>
+                        </div>
+                        <span className="text-xs font-bold text-rose-600 flex-shrink-0 ml-2">
+                          {item.estimatedCost ? fmt(item.estimatedCost) : item.priceRange}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
 
-        <div className="p-5 border-t border-gray-100 flex gap-3">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
-            Hủy
-          </button>
-          <button
-            type="button"
-            onClick={() => onApply(selected)}
-            disabled={selected.length === 0}
-            className="flex-1 py-2.5 rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Áp dụng {selected.length} danh mục
-          </button>
+        <div className="p-5 border-t border-gray-100">
+          <p className="text-xs text-gray-400 mb-3 text-center">
+            {mode === 'detail'
+              ? `Sẽ tạo ${totalItems} mục ngân sách chi tiết từ ${selected.length} danh mục`
+              : `Sẽ cập nhật tổng cho ${selected.length} danh mục`}
+          </p>
+          <div className="flex gap-3">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={() => onApply(selected, mode)}
+              disabled={selected.length === 0}
+              className="flex-1 py-2.5 rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {mode === 'detail' ? `Tạo ${totalItems} mục` : `Cập nhật ${selected.length} danh mục`}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -174,7 +242,7 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
   const {
     user, localProvince, localDistrict, localMarketReport,
     setLocalProvince, setLocalDistrict, setLocalMarketReport,
-    budgetItems, updateBudgetItem, addNotification
+    budgetItems, setBudgetItems, updateBudgetItem, addNotification
   } = useStore();
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>(MARKET_CATEGORIES.map(c => c.id));
@@ -230,35 +298,103 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
   const toggleCategory = (id: string) =>
     setSelectedCategories(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-  const handleApplyBudget = useCallback((sectionIds: string[]) => {
+  const handleApplyBudget = useCallback((sectionIds: string[], mode: 'detail' | 'total') => {
     if (!localMarketReport) return;
+    let createdCount = 0;
     let updatedCount = 0;
+    const newItems: any[] = []; // Collect new items for bulk add
 
     for (const sid of sectionIds) {
       const section = localMarketReport.sections.find(s => s.id === sid);
       if (!section) continue;
-      const recommended = section.budgetRecommendation.estimatedCost;
-      const matchingItems = budgetItems.filter(b => section.budgetCategories.includes(b.category));
-      if (!matchingItems.length) continue;
 
-      const currentTotal = matchingItems.reduce((sum, b) => sum + b.estimatedCost, 0);
-      if (currentTotal === 0) {
-        // Just update the first item
-        updateBudgetItem(matchingItems[0].id, 'estimatedCost', recommended);
-      } else {
-        // Scale each item proportionally
-        const ratio = recommended / currentTotal;
-        for (const item of matchingItems) {
-          updateBudgetItem(item.id, 'estimatedCost', Math.round(item.estimatedCost * ratio));
+      if (mode === 'detail') {
+        // --- DETAIL MODE: Create individual budget items for each sub-item ---
+        const category = section.budgetCategories[0] || section.label;
+        const sectionTotal = section.budgetRecommendation.estimatedCost;
+
+        // Parse price from "15-40 triệu" → average in VNĐ
+        const parseCost = (range: string): number => {
+          const nums = range.match(/[\d.,]+/g);
+          if (!nums || nums.length === 0) return 0;
+          const values = nums.map(n => parseFloat(n.replace(/,/g, '')));
+          const avg = values.reduce((a, b) => a + b, 0) / values.length;
+          if (/tỷ/i.test(range)) return Math.round(avg * 1_000_000_000);
+          if (/triệu/i.test(range)) return Math.round(avg * 1_000_000);
+          if (/ngàn|nghìn|k\b/i.test(range)) return Math.round(avg * 1_000);
+          return avg >= 1000 ? Math.round(avg) : Math.round(avg * 1_000_000); // default triệu
+        };
+
+        for (const item of section.items) {
+          // Fallback chain: estimatedCost → parse priceRange → distribute total evenly
+          let cost = item.estimatedCost || 0;
+          if (cost <= 0) cost = parseCost(item.priceRange);
+          if (cost <= 0) cost = Math.round(sectionTotal / Math.max(section.items.length, 1));
+          if (cost <= 0) continue;
+
+          // Check if a similar item already exists (by name match)
+          const existing = budgetItems.find(
+            b => b.category === category && b.itemName.toLowerCase().includes(item.name.toLowerCase().slice(0, 10))
+          );
+
+          if (existing) {
+            // Update existing item's cost and note
+            updateBudgetItem(existing.id, 'estimatedCost', cost);
+            updateBudgetItem(existing.id, 'note',
+              `${item.description}${item.tips ? ' · Tip: ' + item.tips : ''} (Giá ${localMarketReport.province}: ${item.priceRange})`
+            );
+            updatedCount++;
+          } else {
+            // Create new budget item
+            const newItem = {
+              id: `market_${sid}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              category,
+              itemName: item.name,
+              assignee: '',
+              side: 'BOTH' as const,
+              status: TaskStatus.PENDING,
+              estimatedCost: cost,
+              actualCost: 0,
+              note: `${item.description}${item.tips ? ' · Tip: ' + item.tips : ''} (Giá ${localMarketReport.province}: ${item.priceRange})`,
+            };
+            addBudgetItem(newItem);
+            createdCount++;
+          }
         }
+      } else {
+        // --- TOTAL MODE: Scale existing items proportionally (legacy behavior) ---
+        const recommended = section.budgetRecommendation.estimatedCost;
+        const matchingItems = budgetItems.filter(b => section.budgetCategories.includes(b.category));
+        if (!matchingItems.length) continue;
+
+        const currentTotal = matchingItems.reduce((sum, b) => sum + b.estimatedCost, 0);
+        if (currentTotal === 0) {
+          updateBudgetItem(matchingItems[0].id, 'estimatedCost', recommended);
+          updateBudgetItem(matchingItems[0].id, 'note',
+            `${section.budgetRecommendation.note} (Giá ${localMarketReport.province})`
+          );
+        } else {
+          const ratio = recommended / currentTotal;
+          for (const item of matchingItems) {
+            updateBudgetItem(item.id, 'estimatedCost', Math.round(item.estimatedCost * ratio));
+          }
+        }
+        updatedCount++;
       }
-      updatedCount++;
+    }
+
+    // Bulk add all new items at once (no per-item notification)
+    if (newItems.length > 0) {
+      setBudgetItems([...budgetItems, ...newItems]);
     }
 
     setShowBudgetModal(false);
-    addNotification('SUCCESS', `Đã cập nhật ${updatedCount} danh mục ngân sách theo giá ${localMarketReport.province}.`);
-    if (updatedCount > 0) onNavigateBudget?.();
-  }, [localMarketReport, budgetItems, updateBudgetItem, addNotification, onNavigateBudget]);
+    const parts: string[] = [];
+    if (createdCount > 0) parts.push(`tạo ${createdCount} mục mới`);
+    if (updatedCount > 0) parts.push(`cập nhật ${updatedCount} mục`);
+    addNotification('SUCCESS', `Đã ${parts.join(' và ')} theo giá ${localMarketReport.province}.`);
+    if ((createdCount + updatedCount) > 0) onNavigateBudget?.();
+  }, [localMarketReport, budgetItems, setBudgetItems, updateBudgetItem, addNotification, onNavigateBudget]);
 
   const report = localMarketReport;
 

@@ -16,6 +16,7 @@ export interface Guest {
   id: string;
   name: string;
   group: GuestGroup;
+  address?: string;
   probability: AttendanceProbability;
   childrenCount: number;
   redEnvelope: number; // Tiền mừng dự kiến (VNĐ)
@@ -30,6 +31,16 @@ export enum TaskStatus {
 
 export type WeddingSide = 'GROOM' | 'BRIDE' | 'BOTH';
 
+export enum TimelinePhase {
+  P_12M = 'T-12 Tháng',
+  P_6M = 'T-6 Tháng',
+  P_3M = 'T-3 Tháng',
+  P_1M = 'T-1 Tháng',
+  P_1W = 'T-1 Tuần',
+  P_0D = 'Ngày Cưới',
+  P_POST = 'Sau Cưới'
+}
+
 export interface BudgetItem {
   id: string;
   category: string; // e.g., "Lễ Hỏi", "Trang Trí", "Tiệc Cưới"
@@ -42,6 +53,8 @@ export interface BudgetItem {
   estimatedCost: number;
   actualCost: number;
   note?: string;
+  phaseId?: TimelinePhase;
+  aiHint?: string;
 }
 
 export interface DashboardStats {
@@ -207,6 +220,7 @@ export interface InvitationData {
 export interface LocalMarketItem {
   name: string;
   priceRange: string;
+  estimatedCost: number; // VNĐ — giá ước tính trung bình cho sub-item này
   description: string;
   tips?: string;
 }

@@ -9,6 +9,7 @@ import { checkGuestIPLimit, incrementGuestIPUsage } from '../services/cloudServi
 interface AIAdvisorProps {
   stats: DashboardStats;
   isRestricted?: boolean;
+  hideHeader?: boolean;
 }
 
 interface Message {
@@ -27,7 +28,7 @@ const SUGGESTED_QUESTIONS = [
 
 const MAX_GUEST_CHATS = 5;
 
-const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats, isRestricted = false }) => {
+const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats, isRestricted = false, hideHeader = false }) => {
   const { user, settings, guestUsage, incrementGuestAiChat } = useStore();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -121,7 +122,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats, isRestricted = false }) =>
     <div className="bg-white rounded-2xl shadow-sm border border-rose-100 flex flex-col h-[600px] overflow-hidden relative">
 
       {/* 1. Header */}
-      <div className="p-4 border-b border-rose-50 bg-gradient-to-r from-white to-rose-50/30 flex items-center justify-between flex-shrink-0 z-10">
+      {!hideHeader && <div className="p-4 border-b border-rose-50 bg-gradient-to-r from-white to-rose-50/30 flex items-center justify-between flex-shrink-0 z-10">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-rose-500 to-pink-600 p-2 rounded-xl shadow-md text-white">
             <Bot className="w-5 h-5" />
@@ -147,7 +148,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats, isRestricted = false }) =>
         >
           <RefreshCw className="w-4 h-4" />
         </button>
-      </div>
+      </div>}
 
       {/* 2. Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50 scroll-smooth relative">

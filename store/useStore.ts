@@ -153,21 +153,23 @@ const getEffectiveUidFromState = (state: AppState): string | null => {
 };
 
 const triggerCloudSync = (get: () => AppState) => {
-  const state = get();
-  const effectiveUid = getEffectiveUidFromState(state);
-  if (state.user?.enableCloudStorage && effectiveUid) {
-    clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(() => {
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    // Re-read state at save time to capture all mutations within the debounce window
+    const state = get();
+    const effectiveUid = getEffectiveUidFromState(state);
+    if (state.user?.enableCloudStorage && effectiveUid) {
       saveUserDataToCloud(effectiveUid, {
         guests: state.guests,
         budgetItems: state.budgetItems,
         procedures: state.procedures,
         fengShuiProfile: state.fengShuiProfile || undefined,
         fengShuiResults: state.fengShuiResults || undefined,
-        invitation: state.invitation
+        invitation: state.invitation,
+        weddingDate: state.user?.weddingDate || null,
       });
-    }, 2000); // Debounce 2s
-  }
+    }
+  }, 2000); // Debounce 2s
 };
 
 export const useStore = create<AppState>()(
@@ -221,6 +223,8 @@ export const useStore = create<AppState>()(
           const effectiveUid = getEffectiveUidFromState(get());
           const cloudData = await loadUserDataFromCloud(effectiveUid || user.uid);
           if (cloudData) {
+            // If partner in shared plan, also load owner's weddingDate
+            const isPartner = get().sharedPlan?.status === 'active' && !get().isSharedPlanOwner;
             set({
               guests: cloudData.guests,
               budgetItems: cloudData.budgetItems,
@@ -228,7 +232,10 @@ export const useStore = create<AppState>()(
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
               invitation: cloudData.invitation || DEFAULT_INVITATION,
-              isSyncing: false
+              isSyncing: false,
+              ...(isPartner && cloudData.weddingDate ? {
+                user: { ...get().user!, weddingDate: cloudData.weddingDate }
+              } : {})
             });
             const shared = get().sharedPlan;
             if (shared?.status === 'active') {
@@ -573,6 +580,10 @@ export const useStore = create<AppState>()(
                 fengShuiProfile: cloudData.fengShuiProfile || null,
                 fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
                 invitation: cloudData.invitation || DEFAULT_INVITATION,
+                // Sync owner's weddingDate for countdown/timeline
+                ...(cloudData.weddingDate ? {
+                  user: { ...get().user!, weddingDate: cloudData.weddingDate }
+                } : {})
               });
             }
           }
@@ -629,7 +640,7 @@ export const useStore = create<AppState>()(
       },
 
       pollSharedData: async () => {
-        const { sharedPlan, user } = get();
+        const { sharedPlan, user, isSharedPlanOwner } = get();
         if (!sharedPlan || sharedPlan.status !== 'active' || !user?.enableCloudStorage) return;
         try {
           const effectiveUid = getEffectiveUidFromState(get());
@@ -643,16 +654,29 @@ export const useStore = create<AppState>()(
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
               invitation: cloudData.invitation || DEFAULT_INVITATION,
+              // Sync owner's weddingDate for partner
+              ...(!isSharedPlanOwner && cloudData.weddingDate ? {
+                user: { ...get().user!, weddingDate: cloudData.weddingDate }
+              } : {})
             });
           }
-        } catch {
-          // Silent polling error
+        } catch (e) {
+          console.error('Shared plan polling error:', e);
         }
       },
 
       addNotification: (type, message, duration = 3000) => {
-        const id = Date.now().toString();
-        set((state) => ({ notifications: [...state.notifications, { id, type, message, duration }] }));
+        const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+        // Deduplicate: skip if same message already visible
+        const existing = get().notifications;
+        if (existing.some(n => n.message === message)) return;
+
+        // Limit max visible notifications to 5 (remove oldest)
+        const MAX_VISIBLE = 5;
+        const trimmed = existing.length >= MAX_VISIBLE ? existing.slice(existing.length - MAX_VISIBLE + 1) : existing;
+
+        set({ notifications: [...trimmed, { id, type, message, duration }] });
         if (duration > 0) {
           setTimeout(() => {
             get().removeNotification(id);

@@ -12,6 +12,7 @@ export interface UserCloudData {
     dates: AuspiciousDate[];
   };
   invitation?: InvitationData;
+  weddingDate?: string | null; // Owner's wedding date for shared plan partners
   lastUpdated: number;
 }
 
@@ -63,6 +64,7 @@ export const saveUserDataToCloud = async (
         fengshui_json: JSON.stringify(data.fengShuiProfile ?? null),
         results_json: JSON.stringify(data.fengShuiResults ?? { harmony: null, dates: [] }),
         invitation_json: JSON.stringify(data.invitation ?? {}),
+        weddingDate: data.weddingDate || '',
         lastUpdated: Date.now(),
       },
       [
@@ -91,16 +93,27 @@ export const saveUserDataToCloud = async (
   }
 };
 
+function safeJsonParse<T>(json: string | undefined | null, fallback: T): T {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json) ?? fallback;
+  } catch {
+    console.warn('Failed to parse JSON from cloud, using fallback:', json?.slice(0, 80));
+    return fallback;
+  }
+}
+
 export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData | null> => {
   try {
     const doc = await databases.getDocument(DB_ID, COLLECTIONS.USER_DATA, uid);
     return {
-      guests: JSON.parse(doc.guests_json || '[]'),
-      budgetItems: JSON.parse(doc.budget_json || '[]'),
-      procedures: JSON.parse(doc.procedures_json || 'null') ?? undefined,
-      fengShuiProfile: JSON.parse(doc.fengshui_json || 'null') ?? undefined,
-      fengShuiResults: JSON.parse(doc.results_json || 'null') ?? undefined,
-      invitation: JSON.parse(doc.invitation_json || 'null') ?? undefined,
+      guests: safeJsonParse(doc.guests_json, []),
+      budgetItems: safeJsonParse(doc.budget_json, []),
+      procedures: safeJsonParse(doc.procedures_json, undefined),
+      fengShuiProfile: safeJsonParse(doc.fengshui_json, undefined),
+      fengShuiResults: safeJsonParse(doc.results_json, undefined),
+      invitation: safeJsonParse(doc.invitation_json, undefined),
+      weddingDate: doc.weddingDate || null,
       lastUpdated: doc.lastUpdated,
     };
   } catch (e: any) {

@@ -63,11 +63,17 @@ export async function createShareInvite(owner: UserProfile): Promise<SharedPlan>
 
 // --- JOIN PLAN ---
 
+const SHARE_CODE_PATTERN = /^WED-[A-Z2-9]{4}$/;
+
 export async function joinPlanByCode(
   code: string,
   partner: UserProfile
 ): Promise<SharedPlan> {
   const normalizedCode = code.trim().toUpperCase();
+
+  if (!SHARE_CODE_PATTERN.test(normalizedCode)) {
+    throw new Error('Mã mời không hợp lệ. Định dạng đúng: WED-XXXX (4 ký tự chữ/số).');
+  }
 
   // Find the plan share document by code
   const result = await databases.listDocuments(
@@ -190,7 +196,7 @@ export async function revokeShare(planId: string): Promise<void> {
   );
 }
 
-export async function leavePlan(planId: string, partnerUid: string, ownerUid: string): Promise<void> {
+export async function leavePlan(planId: string, _partnerUid: string, ownerUid: string): Promise<void> {
   // Remove partner from plan
   await databases.updateDocument(
     DB_ID,

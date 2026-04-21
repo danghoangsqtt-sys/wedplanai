@@ -2,11 +2,15 @@
 import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { AttendanceProbability, DashboardStats, TaskStatus } from './types';
 import LoginPage from './components/auth/LoginPage';
-import Sidebar from './components/layout/Sidebar';
-import Dashboard from './components/Dashboard';
+import SideNav from './components/layout/SideNav';
+import TopBar from './components/layout/TopBar';
+import BottomNav from './components/layout/BottomNav';
+import CommandCenter from './components/CommandCenter';
+import AIFloatingChat from './components/AIFloatingChat';
+import WelcomeOnboarding from './components/WelcomeOnboarding';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
-import { Menu, LogIn, AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import { logAppVisit, getUserPublicProfile, syncUserProfile } from './services/cloudService';
 import { account } from './lib/appwrite';
 import { UserProfile } from './types';
@@ -32,7 +36,6 @@ const lazyWithRetry = (componentImport: () => Promise<any>) =>
 
 // --- Lazy-loaded components for code splitting ---
 const GuestManager = lazyWithRetry(() => import('./components/GuestManager'));
-const AIAdvisor = lazyWithRetry(() => import('./components/AIAdvisor'));
 const DetailedBudgetPlanner = lazyWithRetry(() => import('./components/DetailedBudgetPlanner'));
 const UserManagement = lazyWithRetry(() => import('./components/admin/UserManagement'));
 const ProcessGuide = lazyWithRetry(() => import('./components/ProcessGuide'));
@@ -99,12 +102,11 @@ class ErrorBoundary extends React.Component<
 export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
 function App() {
-  const { user, settings, guests, budgetItems, isSyncing, refreshUserProfile, addNotification, login, logout } = useStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'process' | 'fengshui' | 'guests' | 'budget' | 'ai' | 'admin' | 'settings' | 'invitation' | 'local'>('dashboard');
+  const { user, settings, guests, budgetItems, refreshUserProfile, addNotification, login, logout } = useStore();
+  const [activeTab, setActiveTab] = useState<'home' | 'plan' | 'budget' | 'guests' | 'local' | 'fengshui' | 'invitation' | 'settings' | 'admin'>('home');
 
   // UI State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>('ACCOUNT');
 
@@ -197,16 +199,13 @@ function App() {
     }
   }, [user?.uid, isPublicView]);
 
-  // --- Redirect Logic: Active User without Gemini Key ---
+  // Notify active users without Gemini key once on load
   useEffect(() => {
     if (user?.role === 'USER' && user.isActive && user.allowCustomApiKey && !settings.geminiApiKey) {
-      if (activeTab === 'ai') {
-        setSettingsDefaultTab('SYSTEM');
-        setActiveTab('settings');
-        addNotification('WARNING', 'Vui lòng cấu hình Gemini API Key để tiếp tục sử dụng AI.', 5000);
-      }
+      setSettingsDefaultTab('SYSTEM');
+      addNotification('WARNING', 'Vui lòng cấu hình Gemini API Key để sử dụng Cố Vấn AI.', 5000);
     }
-  }, [activeTab, user, settings.geminiApiKey]);
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Statistics Calculation Logic ---
   const stats: DashboardStats = useMemo(() => {
@@ -229,7 +228,7 @@ function App() {
   // Handle Login Success from Modal
   const handleLoginSuccess = () => {
     setShowLoginModal(false);
-    setActiveTab('dashboard');
+    setActiveTab('home');
   };
 
   // --- RENDER: PUBLIC VIEW ---
@@ -248,101 +247,70 @@ function App() {
     return <div className="h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  // Define Restricted Access Logic: Guest OR Inactive User
   const isRestricted = user.role === 'GUEST' || (user.role === 'USER' && !user.isActive);
 
   return (
-    <div className="flex h-screen bg-[#FDF2F8] overflow-hidden transition-colors dark:bg-gray-900 font-sans relative">
+    <div className="flex h-screen bg-[#FDF2F8] overflow-hidden transition-colors dark:bg-gray-900 font-sans">
 
       {/* Toast Notifications */}
       <Notifications />
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
           <LoginPage onLoginSuccess={handleLoginSuccess} onClose={() => setShowLoginModal(false)} />
         </div>
       )}
 
-      <Sidebar
+      {/* Desktop Sidebar */}
+      <SideNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
-        stats={stats}
-        onLoginClick={() => setShowLoginModal(true)}
       />
 
-      {/* --- MAIN CONTENT AREA --- */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden w-full relative">
+      {/* Main area: TopBar + Content */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
 
-        {/* Mobile Header */}
-        <header className="lg:hidden h-16 bg-white border-b border-rose-100 flex items-center justify-between px-4 flex-shrink-0 z-40 relative">
-          <h1 className="font-bold text-gray-900 text-lg">WedPlan AI</h1>
-          <div className="flex items-center gap-2">
-            {user.role === 'GUEST' && (
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="p-2 text-rose-600 bg-rose-50 rounded-lg text-xs font-bold animate-pulse"
-              >
-                Đăng nhập
-              </button>
-            )}
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-600 rounded-lg hover:bg-gray-100">
-              <Menu className="w-6 h-6" />
-            </button>
-          </div>
-        </header>
+        {/* Top Bar (all screen sizes) */}
+        <TopBar
+          activeTab={activeTab}
+          stats={stats}
+          onLoginClick={() => setShowLoginModal(true)}
+          setActiveTab={setActiveTab}
+        />
 
-        {/* Global Warning Banner for Inactive Users */}
+        {/* Inactive user warning banner */}
         {user.role === 'USER' && !user.isActive && (
-          <div className="bg-amber-100 border-b border-amber-200 px-4 py-2 flex items-center justify-center text-xs md:text-sm font-bold text-amber-800 gap-2 flex-shrink-0 text-center z-10 animate-in fade-in slide-in-from-top-2">
+          <div className="bg-amber-100 border-b border-amber-200 px-4 py-2 flex items-center justify-center text-xs font-bold text-amber-800 gap-2 flex-shrink-0 text-center z-10">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             <span>Tài khoản chưa kích hoạt. Liên hệ Admin: 0343019101 hoặc danghoang.sqtt@gmail.com</span>
           </div>
         )}
 
-        {/* Prominent Floating Login Button (Top Right) - Hidden on Mobile */}
-        {user.role === 'GUEST' && (
-          <div className="hidden lg:block absolute top-5 right-5 z-[50]">
-            <button
-              onClick={() => setShowLoginModal(true)}
-              className="bg-rose-600 hover:bg-rose-700 text-white border-2 border-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-rose-500/40 transition-all flex items-center gap-2 hover:shadow-xl hover:scale-105 active:scale-95 animate-pulse"
-            >
-              <LogIn className="w-5 h-5" /> <span>Đăng nhập ngay</span>
-            </button>
-          </div>
-        )}
-
-        {/* Scrollable Content */}
-        <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeTab === 'invitation' ? 'p-0' : 'p-3 md:p-6 lg:p-8'} bg-[#FDF2F8]`}>
-          <div className={`h-full flex flex-col ${activeTab === 'invitation' ? 'w-full' : 'max-w-7xl mx-auto'}`}>
-
+        {/* Scrollable page content */}
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeTab === 'invitation' ? 'p-0' : 'p-3 md:p-5 lg:p-6'} bg-[#FDF2F8]`}>
+          <div className={`${activeTab === 'invitation' ? 'h-full w-full' : 'max-w-7xl mx-auto'}`}>
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
-                {activeTab === 'dashboard' && (
-                  <Dashboard
-                    stats={stats}
-                    user={user}
-                    isSyncing={isSyncing}
-                    setActiveTab={setActiveTab}
-                  />
+
+                {activeTab === 'home' && (
+                  <CommandCenter stats={stats} setActiveTab={setActiveTab} />
                 )}
 
-                {activeTab === 'process' && (
+                {activeTab === 'plan' && (
                   <ProcessGuide />
                 )}
 
                 {activeTab === 'fengshui' && (
-                  <div className="h-full flex-1 min-h-[500px] lg:min-h-[600px] bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden">
+                  <div className="min-h-[500px] lg:min-h-[600px] bg-white rounded-2xl shadow-sm border border-rose-100 overflow-hidden">
                     <FengShuiConsultant isRestricted={isRestricted} />
                   </div>
                 )}
 
                 {activeTab === 'invitation' && (
-                  <div className="h-full flex-1 min-h-[600px] bg-white lg:rounded-xl shadow-sm border border-rose-100 overflow-hidden">
+                  <div className="h-full min-h-[600px] bg-white lg:rounded-2xl shadow-sm border border-rose-100 overflow-hidden">
                     <InvitationManager />
                   </div>
                 )}
@@ -350,34 +318,8 @@ function App() {
                 {activeTab === 'guests' && <GuestManager />}
 
                 {activeTab === 'budget' && (
-                  <div className="flex-1 flex flex-col h-full min-h-[500px] lg:min-h-[600px] overflow-hidden rounded-xl border border-gray-200">
+                  <div className="flex flex-col min-h-[500px] lg:min-h-[600px] overflow-hidden rounded-2xl border border-gray-200">
                     <DetailedBudgetPlanner />
-                  </div>
-                )}
-
-                {activeTab === 'ai' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6">
-                    <div className="lg:col-span-1 space-y-4">
-                      <div className="bg-white p-4 rounded-xl shadow-sm border border-rose-100">
-                        <h3 className="font-bold text-gray-700 mb-2">Trạng thái AI</h3>
-                        <div className={`p-3 rounded-lg text-sm ${isRestricted
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : user.role === 'ADMIN'
-                              ? 'bg-purple-50 text-purple-700'
-                              : 'bg-blue-50 text-blue-700'
-                          }`}>
-                          {isRestricted
-                            ? "Đang dùng thử miễn phí"
-                            : user.role === 'ADMIN'
-                              ? "Bạn đang dùng Google Gemini (System Key)."
-                              : "Bạn đang dùng Google Gemini (Personal Key)."
-                          }
-                        </div>
-                      </div>
-                    </div>
-                    <div className="lg:col-span-2">
-                      <AIAdvisor stats={stats} isRestricted={isRestricted} />
-                    </div>
                   </div>
                 )}
 
@@ -392,11 +334,26 @@ function App() {
                 {activeTab === 'settings' && (
                   <SettingsPage defaultTab={settingsDefaultTab} />
                 )}
+
               </Suspense>
             </ErrorBoundary>
           </div>
         </main>
       </div>
+
+      {/* Mobile / Tablet Bottom Navigation */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* First-time onboarding popup */}
+      <WelcomeOnboarding onDone={(goToSettings?: boolean) => {
+        if (goToSettings) {
+          setSettingsDefaultTab('ACCOUNT');
+          setActiveTab('settings');
+        }
+      }} />
+
+      {/* Floating AI Chat (all screens, bottom-right) */}
+      <AIFloatingChat stats={stats} isRestricted={isRestricted} />
     </div>
   );
 }

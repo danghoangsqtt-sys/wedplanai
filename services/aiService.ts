@@ -229,3 +229,23 @@ export const generateWeddingSticker = async (
     throw new Error("Lỗi tạo ảnh: " + (error.message || "Unknown error"));
   }
 };
+
+/**
+ * Lấy mẹo thực hiện task từ AI
+ */
+export const askAITaskTip = async (taskName: string, category: string, apiKey: string): Promise<string> => {
+  if (!apiKey) return "Vui lòng cấu hình API Key để sử dụng tính năng này.";
+  
+  const systemPrompt = `Bạn là chuyên gia tư vấn tổ chức đám cưới tại Việt Nam.
+Người dùng đang cần thực hiện công việc: "${taskName}" (Mảng: ${category}).
+Hãy đưa ra 3-5 gạch đầu dòng mẹo thực tế, ngắn gọn, thiết thực để giúp họ hoàn thành công việc này tốt nhất (tránh bỡ ngỡ, tiết kiệm chi phí, hoặc phòng rủi ro). Không cần lời chào.`;
+
+  try {
+    const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+    const response = await callAIWithRetry(ai, "gemini-2.5-flash", systemPrompt);
+    return response.trim();
+  } catch (error: any) {
+    console.error("AI Task Tip Error:", error);
+    return "Không thể kết nối AI. Vui lòng kiểm tra lại cấu hình.";
+  }
+};
