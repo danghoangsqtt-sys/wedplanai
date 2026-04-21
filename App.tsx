@@ -5,6 +5,7 @@ import LoginPage from './components/auth/LoginPage';
 import SideNav from './components/layout/SideNav';
 import TopBar from './components/layout/TopBar';
 import BottomNav from './components/layout/BottomNav';
+import MobileDrawer from './components/layout/MobileDrawer';
 import CommandCenter from './components/CommandCenter';
 import AIFloatingChat from './components/AIFloatingChat';
 import WelcomeOnboarding from './components/WelcomeOnboarding';
@@ -107,6 +108,7 @@ function App() {
 
   // UI State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>('ACCOUNT');
 
@@ -279,6 +281,7 @@ function App() {
           stats={stats}
           onLoginClick={() => setShowLoginModal(true)}
           setActiveTab={setActiveTab}
+          onMenuClick={() => setIsMobileDrawerOpen(true)}
         />
 
         {/* Inactive user warning banner */}
@@ -290,7 +293,7 @@ function App() {
         )}
 
         {/* Scrollable page content */}
-        <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeTab === 'invitation' ? 'p-0' : 'p-3 md:p-5 lg:p-6'} bg-[#FDF2F8]`}>
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeTab === 'invitation' ? 'p-0' : 'p-3 md:p-5 lg:p-6'} pb-20 lg:pb-6 bg-[#FDF2F8]`}>
           <div className={`${activeTab === 'invitation' ? 'h-full w-full' : 'max-w-7xl mx-auto'}`}>
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
@@ -340,6 +343,14 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Mobile Sidebar Drawer */}
+      <MobileDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
       {/* Mobile / Tablet Bottom Navigation */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />

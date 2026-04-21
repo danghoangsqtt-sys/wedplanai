@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Users, Heart, LogIn } from 'lucide-react';
+import { Calendar, Users, Heart, LogIn, Menu } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { DashboardStats } from '../../types';
 
@@ -9,6 +9,7 @@ interface TopBarProps {
   stats: DashboardStats;
   onLoginClick: () => void;
   setActiveTab: (tab: string) => void;
+  onMenuClick?: () => void;
 }
 
 const PAGE_LABELS: Record<string, string> = {
@@ -38,7 +39,7 @@ function getStage(daysUntil: number): StageInfo {
   return { label: 'Sau đám cưới', colorClass: 'bg-emerald-100 text-emerald-700' };
 }
 
-const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActiveTab }) => {
+const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActiveTab, onMenuClick }) => {
   const { user, sharedPlan } = useStore();
 
   const weddingDate = user?.weddingDate || '';
@@ -52,10 +53,20 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActi
     : 0;
 
   return (
-    <header className="h-14 bg-white border-b border-rose-100 flex items-center px-4 flex-shrink-0 z-30 gap-3 shadow-sm">
+    <header className="h-14 bg-white border-b border-rose-100 flex items-center px-3 md:px-4 flex-shrink-0 z-30 gap-2 md:gap-3 shadow-sm">
 
-      {/* Mobile / Tablet: Logo */}
-      <div className="lg:hidden flex items-center gap-2">
+      {/* Mobile: Hamburger + Logo */}
+      <div className="lg:hidden flex items-center gap-1.5">
+        {onMenuClick && (
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="p-2 -ml-1 text-gray-500 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors active:scale-95"
+            aria-label="Mở menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
         <Heart className="w-5 h-5 text-rose-500" />
         <span className="font-bold text-gray-900 text-base">
           WedPlan<span className="text-rose-500">AI</span>
