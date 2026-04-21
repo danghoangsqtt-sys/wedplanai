@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { validateGeminiKey } from '../services/aiService';
 import { storage, BUCKET_ID, ID } from '../lib/appwrite';
+import SharedPlanSection from './SharedPlanSection';
 import {
    User, Calendar, Settings as SettingsIcon, Database,
    Key, Shield, Cloud, Download, Upload, Trash2,
@@ -379,6 +380,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                         </div>
                      </div>
                   </section>
+
+                   {/* Section: Shared Plan */}
+                   <SharedPlanSection />
                </div>
             )}
 

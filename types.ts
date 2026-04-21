@@ -59,6 +59,21 @@ export interface DashboardStats {
 
 export type UserRole = 'ADMIN' | 'USER' | 'GUEST';
 
+// --- Shared Plan Types ---
+export type ShareStatus = 'pending' | 'active' | 'revoked';
+
+export interface SharedPlan {
+  id: string;           // Appwrite document ID
+  ownerUid: string;
+  ownerEmail: string;
+  ownerName: string;
+  partnerUid?: string;
+  partnerEmail?: string;
+  shareCode: string;    // 6-char code: "WED-XXXX"
+  status: ShareStatus;
+  createdAt: number;
+}
+
 export interface UserProfile {
   uid: string;
   email: string | null;
@@ -216,6 +231,7 @@ export interface LocalMarketSection {
 
 export interface LocalMarketReport {
   province: string;
+  district?: string;
   region: 'NORTH' | 'CENTRAL' | 'SOUTH';
   economicLevel: 'HIGH' | 'MID' | 'LOW';
   generatedAt: string;

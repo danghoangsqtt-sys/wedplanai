@@ -17,6 +17,7 @@ export const COLLECTIONS = {
   PUBLIC_INVITATIONS: 'public_invitations',
   ANALYTICS_LOGS: 'analytics_logs',
   GUEST_USAGE: 'guest_usage',
+  PLAN_SHARES: 'plan_shares',
 } as const;
 
 export { ID, Query, OAuthProvider, Permission, Role };

@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep, InvitationData, LocalMarketReport } from '../types';
+import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep, InvitationData, LocalMarketReport, SharedPlan } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { saveUserDataToCloud, loadUserDataFromCloud, syncUserProfile, getUserPublicProfile } from '../services/cloudService';
 import { fetchAllProfiles, fetchAnalyticsData, AdminAnalytics } from '../services/adminService';
+import { getMySharedPlan, createShareInvite, joinPlanByCode, revokeShare, leavePlan } from '../services/sharingService';
 import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS } from '../data/initialData';
 import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
 import { account, databases, DB_ID, COLLECTIONS } from '../lib/appwrite';
@@ -122,25 +123,48 @@ interface AppState {
   incrementGuestSpeech: () => void;
   resetGuestUsage: () => void;
 
+  // Shared Plan
+  sharedPlan: SharedPlan | null;
+  isSharedPlanOwner: boolean;
+  getEffectiveUid: () => string | null;  // ownerUid if partner, else user.uid
+
+  // Shared Plan Actions
+  initSharedPlan: () => Promise<void>;
+  createShareInviteAction: () => Promise<SharedPlan | null>;
+  joinPlanAction: (code: string) => Promise<void>;
+  leavePlanAction: () => Promise<void>;
+  revokePlanAction: () => Promise<void>;
+  pollSharedData: () => Promise<void>;
+
   // Notification Actions
   addNotification: (type: NotificationType, message: string, duration?: number) => void;
   removeNotification: (id: string) => void;
 }
 
 let syncTimeout: ReturnType<typeof setTimeout>;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+const getEffectiveUidFromState = (state: AppState): string | null => {
+  if (!state.user) return null;
+  if (state.sharedPlan?.status === 'active' && !state.isSharedPlanOwner) {
+    return state.sharedPlan.ownerUid; // Partner saves to owner's document
+  }
+  return state.user.uid;
+};
 
 const triggerCloudSync = (get: () => AppState) => {
-  const { user, guests, budgetItems, fengShuiProfile, fengShuiResults, procedures, invitation } = get();
-  if (user?.enableCloudStorage) {
+  const state = get();
+  const effectiveUid = getEffectiveUidFromState(state);
+  if (state.user?.enableCloudStorage && effectiveUid) {
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
-      saveUserDataToCloud(user.uid, {
-        guests,
-        budgetItems,
-        procedures,
-        fengShuiProfile: fengShuiProfile || undefined,
-        fengShuiResults: fengShuiResults || undefined,
-        invitation
+      saveUserDataToCloud(effectiveUid, {
+        guests: state.guests,
+        budgetItems: state.budgetItems,
+        procedures: state.procedures,
+        fengShuiProfile: state.fengShuiProfile || undefined,
+        fengShuiResults: state.fengShuiResults || undefined,
+        invitation: state.invitation
       });
     }, 2000); // Debounce 2s
   }
@@ -171,6 +195,10 @@ export const useStore = create<AppState>()(
       localProvince: '',
       localDistrict: '',
       localMarketReport: null,
+      sharedPlan: null,
+      isSharedPlanOwner: false,
+
+      getEffectiveUid: () => getEffectiveUidFromState(get()),
 
       setLocalProvince: (province) => set({ localProvince: province }),
       setLocalDistrict: (district) => set({ localDistrict: district }),
@@ -181,8 +209,17 @@ export const useStore = create<AppState>()(
         get().addNotification('SUCCESS', `Chào mừng ${user.displayName} đã quay trở lại!`);
         await syncUserProfile(user);
 
+        // Check shared plans
+        try {
+          const shared = await getMySharedPlan(user.uid);
+          if (shared) {
+            set({ sharedPlan: shared.plan, isSharedPlanOwner: shared.role === 'owner' });
+          }
+        } catch { /* silent */ }
+
         if (user.enableCloudStorage) {
-          const cloudData = await loadUserDataFromCloud(user.uid);
+          const effectiveUid = getEffectiveUidFromState(get());
+          const cloudData = await loadUserDataFromCloud(effectiveUid || user.uid);
           if (cloudData) {
             set({
               guests: cloudData.guests,
@@ -193,7 +230,12 @@ export const useStore = create<AppState>()(
               invitation: cloudData.invitation || DEFAULT_INVITATION,
               isSyncing: false
             });
-            get().addNotification('INFO', 'Đã đồng bộ dữ liệu từ đám mây.');
+            const shared = get().sharedPlan;
+            if (shared?.status === 'active') {
+              get().addNotification('INFO', `Đã đồng bộ kế hoạch chung với ${get().isSharedPlanOwner ? shared.partnerEmail : shared.ownerName}.`);
+            } else {
+              get().addNotification('INFO', 'Đã đồng bộ dữ liệu từ đám mây.');
+            }
             return;
           }
         }
@@ -201,6 +243,8 @@ export const useStore = create<AppState>()(
       },
 
       logout: () => {
+        // Clear polling
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
         account.deleteSession('current').catch(() => {});
         set({
           user: DEFAULT_GUEST_USER,
@@ -210,7 +254,9 @@ export const useStore = create<AppState>()(
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] },
           guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
-          invitation: DEFAULT_INVITATION
+          invitation: DEFAULT_INVITATION,
+          sharedPlan: null,
+          isSharedPlanOwner: false,
         });
         get().addNotification('INFO', 'Đã đăng xuất thành công.');
       },
@@ -472,6 +518,137 @@ export const useStore = create<AppState>()(
       })),
 
       resetGuestUsage: () => set({ guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 } }),
+
+      // --- SHARED PLAN ACTIONS ---
+
+      initSharedPlan: async () => {
+        const user = get().user;
+        if (!user || user.role === 'GUEST') return;
+        try {
+          const result = await getMySharedPlan(user.uid);
+          if (result) {
+            set({ sharedPlan: result.plan, isSharedPlanOwner: result.role === 'owner' });
+
+            // Start polling if active shared plan
+            if (result.plan.status === 'active' && !pollInterval) {
+              pollInterval = setInterval(() => {
+                get().pollSharedData();
+              }, 30000); // Poll every 30s
+            }
+          }
+        } catch (e) {
+          console.error('Init shared plan error:', e);
+        }
+      },
+
+      createShareInviteAction: async () => {
+        const user = get().user;
+        if (!user) return null;
+        try {
+          const plan = await createShareInvite(user);
+          set({ sharedPlan: plan, isSharedPlanOwner: true });
+          get().addNotification('SUCCESS', `Đã tạo mã mời: ${plan.shareCode}`);
+          return plan;
+        } catch (e: any) {
+          get().addNotification('ERROR', e.message || 'Lỗi tạo mã mời.');
+          return null;
+        }
+      },
+
+      joinPlanAction: async (code: string) => {
+        const user = get().user;
+        if (!user) return;
+        try {
+          const plan = await joinPlanByCode(code, user);
+          set({ sharedPlan: plan, isSharedPlanOwner: false });
+
+          // Load owner's data
+          if (user.enableCloudStorage) {
+            const cloudData = await loadUserDataFromCloud(plan.ownerUid);
+            if (cloudData) {
+              set({
+                guests: cloudData.guests,
+                budgetItems: cloudData.budgetItems,
+                procedures: cloudData.procedures || WEDDING_PROCEDURES,
+                fengShuiProfile: cloudData.fengShuiProfile || null,
+                fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
+                invitation: cloudData.invitation || DEFAULT_INVITATION,
+              });
+            }
+          }
+
+          // Start polling
+          if (!pollInterval) {
+            pollInterval = setInterval(() => { get().pollSharedData(); }, 30000);
+          }
+
+          get().addNotification('SUCCESS', `Đã tham gia kế hoạch cưới của ${plan.ownerName || plan.ownerEmail}!`);
+        } catch (e: any) {
+          get().addNotification('ERROR', e.message || 'Lỗi tham gia kế hoạch.');
+        }
+      },
+
+      leavePlanAction: async () => {
+        const { sharedPlan, user } = get();
+        if (!sharedPlan || !user) return;
+        try {
+          await leavePlan(sharedPlan.id, user.uid, sharedPlan.ownerUid);
+          if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+          set({ sharedPlan: null, isSharedPlanOwner: false });
+          // Reset to user's own data
+          if (user.enableCloudStorage) {
+            const ownData = await loadUserDataFromCloud(user.uid);
+            if (ownData) {
+              set({
+                guests: ownData.guests,
+                budgetItems: ownData.budgetItems,
+                procedures: ownData.procedures || WEDDING_PROCEDURES,
+                fengShuiProfile: ownData.fengShuiProfile || null,
+                fengShuiResults: ownData.fengShuiResults || { harmony: null, dates: [] },
+                invitation: ownData.invitation || DEFAULT_INVITATION,
+              });
+            }
+          }
+          get().addNotification('INFO', 'Đã rời khỏi kế hoạch chung.');
+        } catch (e: any) {
+          get().addNotification('ERROR', e.message || 'Lỗi rời kế hoạch.');
+        }
+      },
+
+      revokePlanAction: async () => {
+        const { sharedPlan } = get();
+        if (!sharedPlan) return;
+        try {
+          await revokeShare(sharedPlan.id);
+          if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+          set({ sharedPlan: null, isSharedPlanOwner: false });
+          get().addNotification('INFO', 'Đã hủy chia sẻ kế hoạch.');
+        } catch (e: any) {
+          get().addNotification('ERROR', e.message || 'Lỗi hủy chia sẻ.');
+        }
+      },
+
+      pollSharedData: async () => {
+        const { sharedPlan, user } = get();
+        if (!sharedPlan || sharedPlan.status !== 'active' || !user?.enableCloudStorage) return;
+        try {
+          const effectiveUid = getEffectiveUidFromState(get());
+          if (!effectiveUid) return;
+          const cloudData = await loadUserDataFromCloud(effectiveUid);
+          if (cloudData) {
+            set({
+              guests: cloudData.guests,
+              budgetItems: cloudData.budgetItems,
+              procedures: cloudData.procedures || WEDDING_PROCEDURES,
+              fengShuiProfile: cloudData.fengShuiProfile || null,
+              fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
+              invitation: cloudData.invitation || DEFAULT_INVITATION,
+            });
+          }
+        } catch {
+          // Silent polling error
+        }
+      },
 
       addNotification: (type, message, duration = 3000) => {
         const id = Date.now().toString();
