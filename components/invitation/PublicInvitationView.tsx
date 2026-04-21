@@ -329,86 +329,246 @@ const PublicInvitationView: React.FC = () => {
             : null;
 
         return (
-            <div className="invite-welcome-bg fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
-                <style>{`@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');`}</style>
+            <div className="fixed inset-0 z-50 overflow-hidden">
+                <style>{`
+                    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+
+                    /* Falling petals */
+                    @keyframes petalDrift {
+                        0% { transform: translateY(-10vh) translateX(0) rotate(0deg) scale(0.8); opacity: 0; }
+                        10% { opacity: 1; }
+                        90% { opacity: 0.8; }
+                        100% { transform: translateY(110vh) translateX(var(--drift, 60px)) rotate(var(--spin, 720deg)) scale(0.4); opacity: 0; }
+                    }
+                    .petal { 
+                        position: absolute; top: -5%; pointer-events: none; 
+                        animation: petalDrift var(--dur, 8s) var(--delay, 0s) linear infinite;
+                    }
+
+                    /* Sparkle twinkle */
+                    @keyframes twinkle {
+                        0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+                        50% { opacity: 1; transform: scale(1) rotate(180deg); }
+                    }
+                    .sparkle {
+                        position: absolute; pointer-events: none;
+                        animation: twinkle var(--dur, 3s) var(--delay, 0s) ease-in-out infinite;
+                    }
+
+                    /* Envelope 3D flip */
+                    @keyframes envelopeOpen {
+                        0% { transform: perspective(800px) rotateX(0deg) scale(1); }
+                        40% { transform: perspective(800px) rotateX(-25deg) scale(1.05); }
+                        70% { transform: perspective(800px) rotateX(-15deg) scale(1.02) translateY(-20px); }
+                        100% { transform: perspective(800px) rotateX(0deg) scale(0.8) translateY(-60px); opacity: 0; }
+                    }
+                    .envelope-opening {
+                        animation: envelopeOpen 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                    }
+
+                    /* Envelope flap animation */
+                    @keyframes flapOpen {
+                        0% { transform: rotateX(0deg); }
+                        100% { transform: rotateX(-180deg); }
+                    }
+                    .flap-opening {
+                        animation: flapOpen 0.6s ease-in-out forwards;
+                        transform-origin: top center;
+                    }
+
+                    /* Content reveal */
+                    @keyframes contentReveal {
+                        0% { opacity: 0; transform: scale(0.9) translateY(30px); filter: blur(10px); }
+                        100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+                    }
+                    .content-reveal { animation: contentReveal 0.8s 0.6s ease-out forwards; opacity: 0; }
+
+                    /* Pulse ring */
+                    @keyframes pulseRing {
+                        0% { transform: scale(1); opacity: 0.4; }
+                        100% { transform: scale(2.5); opacity: 0; }
+                    }
+                    .pulse-ring { animation: pulseRing 2s ease-out infinite; }
+
+                    /* Gentle float */
+                    @keyframes gentleFloat {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-8px); }
+                    }
+                    .gentle-float { animation: gentleFloat 3s ease-in-out infinite; }
+
+                    /* Golden glow */
+                    @keyframes goldenGlow {
+                        0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.2), 0 0 40px rgba(251, 191, 36, 0.1); }
+                        50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.4), 0 0 60px rgba(251, 191, 36, 0.2); }
+                    }
+                    .golden-glow { animation: goldenGlow 2s ease-in-out infinite; }
+                `}</style>
+
+                {/* Gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-rose-600 via-pink-600 to-rose-800" />
 
                 {/* Animated background orbs */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-                    <div className="absolute rounded-full bg-white/10 blur-3xl animate-pulse invite-orb-1" />
-                    <div className="absolute rounded-full bg-white/10 blur-3xl animate-pulse invite-orb-2" />
-                    <div className="absolute rounded-full bg-white/10 blur-3xl animate-pulse invite-orb-3" />
-                    <div className="absolute rounded-full bg-white/10 blur-3xl animate-pulse invite-orb-4" />
+                    <div className="absolute w-[400px] h-[400px] rounded-full bg-white/8 blur-3xl animate-pulse" style={{ top: '-10%', left: '-10%', animationDuration: '4s' }} />
+                    <div className="absolute w-[300px] h-[300px] rounded-full bg-pink-300/10 blur-3xl animate-pulse" style={{ top: '50%', right: '-5%', animationDuration: '5s', animationDelay: '1s' }} />
+                    <div className="absolute w-[250px] h-[250px] rounded-full bg-rose-300/10 blur-3xl animate-pulse" style={{ bottom: '-5%', left: '20%', animationDuration: '6s', animationDelay: '2s' }} />
+                </div>
+
+                {/* Falling petals */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+                    {Array.from({ length: 20 }).map((_, i) => {
+                        const emojis = ['🌸', '🩷', '💮', '✿', '❀', '🪷'];
+                        const emoji = emojis[i % emojis.length];
+                        const left = Math.random() * 100;
+                        const dur = 6 + Math.random() * 8;
+                        const delay = Math.random() * 10;
+                        const drift = -40 + Math.random() * 80;
+                        const spin = 360 + Math.random() * 720;
+                        const size = 10 + Math.random() * 14;
+                        return (
+                            <span
+                                key={i}
+                                className="petal select-none"
+                                style={{
+                                    left: `${left}%`,
+                                    fontSize: `${size}px`,
+                                    '--dur': `${dur}s`,
+                                    '--delay': `${delay}s`,
+                                    '--drift': `${drift}px`,
+                                    '--spin': `${spin}deg`,
+                                    opacity: 0.7,
+                                } as React.CSSProperties}
+                            >
+                                {emoji}
+                            </span>
+                        );
+                    })}
+                </div>
+
+                {/* Sparkles */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+                    {Array.from({ length: 15 }).map((_, i) => (
+                        <span
+                            key={`s${i}`}
+                            className="sparkle text-white select-none"
+                            style={{
+                                left: `${5 + Math.random() * 90}%`,
+                                top: `${5 + Math.random() * 90}%`,
+                                fontSize: `${6 + Math.random() * 10}px`,
+                                '--dur': `${2 + Math.random() * 4}s`,
+                                '--delay': `${Math.random() * 5}s`,
+                            } as React.CSSProperties}
+                        >
+                            ✦
+                        </span>
+                    ))}
                 </div>
 
                 {/* Floating hearts */}
                 <FloatingHearts />
 
-                {/* Decorative corner petals */}
-                <div className="absolute top-6 left-6 text-white/20 text-3xl pointer-events-none select-none">✿</div>
-                <div className="absolute top-6 right-6 text-white/20 text-3xl pointer-events-none select-none">✿</div>
-                <div className="absolute bottom-16 left-6 text-white/15 text-2xl pointer-events-none select-none">✦</div>
-                <div className="absolute bottom-16 right-6 text-white/15 text-2xl pointer-events-none select-none">✦</div>
+                {/* Decorative corners */}
+                <div className="absolute top-6 left-6 text-white/15 text-4xl pointer-events-none select-none" style={{ fontFamily: 'serif' }}>❦</div>
+                <div className="absolute top-6 right-6 text-white/15 text-4xl pointer-events-none select-none" style={{ fontFamily: 'serif', transform: 'scaleX(-1)' }}>❦</div>
+                <div className="absolute bottom-20 left-6 text-white/10 text-2xl pointer-events-none select-none">✧</div>
+                <div className="absolute bottom-20 right-6 text-white/10 text-2xl pointer-events-none select-none">✧</div>
 
-                {/* Main card content */}
-                <div className="relative z-10 flex flex-col items-center text-center px-8 max-w-xs w-full animate-envelope-pop">
+                {/* Main envelope card */}
+                <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+                    <div className={`flex flex-col items-center text-center max-w-xs w-full ${isOpened ? 'envelope-opening' : 'animate-envelope-pop'}`}>
 
-                    {/* Envelope icon */}
-                    <div className="mb-8 relative">
-                        <div className="w-24 h-24 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-2xl">
-                            <Mail className="w-11 h-11 text-white drop-shadow-lg" />
-                        </div>
-                        <Heart className="w-6 h-6 text-white fill-current absolute -top-1 -right-1 animate-bounce drop-shadow-md" />
-                        <Heart className="w-4 h-4 text-pink-200 fill-current absolute bottom-1 -left-2 animate-bounce drop-shadow-md invite-heart-secondary" />
-                    </div>
-
-                    {/* Tagline */}
-                    <p className="text-[10px] uppercase tracking-[0.45em] text-white/60 font-light mb-5">
-                        ✦ &nbsp; Thiệp Cưới Trân Trọng &nbsp; ✦
-                    </p>
-
-                    {/* Names */}
-                    {(data.groomName || data.brideName) ? (
-                        <div className="mb-3">
-                            <p className="text-white/50 text-[10px] uppercase tracking-[0.3em] mb-2">Chúng tôi trân trọng mời bạn</p>
-                            <div className="font-handwriting text-5xl text-white leading-tight drop-shadow-lg">
-                                {data.groomName}
+                        {/* Envelope with 3D effect */}
+                        <div className="mb-8 relative gentle-float">
+                            {/* Pulse rings behind */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-24 h-24 rounded-full border-2 border-white/20 pulse-ring" />
                             </div>
-                            <div className="text-white/50 text-xl my-1 font-light tracking-widest">&amp;</div>
-                            <div className="font-handwriting text-5xl text-white leading-tight drop-shadow-lg">
-                                {data.brideName}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-24 h-24 rounded-full border-2 border-white/15 pulse-ring" style={{ animationDelay: '0.7s' }} />
                             </div>
-                        </div>
-                    ) : (
-                        <p className="text-3xl text-white font-light mb-4 tracking-wide">Thiệp Mời Của Bạn</p>
-                    )}
 
-                    {/* Date */}
-                    {wDate && (
-                        <p className="text-[11px] tracking-[0.35em] text-white/60 uppercase mt-3 mb-1">
-                            {wDate}
+                            {/* Envelope body */}
+                            <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-white/25 to-white/10 backdrop-blur-md flex items-center justify-center border-2 border-white/30 shadow-2xl golden-glow relative overflow-hidden">
+                                {/* Envelope flap (triangle) */}
+                                <div className="absolute top-0 left-0 right-0 h-[45%] overflow-hidden">
+                                    <div className="w-0 h-0 mx-auto" style={{
+                                        borderLeft: '56px solid transparent',
+                                        borderRight: '56px solid transparent',
+                                        borderTop: '40px solid rgba(255,255,255,0.15)',
+                                    }} />
+                                </div>
+                                <Mail className="w-12 h-12 text-white drop-shadow-lg relative z-10" />
+                            </div>
+
+                            {/* Floating hearts around envelope */}
+                            <Heart className="w-6 h-6 text-white fill-current absolute -top-2 -right-3 animate-bounce drop-shadow-lg" style={{ animationDuration: '2s' }} />
+                            <Heart className="w-4 h-4 text-pink-200 fill-current absolute bottom-0 -left-3 animate-bounce drop-shadow-md" style={{ animationDelay: '0.5s', animationDuration: '2.5s' }} />
+                            <span className="absolute -top-1 -left-2 text-lg animate-pulse select-none">✨</span>
+                            <span className="absolute -bottom-2 -right-2 text-sm animate-pulse select-none" style={{ animationDelay: '1s' }}>✨</span>
+                        </div>
+
+                        {/* Tagline */}
+                        <p className="text-[10px] uppercase tracking-[0.5em] text-white/50 font-light mb-5 select-none">
+                            ✦ &nbsp; Thiệp Cưới Trân Trọng &nbsp; ✦
                         </p>
-                    )}
 
-                    {/* Divider */}
-                    <div className="flex items-center gap-3 my-6 w-full">
-                        <div className="flex-1 h-px bg-white/20" />
-                        <span className="text-white/40 text-sm">❧</span>
-                        <div className="flex-1 h-px bg-white/20" />
+                        {/* Names */}
+                        {(data.groomName || data.brideName) ? (
+                            <div className="mb-4">
+                                <p className="text-white/40 text-[10px] uppercase tracking-[0.35em] mb-3">Trân trọng kính mời</p>
+                                <div className="font-handwriting text-5xl sm:text-6xl text-white leading-tight drop-shadow-lg">
+                                    {data.groomName}
+                                </div>
+                                <div className="text-white/40 text-2xl my-2 font-light tracking-widest select-none">&amp;</div>
+                                <div className="font-handwriting text-5xl sm:text-6xl text-white leading-tight drop-shadow-lg">
+                                    {data.brideName}
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-3xl text-white font-light mb-4 tracking-wide">Thiệp Mời Của Bạn</p>
+                        )}
+
+                        {/* Date */}
+                        {wDate && (
+                            <div className="flex items-center gap-2 mt-2 mb-1">
+                                <div className="w-8 h-px bg-white/30" />
+                                <p className="text-[11px] tracking-[0.35em] text-white/60 uppercase font-medium">
+                                    {wDate}
+                                </p>
+                                <div className="w-8 h-px bg-white/30" />
+                            </div>
+                        )}
+
+                        {/* Ornamental divider */}
+                        <div className="flex items-center gap-3 my-6 w-full">
+                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                            <span className="text-white/30 text-lg select-none">❧</span>
+                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                        </div>
+
+                        {/* CTA Button */}
+                        <button
+                            type="button"
+                            onClick={handleOpenInvite}
+                            className="relative w-full overflow-hidden bg-white text-rose-600 py-4 px-8 rounded-2xl font-bold text-base shadow-2xl shadow-rose-900/40 flex items-center justify-center gap-3 active:scale-95 transition-all group hover:shadow-rose-900/50"
+                        >
+                            <MailOpen className="w-5 h-5 group-hover:rotate-12 group-active:rotate-[-12deg] transition-transform flex-shrink-0" />
+                            <span>Mở Thiệp Ngay</span>
+                            {/* Shimmer effect */}
+                            <div className="absolute inset-0 animate-shimmer rounded-2xl pointer-events-none" />
+                        </button>
+
+                        {/* Music hint */}
+                        {data.musicUrl && (
+                            <p className="mt-4 text-[9px] text-white/35 flex items-center gap-1.5">
+                                <Volume2 className="w-3 h-3" />
+                                <span>Nhạc nền sẽ phát khi bạn mở thiệp</span>
+                            </p>
+                        )}
+
+                        <p className="mt-6 text-[8px] text-white/20 uppercase tracking-[0.4em] select-none">Powered by WedPlan AI</p>
                     </div>
-
-                    {/* CTA Button */}
-                    <button
-                        type="button"
-                        onClick={handleOpenInvite}
-                        className="relative w-full overflow-hidden bg-white text-rose-600 py-4 px-8 rounded-2xl font-bold text-base shadow-2xl shadow-rose-900/30 flex items-center justify-center gap-3 active:scale-95 transition-transform group"
-                    >
-                        <MailOpen className="w-5 h-5 group-active:rotate-12 transition-transform flex-shrink-0" />
-                        <span>Mở Thiệp Ngay</span>
-                        {/* Shimmer on load */}
-                        <div className="absolute inset-0 animate-shimmer rounded-2xl pointer-events-none" />
-                    </button>
-
-                    <p className="mt-8 text-[9px] text-white/30 uppercase tracking-[0.35em]">Powered by WedPlan AI</p>
                 </div>
             </div>
         );
