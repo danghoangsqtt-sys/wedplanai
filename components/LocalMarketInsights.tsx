@@ -345,8 +345,8 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
             );
             updatedCount++;
           } else {
-            // Create new budget item
-            const newItem = {
+            // Collect new item for bulk add (avoids N separate cloud syncs)
+            newItems.push({
               id: `market_${sid}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
               category,
               itemName: item.name,
@@ -356,8 +356,7 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
               estimatedCost: cost,
               actualCost: 0,
               note: `${item.description}${item.tips ? ' · Tip: ' + item.tips : ''} (Giá ${localMarketReport.province}: ${item.priceRange})`,
-            };
-            addBudgetItem(newItem);
+            });
             createdCount++;
           }
         }

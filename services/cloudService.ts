@@ -63,8 +63,9 @@ export const saveUserDataToCloud = async (
         procedures_json: JSON.stringify(data.procedures ?? {}),
         fengshui_json: JSON.stringify(data.fengShuiProfile ?? null),
         results_json: JSON.stringify(data.fengShuiResults ?? { harmony: null, dates: [] }),
-        invitation_json: JSON.stringify(data.invitation ?? {}),
-        weddingDate: data.weddingDate || '',
+        // Embed weddingDate inside invitation_json — the user_data collection
+        // has no separate weddingDate attribute in its Appwrite schema.
+        invitation_json: JSON.stringify({ ...(data.invitation ?? {}), _weddingDate: data.weddingDate ?? null }),
         lastUpdated: Date.now(),
       },
       [
@@ -106,14 +107,17 @@ function safeJsonParse<T>(json: string | undefined | null, fallback: T): T {
 export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData | null> => {
   try {
     const doc = await databases.getDocument(DB_ID, COLLECTIONS.USER_DATA, uid);
+    // Extract _weddingDate embedded in invitation_json, then strip it from the invitation object
+    const rawInvitation = safeJsonParse<Record<string, any>>(doc.invitation_json, {});
+    const { _weddingDate, ...cleanInvitation } = rawInvitation;
     return {
       guests: safeJsonParse(doc.guests_json, []),
       budgetItems: safeJsonParse(doc.budget_json, []),
       procedures: safeJsonParse(doc.procedures_json, undefined),
       fengShuiProfile: safeJsonParse(doc.fengshui_json, undefined),
       fengShuiResults: safeJsonParse(doc.results_json, undefined),
-      invitation: safeJsonParse(doc.invitation_json, undefined),
-      weddingDate: doc.weddingDate || null,
+      invitation: Object.keys(cleanInvitation).length > 0 ? cleanInvitation as any : undefined,
+      weddingDate: (_weddingDate as string | null) || null,
       lastUpdated: doc.lastUpdated,
     };
   } catch (e: any) {
@@ -125,7 +129,10 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
 export const loadPublicInvitation = async (uid: string): Promise<InvitationData | null> => {
   try {
     const doc = await databases.getDocument(DB_ID, COLLECTIONS.PUBLIC_INVITATIONS, uid);
-    return JSON.parse(doc.invitation_json || 'null');
+    const raw = safeJsonParse<Record<string, any>>(doc.invitation_json, null);
+    if (!raw) return null;
+    const { _weddingDate: _wd, ...clean } = raw;
+    return clean as InvitationData;
   } catch (e: any) {
     if (e.code !== 404) console.error('Error loading public invitation:', e);
     return null;
