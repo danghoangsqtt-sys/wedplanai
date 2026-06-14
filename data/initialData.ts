@@ -118,11 +118,10 @@ export const INITIAL_USERS: UserProfile[] = [
 ];
 
 export const DEFAULT_GUEST_USER: UserProfile = {
-  uid: 'guest-default',
+  uid: 'local-user',
   email: null,
-  displayName: 'Khách',
+  displayName: 'Người dùng',
   photoURL: null,
-  // TEMP: Grant full access to anonymous visitors (revert role→'GUEST' to restore auth)
   role: 'ADMIN',
   isActive: true,
   allowCustomApiKey: true,

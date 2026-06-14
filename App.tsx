@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { AttendanceProbability, DashboardStats, TaskStatus } from './types';
-import LoginPage from './components/auth/LoginPage';
 import SideNav from './components/layout/SideNav';
 import TopBar from './components/layout/TopBar';
 import BottomNav from './components/layout/BottomNav';
@@ -12,10 +11,6 @@ import WelcomeOnboarding from './components/WelcomeOnboarding';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { logAppVisit, getUserPublicProfile, syncUserProfile } from './services/cloudService';
-import { supabase } from './lib/supabase';
-import { UserProfile } from './types';
-import { ADMIN_CONTACT } from './data/initialData';
 
 // --- Helper to handle lazy loading chunk errors (Vite cached index.html issue) ---
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -108,88 +103,22 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
 export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
 function App() {
-  const { user, settings, guests, budgetItems, refreshUserProfile, addNotification, login, logout } = useStore();
+  const { user, settings, guests, budgetItems } = useStore();
   const [activeTab, setActiveTab] = useState<'home' | 'plan' | 'budget' | 'guests' | 'local' | 'fengshui' | 'invitation' | 'settings' | 'admin'>('home');
 
   // UI State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>('ACCOUNT');
 
   // Public View State
   const [isPublicView, setIsPublicView] = useState(false);
-
-  // --- Supabase Session Check (runs on mount + after OAuth redirect) ---
-  useEffect(() => {
-    const initSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && user?.uid === 'guest-default') {
-          const supaUser = session.user;
-          const meta = supaUser.user_metadata || {};
-          let profile = await getUserPublicProfile(supaUser.id);
-          if (profile) {
-            // Existing user: merge latest Google display info
-            profile = {
-              ...profile,
-              email: supaUser.email || profile.email,
-              displayName: meta.full_name || meta.name || profile.displayName,
-              photoURL: meta.avatar_url || profile.photoURL,
-            };
-            await syncUserProfile(profile);
-          } else {
-            // Brand new user — role defaults to USER, admin set in DB
-            profile = {
-              uid: supaUser.id,
-              email: supaUser.email || null,
-              displayName: meta.full_name || meta.name || supaUser.email?.split('@')[0] || 'Người dùng',
-              photoURL: meta.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(meta.full_name || '')}&background=e11d48&color=fff&size=128`,
-              role: 'USER',
-              isActive: false,
-              enableCloudStorage: true,
-              allowCustomApiKey: false,
-              joinedAt: new Date().toISOString(),
-            } as UserProfile;
-          }
-          await login(profile);
-          if (profile.role === 'ADMIN') {
-            addNotification('SUCCESS', `Chào mừng Admin ${profile.displayName} quay trở lại!`);
-          } else if (!profile.isActive) {
-            addNotification('WARNING', ADMIN_CONTACT.activationWarning, 10000);
-          } else {
-            addNotification('SUCCESS', `Đăng nhập thành công! Xin chào ${profile.displayName}`);
-          }
-        } else if (!session && user && user.uid !== 'guest-default') {
-          // No valid session — clear stale user
-          // TEMP: Disabled logout for anonymous access mode
-          // logout();
-        }
-      } catch {
-        // TEMP: Don't logout on error in anonymous mode
-      }
-    };
-    initSession();
-
-    // Listen for auth state changes (sign in/out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // TEMP: Disabled auto-logout in anonymous access mode
-      // if (!session && user && user.uid !== 'guest-default') {
-      //   logout();
-      // }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Check for Public URL Params ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'invitation' && params.get('uid')) {
       setIsPublicView(true);
-    }
-    if (params.get('auth_error') === '1') {
-      addNotification('ERROR', 'Đăng nhập Google thất bại. Vui lòng thử lại.', 6000);
     }
   }, []);
 
@@ -201,27 +130,6 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [settings.themeMode]);
-
-  // --- Analytics & User Sync Tracking ---
-  useEffect(() => {
-    if (!isPublicView) {
-      // 1. Log visit
-      logAppVisit(user?.uid);
-
-      // 2. Refresh user profile (check activation status) from Cloud
-      if (user && user.uid !== 'guest-default') {
-        refreshUserProfile();
-      }
-    }
-  }, [user?.uid, isPublicView]);
-
-  // Notify active users without Gemini key once on load
-  useEffect(() => {
-    if (user?.role === 'USER' && user.isActive && user.allowCustomApiKey && !settings.geminiApiKey) {
-      setSettingsDefaultTab('SYSTEM');
-      addNotification('WARNING', 'Vui lòng cấu hình Gemini API Key để sử dụng Cố Vấn AI.', 5000);
-    }
-  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Statistics Calculation Logic ---
   const stats: DashboardStats = useMemo(() => {
@@ -241,11 +149,7 @@ function App() {
     return { totalGuests, weightedGuestCount, totalChildren, confirmedGuests, totalBudget, totalActual, expectedGiftMoney, pendingTasks };
   }, [guests, budgetItems]);
 
-  // Handle Login Success from Modal
-  const handleLoginSuccess = () => {
-    setShowLoginModal(false);
-    setActiveTab('home');
-  };
+
 
   // --- RENDER: PUBLIC VIEW ---
   if (isPublicView) {
@@ -273,12 +177,7 @@ function App() {
       {/* Toast Notifications */}
       <Notifications />
 
-      {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
-          <LoginPage onLoginSuccess={handleLoginSuccess} onClose={() => setShowLoginModal(false)} />
-        </div>
-      )}
+
 
       {/* Desktop Sidebar */}
       <SideNav
@@ -295,7 +194,7 @@ function App() {
         <TopBar
           activeTab={activeTab}
           stats={stats}
-          onLoginClick={() => setShowLoginModal(true)}
+          onLoginClick={() => {}}
           setActiveTab={setActiveTab}
           onMenuClick={() => setIsMobileDrawerOpen(true)}
         />

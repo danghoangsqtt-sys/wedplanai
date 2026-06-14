@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>H &amp; M - Wedding Invitation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#bfab49",
+                        "on-secondary-fixed": "#171c20",
+                        "on-background": "#1b1c1d",
+                        "secondary": "#5a5f63",
+                        "surface-dim": "#dbdadb",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#4a3f00",
+                        "primary-fixed": "#d9e2ff",
+                        "on-error": "#ffffff",
+                        "primary": "#094cb2",
+                        "inverse-surface": "#303031",
+                        "inverse-on-surface": "#f2f0f1",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#faf9fa",
+                        "tertiary-fixed-dim": "#dcc661",
+                        "secondary-container": "#dfe3e8",
+                        "surface-container": "#efedee",
+                        "on-primary-fixed-variant": "#00419d",
+                        "on-primary-fixed": "#001946",
+                        "error": "#ba1a1a",
+                        "outline": "#737784",
+                        "surface-variant": "#e3e2e3",
+                        "on-primary-container": "#e7ebff",
+                        "surface-container-low": "#f5f3f4",
+                        "primary-container": "#3366cc",
+                        "on-secondary-fixed-variant": "#42474b",
+                        "background": "#faf9fa",
+                        "on-tertiary-fixed-variant": "#524600",
+                        "secondary-fixed-dim": "#c2c7cc",
+                        "primary-fixed-dim": "#b1c5ff",
+                        "secondary-fixed": "#dfe3e8",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#b1c5ff",
+                        "tertiary": "#6d5e00",
+                        "on-tertiary-fixed": "#211b00",
+                        "on-secondary-container": "#606569",
+                        "on-surface-variant": "#434653",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed": "#f9e37a",
+                        "surface-container-high": "#e9e8e9",
+                        "outline-variant": "#c3c6d5",
+                        "surface-tint": "#2259bf",
+                        "surface": "#faf9fa",
+                        "surface-container-highest": "#e3e2e3",
+                        "on-surface": "#1b1c1d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Noto Serif", "serif"],
+                        "display": ["Noto Serif", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #faf9fa; color: #1b1c1d; }
+        h1, h2, h3, h4, h5, h6, .font-headline, .font-display { font-family: 'Noto Serif', serif; }
+        .font-label { font-family: 'Public Sans', sans-serif; }
+        
+        .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease-out, transform 0.8s ease-out; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        /* Minimal scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e3e2e3; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #c3c6d5; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased overflow-x-hidden">
+<!-- NavigationDrawer (Mobile Sidebar hidden by default) -->
+<div aria-hidden="true" class="fixed inset-0 bg-on-surface/20 z-[60] hidden transition-opacity duration-300 opacity-0 backdrop-blur-sm" id="drawer-overlay"></div>
+<nav aria-label="Main Navigation" class="fixed top-0 left-0 h-full w-[280px] rounded-r-xl bg-surface dark:bg-surface-dim shadow-2xl z-[70] transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col py-6" id="nav-drawer">
+<div class="px-6 mb-8 flex justify-between items-center">
+<h2 class="font-headline text-2xl font-bold text-primary dark:text-primary-fixed">Wedding Invitation</h2>
+<button aria-label="Close menu" class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors" id="close-drawer">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto flex flex-col space-y-2">
+<a class="flex items-center space-x-4 bg-secondary-container text-on-secondary-container rounded-full mx-2 px-4 py-3 font-label font-medium transition-colors" href="#home">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span>Home</span>
+</a>
+<a class="flex items-center space-x-4 text-on-surface-variant hover:bg-surface-container-high hover:bg-primary-fixed/10 transition-colors rounded-full mx-2 px-4 py-3 font-label font-medium" href="#story">
+<span class="material-symbols-outlined">favorite</span>
+<span>Our Story</span>
+</a>
+<a class="flex items-center space-x-4 text-on-surface-variant hover:bg-surface-container-high hover:bg-primary-fixed/10 transition-colors rounded-full mx-2 px-4 py-3 font-label font-medium" href="#timeline">
+<span class="material-symbols-outlined">schedule</span>
+<span>Timeline</span>
+</a>
+<a class="flex items-center space-x-4 text-on-surface-variant hover:bg-surface-container-high hover:bg-primary-fixed/10 transition-colors rounded-full mx-2 px-4 py-3 font-label font-medium" href="#location">
+<span class="material-symbols-outlined">map</span>
+<span>Location</span>
+</a>
+<a class="flex items-center space-x-4 text-on-surface-variant hover:bg-surface-container-high hover:bg-primary-fixed/10 transition-colors rounded-full mx-2 px-4 py-3 font-label font-medium" href="#guestbook">
+<span class="material-symbols-outlined">forum</span>
+<span>Guestbook</span>
+</a>
+</div>
+</nav>
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-xl bg-surface/80 dark:bg-surface-dim/80 shadow-sm transition-all duration-300 ease-in-out">
+<div class="flex justify-between items-center px-4 md:px-8 h-16 w-full max-w-[480px] md:max-w-7xl mx-auto">
+<button aria-label="Open menu" class="p-2 text-outline dark:text-outline-variant hover:opacity-80 transition-opacity md:hidden" id="menu-btn">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex-1 flex justify-center md:justify-start">
+<h1 class="font-headline font-bold text-2xl tracking-tight text-primary dark:text-primary-fixed">H &amp; M</h1>
+</div>
+<!-- Desktop Nav (Hidden on Mobile) -->
+<nav class="hidden md:flex space-x-8 items-center font-label text-sm font-medium">
+<a class="text-primary dark:text-primary-fixed transition-colors" href="#home">Home</a>
+<a class="text-outline hover:text-primary transition-colors" href="#story">Our Story</a>
+<a class="text-outline hover:text-primary transition-colors" href="#timeline">Timeline</a>
+<a class="text-outline hover:text-primary transition-colors" href="#location">Location</a>
+</nav>
+<button aria-label="Favorite" class="p-2 text-outline dark:text-outline-variant hover:opacity-80 transition-opacity hidden md:block">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+</header>
+<!-- Main Content Container (Max width for mobile feel, centered on desktop) -->
+<main class="w-full max-w-[480px] md:max-w-2xl mx-auto pb-24 pt-16 min-h-screen bg-surface-container-lowest">
+<!-- Hero Section -->
+<section class="relative w-full h-[80vh] flex flex-col justify-end pb-16 px-6 fade-in" id="home">
+<div class="absolute inset-0 z-0 overflow-hidden rounded-b-3xl">
+<div class="w-full h-full bg-surface-variant" data-alt="A breathtaking, cinematic minimalist wedding portrait of a couple standing in a vast, empty gallery space with polished concrete floors. Soft, diffused natural light pours through an unseen window, casting a warm glow. The mood is serene, intimate, and editorial, featuring a muted palette of soft whites, warm greys, and a hint of blush. The composition has generous whitespace above them." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCFLy0ezOAKEW9h6C5Gcv7mPYKwrmkprzx_adU2IMADI4SFp1q_X4ciaxNiBtxxLRBZKPMHPD7DJ7s9P0GJyQbUVjmT8ZOSooUgNxA9EQ8KzM1aDwnObMPKPXQM_p6rN5JHsqBjo1AAHYygnLD0UkUv2kYSJiA0trdsmgHJykZ7-MaYrox3J9XqMQBppVaVr60bIp9XXoMeU_ZuCkR1mipeymuqw-RdC24LAjivwu2Rc308v1dRAAfG4zj50VqdhQMMZLXYa4HOjfI'); background-size: cover; background-position: center;">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/50 to-transparent"></div>
+</div>
+<div class="relative z-10 text-center space-y-4">
+<p class="font-label text-sm tracking-widest text-outline uppercase">We are getting married</p>
+<h2 class="font-headline text-5xl md:text-6xl font-semibold text-on-surface">Henry &amp; Mia</h2>
+<p class="font-body text-on-surface-variant mt-4">October 25, 2024</p>
+</div>
+</section>
+<!-- Mừng Cưới (Gift/QR) Section -->
+<section class="py-16 px-6 bg-surface-bright fade-in">
+<div class="text-center mb-10">
+<h3 class="font-headline text-3xl text-on-surface mb-3">Mừng Cưới</h3>
+<p class="font-body text-on-surface-variant text-sm max-w-sm mx-auto">Your presence is the greatest gift. If you wish to bless us with a gift, you may do so here.</p>
+</div>
+<div class="flex justify-center">
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-outline-variant/15 w-full max-w-[280px]">
+<div class="aspect-square w-full rounded-xl overflow-hidden bg-surface-variant mb-4 relative">
+<img alt="QR Code for Wedding Gift" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuibOptRYuqcc-Za4EuJl9pGtj0rUysQKJcXl0OZlvy3dASc00fFX_6TMPJs6ph3vXpQO2vzBnF4AATLftRlXFX8TpcK5OI3FdWTs8u_9y4tgJu8M0g4cVd6SGDSCU8madxWwqi42T39pr-cSOIveSm6GIBA1DLAtAhqPMhJLUDFTE5545el1H9siFG9pdBIS3MhgGAwCz8mvIGPVhiOi4NXq0ksieROwweBc4id_fLzy6of6nY2xiLTA"/>
+</div>
+<div class="text-center space-y-1">
+<p class="font-label font-medium text-on-surface">Bank Transfer</p>
+<p class="font-body text-sm text-outline">Henry Nguyen • 1234567890</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Our Story Preview -->
+<section class="py-16 px-6 bg-surface-container-lowest fade-in" id="story">
+<div class="space-y-6 text-center">
+<h3 class="font-headline text-3xl text-on-surface">Our Story</h3>
+<p class="font-body text-on-surface-variant leading-relaxed">
+                    A scholarly approach to love. We met amidst the towering stacks of the city archives, bonded over shared coffee, and slowly built a life of quiet luxury and shared dreams.
+                </p>
+<button class="inline-flex items-center space-x-2 text-primary font-label font-medium group pb-1 border-b border-primary/30 hover:border-primary transition-colors">
+<span>Read Full Story</span>
+<span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav aria-label="Bottom Navigation" class="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50 backdrop-blur-xl bg-surface/90 dark:bg-surface-dim/90 shadow-[0_-4px_20px_0_rgba(0,0,0,0.05)] border-t-0 border-secondary-container/30 transition-all duration-300 ease-in-out pb-safe">
+<div class="flex justify-around items-center py-3 px-4">
+<!-- Active State -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed font-bold font-label text-xs hover:text-primary-container transition-colors scale-95" href="#home">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span>Our Story</span>
+</a>
+<!-- Inactive States -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim font-label text-xs hover:text-primary-container transition-colors" href="#events">
+<span class="material-symbols-outlined mb-1">event</span>
+<span>Events</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim font-label text-xs hover:text-primary-container transition-colors" href="#gallery">
+<span class="material-symbols-outlined mb-1">photo_library</span>
+<span>Gallery</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim font-label text-xs hover:text-primary-container transition-colors" href="#rsvp">
+<span class="material-symbols-outlined mb-1">mail</span>
+<span>RSVP</span>
+</a>
+</div>
+</nav>
+<!-- Add safe area padding for modern mobile browsers -->
+<style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    </style>
+<script>
+        // Drawer Logic
+        const menuBtn = document.getElementById('menu-btn');
+        const closeBtn = document.getElementById('close-drawer');
+        const drawer = document.getElementById('nav-drawer');
+        const overlay = document.getElementById('drawer-overlay');
+
+        function toggleDrawer() {
+            const isOpen = !drawer.classList.contains('-translate-x-full');
+            if (isOpen) {
+                drawer.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            } else {
+                overlay.classList.remove('hidden');
+                // trigger reflow
+                void overlay.offsetWidth;
+                overlay.classList.remove('opacity-0');
+                drawer.classList.remove('-translate-x-full');
+            }
+        }
+
+        menuBtn.addEventListener('click', toggleDrawer);
+        closeBtn.addEventListener('click', toggleDrawer);
+        overlay.addEventListener('click', toggleDrawer);
+
+        // Simple Intersection Observer for fade-in animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    // Optional: Stop observing once faded in
+                    // observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    </script>
+</body></html>

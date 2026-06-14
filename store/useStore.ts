@@ -169,24 +169,8 @@ const getEffectiveUidFromState = (state: AppState): string | null => {
   return state.user.uid;
 };
 
-const triggerCloudSync = (get: () => AppState) => {
-  clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(() => {
-    // Re-read state at save time to capture all mutations within the debounce window
-    const state = get();
-    const effectiveUid = getEffectiveUidFromState(state);
-    if (state.user?.enableCloudStorage && effectiveUid && effectiveUid !== 'guest-default') {
-      saveUserDataToCloud(effectiveUid, {
-        guests: state.guests,
-        budgetItems: state.budgetItems,
-        procedures: state.procedures,
-        fengShuiProfile: state.fengShuiProfile || undefined,
-        fengShuiResults: state.fengShuiResults || undefined,
-        invitation: state.invitation,
-        weddingDate: state.user?.weddingDate || null,
-      });
-    }
-  }, 2000); // Debounce 2s
+const triggerCloudSync = (_get: () => AppState) => {
+  // Cloud sync disabled — app uses localStorage only
 };
 
 export const useStore = create<AppState>()(
@@ -224,80 +208,18 @@ export const useStore = create<AppState>()(
       setLocalMarketReport: (report) => set({ localMarketReport: report }),
 
       login: async (user) => {
-        set({ user, isSyncing: true });
-        get().addNotification('SUCCESS', `Chào mừng ${user.displayName} đã quay trở lại!`);
-        await syncUserProfile(user);
-
-        // Check shared plans
-        try {
-          const shared = await getMySharedPlan(user.uid);
-          if (shared) {
-            set({ sharedPlan: shared.plan, isSharedPlanOwner: shared.role === 'owner' });
-          }
-        } catch { /* silent */ }
-
-        if (user.enableCloudStorage) {
-          const effectiveUid = getEffectiveUidFromState(get());
-          const cloudData = await loadUserDataFromCloud(effectiveUid || user.uid);
-          if (cloudData) {
-            set({
-              guests: cloudData.guests,
-              budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
-              procedures: cloudData.procedures || WEDDING_PROCEDURES,
-              fengShuiProfile: cloudData.fengShuiProfile || null,
-              fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
-              invitation: cloudData.invitation || DEFAULT_INVITATION,
-              isSyncing: false,
-              // Restore weddingDate from cloud for all users (owner AND partner)
-              ...(cloudData.weddingDate ? {
-                user: { ...get().user!, weddingDate: cloudData.weddingDate }
-              } : {})
-            });
-            const shared = get().sharedPlan;
-            if (shared?.status === 'active') {
-              get().addNotification('INFO', `Đã đồng bộ kế hoạch chung với ${get().isSharedPlanOwner ? shared.partnerEmail : shared.ownerName}.`);
-            } else {
-              get().addNotification('INFO', 'Đã đồng bộ dữ liệu từ đám mây.');
-            }
-            return;
-          }
-        }
-        set({ isSyncing: false });
+        // Simply update user profile — no cloud sync
+        set({ user });
       },
 
       logout: async () => {
-        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-
-        // Flush any pending debounced sync to cloud immediately before logout
-        clearTimeout(syncTimeout);
-        const preState = get();
-        const effectiveUid = getEffectiveUidFromState(preState);
-        if (preState.user?.enableCloudStorage && effectiveUid && effectiveUid !== 'guest-default' && preState.user.role !== 'GUEST') {
-          try {
-            await saveUserDataToCloud(effectiveUid, {
-              guests: preState.guests,
-              budgetItems: preState.budgetItems,
-              procedures: preState.procedures,
-              fengShuiProfile: preState.fengShuiProfile || undefined,
-              fengShuiResults: preState.fengShuiResults || undefined,
-              invitation: preState.invitation,
-              weddingDate: preState.user?.weddingDate || null,
-            });
-          } catch (e) {
-            console.error('Failed to flush data before logout:', e);
-          }
-        }
-
-        supabase.auth.signOut().catch(() => {});
-
-        // Only reset auth state — preserve data in localStorage as fallback for next login
+        // Simply reset to default state — no cloud operations
         set({
           user: DEFAULT_GUEST_USER,
           guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
           sharedPlan: null,
           isSharedPlanOwner: false,
         });
-        get().addNotification('INFO', 'Đã đăng xuất thành công.');
       },
 
       setGeminiApiKey: (key) => set((state) => ({ settings: { ...state.settings, geminiApiKey: key } })),
@@ -723,7 +645,7 @@ export const useStore = create<AppState>()(
       }
     }),
     {
-      name: 'wedplan-storage-v10',
+      name: 'wedplan-storage-v11',
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,

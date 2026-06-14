@@ -1,6 +1,6 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent } from '../../types';
-import { MapPin, Calendar, Clock, Heart, Quote, CreditCard, ChevronDown, Gift, Send, BookOpen, Camera, MessageCircle } from 'lucide-react';
+import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, X, Music, Volume2, VolumeX } from 'lucide-react';
 
 interface InvitationPreviewProps {
     data: InvitationData;
@@ -8,545 +8,859 @@ interface InvitationPreviewProps {
     onGuestbook?: () => void;
 }
 
-// --- HOOK: SCROLL REVEAL ---
-const useScrollReveal = (data: any) => {
+/* ============================================================
+   DESIGN SYSTEM — Timeless Heritage (Inspired by reference themes)
+   ============================================================
+   Primary: #7c1d00 (Heritage Red)
+   Surface: #fdf8f6 (Warm Cream)
+   Rose Gold: #EFCB84
+   Deep Earth: #61564F
+   Ink Charcoal: #2A2626
+   Font: Playfair Display (headlines), Source Serif 4 (body)
+   ============================================================ */
+
+// ─── SCROLL REVEAL HOOK ───
+const useScrollReveal = (deps: any) => {
     useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
-            });
-        }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
-
-        const timeout = setTimeout(() => {
-            document.querySelectorAll('.reveal, .reveal-zoom, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
-        }, 100);
-
-        return () => {
-            clearTimeout(timeout);
-            observer.disconnect();
-        };
-    }, [data]);
+        const obs = new IntersectionObserver(
+            entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); }),
+            { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+        );
+        const t = setTimeout(() => document.querySelectorAll('.rv').forEach(el => obs.observe(el)), 80);
+        return () => { clearTimeout(t); obs.disconnect(); };
+    }, [deps]);
 };
 
-// --- EFFECT: PETALS/HEARTS/SPARKLES ---
+// ─── FLOATING PETALS / HEARTS ───
 const FloatingEffect: React.FC<{ type: 'petals' | 'hearts' | 'sparkles' }> = ({ type }) => {
-    const items = useMemo(() => Array.from({ length: 15 }, (_, i) => ({
+    const items = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
         id: i,
         left: `${Math.random() * 100}%`,
-        duration: `${4 + Math.random() * 4}s`,
-        delay: `${Math.random() * 5}s`,
-        drift: `${-50 + Math.random() * 100}px`,
-        size: `${14 + Math.random() * 10}px`,
+        dur: `${5 + Math.random() * 5}s`,
+        delay: `${Math.random() * 6}s`,
+        drift: `${-40 + Math.random() * 80}px`,
+        size: `${12 + Math.random() * 8}px`,
     })), []);
-
     const emoji = type === 'hearts' ? '❤' : type === 'sparkles' ? '✦' : '✿';
-    const animClass = type === 'hearts' ? 'animate-heart-float' : type === 'sparkles' ? 'animate-sparkle-float' : 'animate-petal-fall';
-    const color = type === 'hearts' ? '#f43f5e' : type === 'sparkles' ? '#f59e0b' : '#fb7185';
-
+    const color = type === 'hearts' ? '#e11d48' : type === 'sparkles' ? '#EFCB84' : '#f9a8d4';
     return (
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
             {items.map(p => (
-                <span
-                    key={p.id}
-                    className={animClass}
-                    style={{
-                        position: 'absolute',
-                        top: '-30px',
-                        left: p.left,
-                        fontSize: p.size,
-                        color,
-                        '--petal-duration': p.duration,
-                        '--petal-delay': p.delay,
-                        '--petal-drift': p.drift,
-                        opacity: 0.7
-                    } as React.CSSProperties}
-                >
-                    {emoji}
-                </span>
+                <span key={p.id} className="float-particle" style={{
+                    position: 'absolute', top: '-24px', left: p.left, fontSize: p.size, color,
+                    '--fd': p.dur, '--fdl': p.delay, '--fdr': p.drift, opacity: 0.6,
+                } as React.CSSProperties}>{emoji}</span>
             ))}
         </div>
     );
 };
 
-// --- ORNAMENTAL DIVIDER ---
-const OrnamentalDivider: React.FC<{ templateId: string; className?: string }> = ({ templateId, className = '' }) => {
-    const isDark = templateId === 'luxury';
-    return (
-        <div className={`flex items-center justify-center gap-3 py-4 ${className}`}>
-            <div className={`w-12 sm:w-20 h-px ${isDark ? 'bg-yellow-500/40' : 'bg-current opacity-15'}`}></div>
-            <span className={`text-xs ${isDark ? 'text-yellow-500/60' : 'opacity-25'}`}>✦</span>
-            <div className={`w-12 sm:w-20 h-px ${isDark ? 'bg-yellow-500/40' : 'bg-current opacity-15'}`}></div>
-        </div>
-    );
-};
-
-// --- SECTION HEADER ---
-const SectionHeader: React.FC<{ subtitle: string; title: string; s: any; className?: string }> = ({ subtitle, title, s, className = '' }) => (
-    <div className={`text-center mb-10 ${className}`}>
-        <p className={`${s.title} text-[10px] sm:text-xs uppercase tracking-[0.3em] opacity-60 mb-3 font-semibold`}>{subtitle}</p>
-        <h2 className={`${s.script} text-3xl sm:text-4xl ${s.accent}`}>{title}</h2>
+// ─── ORNAMENTAL DIVIDER ───
+const Divider: React.FC<{ className?: string }> = ({ className = '' }) => (
+    <div className={`flex items-center justify-center gap-3 py-5 ${className}`}>
+        <div className="w-16 h-px" style={{ background: 'linear-gradient(90deg, transparent, #EFCB84, transparent)' }} />
+        <span className="text-[10px]" style={{ color: '#EFCB84' }}>✦</span>
+        <div className="w-16 h-px" style={{ background: 'linear-gradient(90deg, transparent, #EFCB84, transparent)' }} />
     </div>
 );
 
-// --- STICKER DECOR ---
-const StickerDecor: React.FC<{ emoji?: string; size?: string; className?: string }> = ({ emoji, size = 'text-3xl', className = '' }) => {
-    if (!emoji) return null;
+// ─── COUNTDOWN HOOK ───
+const useCountdown = (targetDate: string) => {
+    const [diff, setDiff] = useState({ d: 0, h: 0, m: 0, s: 0 });
+    useEffect(() => {
+        if (!targetDate) return;
+        const tick = () => {
+            const now = Date.now();
+            const target = new Date(targetDate).getTime();
+            const ms = Math.max(0, target - now);
+            setDiff({
+                d: Math.floor(ms / 86400000),
+                h: Math.floor((ms % 86400000) / 3600000),
+                m: Math.floor((ms % 3600000) / 60000),
+                s: Math.floor((ms % 60000) / 1000),
+            });
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [targetDate]);
+    return diff;
+};
+
+// ─── LIGHTBOX ───
+const Lightbox: React.FC<{ images: string[]; index: number; onClose: () => void }> = ({ images, index, onClose }) => {
+    const [cur, setCur] = useState(index);
+    useEffect(() => {
+        const h = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowRight') setCur(c => (c + 1) % images.length);
+            if (e.key === 'ArrowLeft') setCur(c => (c - 1 + images.length) % images.length);
+        };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+    }, [images.length, onClose]);
+
     return (
-        <div className={`flex items-center justify-center select-none pointer-events-none ${className}`} aria-hidden>
-            <span className={`${size} animate-pulse`} style={{ animationDuration: '3s' }}>{emoji}</span>
+        <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center" onClick={onClose}>
+            <button className="absolute top-4 right-4 text-white/80 hover:text-white z-10" onClick={onClose}><X size={28} /></button>
+            <img src={images[cur]} alt="" className="max-w-[92vw] max-h-[88vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+            {images.length > 1 && (
+                <div className="absolute bottom-6 flex gap-2">
+                    {images.map((_, i) => (
+                        <button key={i} className={`w-2 h-2 rounded-full transition-all ${i === cur ? 'bg-white scale-125' : 'bg-white/40'}`}
+                            onClick={e => { e.stopPropagation(); setCur(i); }} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
 
-// --- MAIN COMPONENT ---
-const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook }) => {
+// ─── QR CODE GENERATOR ───
+const QRCodeImage: React.FC<{ bankId: string; accountNumber: string; accountName: string; amount?: number }> = ({ bankId, accountNumber, accountName }) => {
+    const url = `https://img.vietqr.io/image/${bankId}-${accountNumber}-compact2.png?accountName=${encodeURIComponent(accountName)}`;
+    return <img src={url} alt="QR Mừng Cưới" className="w-44 h-44 mx-auto rounded-lg" />;
+};
+
+// ════════════════════════════════════════════════════════════════
+//  MAIN COMPONENT
+// ════════════════════════════════════════════════════════════════
+const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     useScrollReveal(data);
+    const countdown = useCountdown(data.date);
+    const [lbIndex, setLbIndex] = useState<number | null>(null);
+    const [audioPlaying, setAudioPlaying] = useState(false);
+    const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
-    const {
-        templateId = 'modern', groomName, brideName, groomParents, brideParents, date, lunarDate, time,
-        location, address, mapLink, wishes, themeColor,
-        bankInfo, couplePhoto, galleryImages, events,
-        loveStory, rsvpEnabled, rsvpDeadline, guestbookEnabled,
-        countdownEnabled, petalEffect, guestWishes,
-        headerSticker, dividerSticker, footerSticker,
-    } = data;
-
-    const vietQrUrl = useMemo(() => {
-        if (!bankInfo?.bankId || !bankInfo?.accountNumber) return '';
-        return `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNumber}-compact2.png`;
-    }, [bankInfo]);
-
-    const weddingDate = new Date(date || '');
-    const isValidDate = Boolean(date) && !isNaN(weddingDate.getTime());
-    const day = isValidDate ? weddingDate.getDate() : '--';
-    const month = isValidDate ? weddingDate.getMonth() + 1 : '--';
-    const year = isValidDate ? weddingDate.getFullYear() : '----';
-    const dayName = isValidDate ? weddingDate.toLocaleDateString('vi-VN', { weekday: 'long' }) : 'Ngày';
-
-    // Countdown logic
-    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, passed: false });
-    useEffect(() => {
-        if (!countdownEnabled || !isValidDate) return;
-        const target = new Date(`${date}T${time || '10:00'}:00`).getTime();
-        const interval = setInterval(() => {
-            const diff = target - Date.now();
-            if (diff <= 0) {
-                setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, passed: true });
-                clearInterval(interval);
-            } else {
-                setTimeLeft({
-                    days: Math.floor(diff / 86400000),
-                    hours: Math.floor((diff % 86400000) / 3600000),
-                    minutes: Math.floor((diff % 3600000) / 60000),
-                    seconds: Math.floor((diff % 60000) / 1000),
-                    passed: false
-                });
-            }
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [date, time, countdownEnabled, isValidDate]);
-
-    // Lightbox state
-    const [lightboxImg, setLightboxImg] = useState<string | null>(null);
-
-    // Style Mapping
-    const getStyles = () => {
-        switch (templateId) {
-            case 'luxury': return { title: "font-['Cinzel',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-stone-900', text: 'text-stone-200', accent: 'text-yellow-400', accentBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', accentColor: '#facc15', cardBg: 'bg-stone-800/60', cardBorder: 'border-stone-700/50', sectionAlt: 'bg-stone-800/30' };
-            case 'traditional': return { title: "font-['Playfair_Display',serif]", body: "font-['Merriweather',serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#FFF6E5]', text: 'text-[#9B1C1C]', accent: 'text-[#9B1C1C]', accentBg: 'bg-[#9B1C1C] text-[#FFF6E5] border-[#C9A24D]', accentColor: '#9B1C1C', cardBg: 'bg-white/60', cardBorder: 'border-[#C9A24D]/20', sectionAlt: 'bg-[#F5ECD5]/50' };
-            case 'vintage': return { title: "font-['Cinzel',serif]", body: "font-['Merriweather',serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#F5EED8]', text: 'text-[#5C4A1E]', accent: 'text-[#7B5C2A]', accentBg: 'bg-[#7B5C2A] text-[#FDF6E3] border-[#A0845C]', accentColor: '#7B5C2A', cardBg: 'bg-white/50', cardBorder: 'border-[#A0845C]/20', sectionAlt: 'bg-[#EDE4CC]/40' };
-            case 'floral': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-pink-50/50', text: 'text-gray-700', accent: 'text-pink-600', accentBg: 'bg-pink-500 text-white border-pink-200', accentColor: '#db2777', cardBg: 'bg-white/70', cardBorder: 'border-pink-200/40', sectionAlt: 'bg-pink-50/60' };
-            case 'romantic': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-rose-50/50', text: 'text-rose-900', accent: 'text-rose-600', accentBg: 'bg-rose-500 text-white border-rose-200', accentColor: '#e11d48', cardBg: 'bg-white/70', cardBorder: 'border-rose-200/40', sectionAlt: 'bg-rose-50/60' };
-            case 'garden': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-emerald-50/30', text: 'text-emerald-950', accent: 'text-emerald-700', accentBg: 'bg-emerald-600 text-white border-emerald-200', accentColor: '#047857', cardBg: 'bg-white/60', cardBorder: 'border-emerald-200/30', sectionAlt: 'bg-emerald-50/40' };
-            case 'minimalist': return { title: "font-['Montserrat',sans-serif]", body: "font-['Montserrat',sans-serif]", script: "font-['Montserrat',sans-serif]", bg: 'bg-white', text: 'text-gray-900', accent: 'text-gray-900', accentBg: 'bg-gray-900 text-white border-gray-900', accentColor: '#111827', cardBg: 'bg-gray-50/80', cardBorder: 'border-gray-200/50', sectionAlt: 'bg-gray-50/60' };
-            default: // modern
-                return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#fdf8f6]', text: 'text-[#2A2626]', accent: 'text-[#7c1d00]', accentBg: 'bg-[#a12f0c] text-white border-[#a12f0c]', accentColor: '#7c1d00', cardBg: 'bg-white/70', cardBorder: 'border-[#e0bfb7]/30', sectionAlt: 'bg-[#f7f3f1]' };
+    const toggleAudio = useCallback(() => {
+        if (!audioRef.current && data.musicUrl) {
+            audioRef.current = new Audio(data.musicUrl);
+            audioRef.current.loop = true;
         }
-    };
-    const s = getStyles();
-    const isDark = templateId === 'luxury';
+        if (audioRef.current) {
+            if (audioPlaying) { audioRef.current.pause(); }
+            else { audioRef.current.play().catch(() => { }); }
+            setAudioPlaying(!audioPlaying);
+        }
+    }, [audioPlaying, data.musicUrl]);
+
+    const hasCountdown = data.countdownEnabled !== false && data.date;
+    const hasEvents = data.events && data.events.length > 0;
+    const hasGallery = data.galleryImages && data.galleryImages.length > 0;
+    const hasBank = data.bankInfo?.bankId && data.bankInfo?.accountNumber;
+    const hasLoveStory = data.loveStory && data.loveStory.length > 0;
+    const hasRSVP = data.rsvpEnabled;
+    const effectType = data.petalEffect && data.petalEffect !== 'none' ? data.petalEffect : null;
+    const groomName = data.groomName || 'Chú Rể';
+    const brideName = data.brideName || 'Cô Dâu';
+
+    // Format wedding date nicely
+    const fmtDate = useMemo(() => {
+        if (!data.date) return '';
+        try {
+            const d = new Date(data.date);
+            return d.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        } catch { return data.date; }
+    }, [data.date]);
 
     return (
-        <div className={`w-full overflow-x-hidden relative ${s.bg} ${s.text} ${s.body}`}>
-            {/* Fonts Import */}
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Be+Vietnam+Pro:wght@400;500&display=swap');
-                .text-shadow-elegant { text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-                .text-shadow-hero { text-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-                .glass-card-v2 {
-                    background: ${isDark ? 'rgba(28,25,23,0.7)' : 'rgba(253,248,246,0.85)'};
-                    backdrop-filter: blur(12px);
-                    -webkit-backdrop-filter: blur(12px);
-                }
-                .inner-glow { box-shadow: inset 0 0 30px ${isDark ? 'rgba(250,204,21,0.03)' : 'rgba(255,255,255,0.5)'}; }
-                .floral-shadow { box-shadow: 0 4px 30px rgba(0,0,0,0.06); }
-                .countdown-circle {
-                    background: ${isDark ? 'rgba(28,25,23,0.8)' : 'rgba(255,255,255,0.9)'};
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.08), inset 0 0 20px ${isDark ? 'rgba(250,204,21,0.05)' : 'rgba(0,0,0,0.02)'};
-                }
-                .event-connector {
-                    background: linear-gradient(to bottom, transparent, ${s.accentColor}40, transparent);
-                }
-                @keyframes gentle-float {
-                    0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-6px); }
-                }
-                .animate-gentle-float { animation: gentle-float 3s ease-in-out infinite; }
-            `}</style>
+        <>
+            {lbIndex !== null && data.galleryImages && (
+                <Lightbox images={data.galleryImages} index={lbIndex} onClose={() => setLbIndex(null)} />
+            )}
 
-            {/* Global Petal/Floating Effects */}
-            {petalEffect && petalEffect !== 'none' && <FloatingEffect type={petalEffect} />}
+            <div className="inv-preview" style={{ fontFamily: "'Source Serif 4', 'Playfair Display', serif" }}>
 
-            {/* ============================== */}
-            {/* 1. HERO SECTION                */}
-            {/* ============================== */}
-            <section className="relative w-full h-[100dvh] flex items-end justify-center overflow-hidden">
-                {/* Background */}
-                {couplePhoto ? (
-                    <div className="absolute inset-0 z-0">
-                        <img src={couplePhoto} alt="Couple" className="w-full h-full object-cover object-center" />
-                        <div className={`absolute inset-0 ${isDark
-                            ? 'bg-gradient-to-t from-stone-900 via-stone-900/50 to-black/20'
-                            : 'bg-gradient-to-t from-black/70 via-black/20 to-transparent'
-                            }`}></div>
-                    </div>
-                ) : (
-                    <div className="absolute inset-0 z-0">
-                        <div className={`w-full h-full ${isDark ? 'bg-stone-900' : 'bg-gradient-to-b from-[#f7f3f1] via-[#fdf8f6] to-[#f7f3f1]'}`}></div>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03]">
-                            <Heart className="w-80 h-80" />
-                        </div>
-                    </div>
+                {/* ── FLOATING MUSIC BUTTON ── */}
+                {data.musicUrl && (
+                    <button onClick={toggleAudio} className="inv-music-btn" title={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'}>
+                        {audioPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                    </button>
                 )}
 
-                {/* Hero Content — positioned at bottom like reference */}
-                <div className="relative z-10 w-full px-6 pb-16 flex flex-col items-center text-center">
-                    <div className="reveal">
-                        <StickerDecor emoji={headerSticker} size="text-3xl" className="mb-3" />
-                        <p className={`text-[10px] sm:text-[11px] uppercase tracking-[0.4em] mb-4 font-semibold ${couplePhoto ? 'text-white/80' : `opacity-60`}`}>
-                            Trân Trọng Kính Mời
-                        </p>
-                    </div>
-
-                    <div className="reveal delay-200">
-                        {/* Names — controlled size, never overflow */}
-                        <h1 className={`${s.script} leading-[1.15] mb-1 ${couplePhoto ? 'text-white text-shadow-hero' : s.accent}`}
-                            style={{ fontSize: 'clamp(2rem, 10vw, 3.5rem)' }}>
-                            {groomName || 'Chú Rể'}
-                        </h1>
-                        <span className={`${s.title} text-lg block my-2 ${couplePhoto ? 'text-[#EFCB84] text-shadow-elegant' : 'opacity-50'}`}>&amp;</span>
-                        <h1 className={`${s.script} leading-[1.15] ${couplePhoto ? 'text-white text-shadow-hero' : s.accent}`}
-                            style={{ fontSize: 'clamp(2rem, 10vw, 3.5rem)' }}>
-                            {brideName || 'Cô Dâu'}
-                        </h1>
-                    </div>
-
-                    <div className="reveal delay-400 mt-6 w-full max-w-xs">
-                        <div className={`flex items-center justify-center gap-3 text-[11px] sm:text-xs tracking-[0.2em] uppercase font-medium ${couplePhoto ? 'text-white/90' : 'opacity-70'}`}>
-                            <span>{isValidDate ? `${String(day).padStart(2,'0')}.${String(month).padStart(2,'0')}.${year}` : '-- . -- . ----'}</span>
-                            {(location || address) && <>
-                                <span className={`w-1 h-1 rounded-full ${couplePhoto ? 'bg-[#EFCB84]' : 'bg-current opacity-40'}`}></span>
-                                <span className="truncate max-w-[140px]">{location || address}</span>
-                            </>}
-                        </div>
-                        {lunarDate && <p className={`text-[10px] mt-2 italic ${couplePhoto ? 'text-white/60' : 'opacity-50'}`}>({lunarDate})</p>}
-                    </div>
-
-                    {/* Scroll indicator */}
-                    <div className="reveal delay-500 mt-10 flex flex-col items-center animate-bounce">
-                        <ChevronDown className={`w-6 h-6 ${couplePhoto ? 'text-white/50' : 'opacity-30'}`} />
-                    </div>
-                </div>
-            </section>
-
-            {/* ============================== */}
-            {/* 2. INVITATION MESSAGE & FAMILY */}
-            {/* ============================== */}
-            <section className={`py-14 sm:py-20 px-6 text-center relative z-10 ${s.sectionAlt} inner-glow`}>
-                <div className="reveal-zoom max-w-md mx-auto">
-                    <OrnamentalDivider templateId={templateId} className="mb-6" />
-
-                    <p className={`${s.title} text-[10px] sm:text-xs uppercase tracking-[0.3em] opacity-60 mb-6 font-semibold`}>Lời Mời Trân Trọng</p>
-
-                    <p className={`${s.body} text-sm sm:text-base leading-relaxed opacity-85 italic px-4 mb-10`}>
-                        "{wishes || 'Sự hiện diện của quý vị là niềm vinh hạnh lớn nhất cho gia đình chúng tôi.'}"
-                    </p>
-
-                    {/* Family Info — Card style */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                        <div className={`glass-card-v2 rounded-2xl p-5 border ${s.cardBorder} floral-shadow`}>
-                            <p className={`${s.title} text-[10px] uppercase tracking-[0.2em] ${s.accent} font-bold mb-3`}>Nhà Trai</p>
-                            <p className="text-sm opacity-80 leading-relaxed">Ông: {groomParents?.father || '...'}</p>
-                            <p className="text-sm opacity-80 leading-relaxed">Bà: {groomParents?.mother || '...'}</p>
-                        </div>
-                        <div className={`glass-card-v2 rounded-2xl p-5 border ${s.cardBorder} floral-shadow`}>
-                            <p className={`${s.title} text-[10px] uppercase tracking-[0.2em] ${s.accent} font-bold mb-3`}>Nhà Gái</p>
-                            <p className="text-sm opacity-80 leading-relaxed">Ông: {brideParents?.father || '...'}</p>
-                            <p className="text-sm opacity-80 leading-relaxed">Bà: {brideParents?.mother || '...'}</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ============================== */}
-            {/* 3. COUNTDOWN                   */}
-            {/* ============================== */}
-            {countdownEnabled && date && !timeLeft.passed && (
-                <section className="py-14 sm:py-20 px-6 text-center reveal">
-                    <SectionHeader subtitle="Đếm Ngược" title="Ngày Trọng Đại" s={s} />
-                    <div className="flex justify-center gap-3 sm:gap-5">
-                        {[
-                            { label: 'Ngày', value: timeLeft.days },
-                            { label: 'Giờ', value: timeLeft.hours },
-                            { label: 'Phút', value: timeLeft.minutes },
-                            { label: 'Giây', value: timeLeft.seconds },
-                        ].map((item) => (
-                            <div key={item.label} className="flex flex-col items-center">
-                                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full countdown-circle flex items-center justify-center border ${s.cardBorder} transition-all`}>
-                                    <span className={`${s.title} text-xl sm:text-2xl font-bold ${s.accent} tabular-nums`}>
-                                        {String(item.value).padStart(2, '0')}
-                                    </span>
-                                </div>
-                                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider mt-3 opacity-50 font-semibold">{item.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* ============================== */}
-            {/* 4. EVENTS TIMELINE             */}
-            {/* ============================== */}
-            {events && events.length > 0 && (
-                <section className={`py-14 sm:py-20 px-6 ${s.sectionAlt}`}>
-                    <div className="reveal">
-                        <SectionHeader subtitle="Chương Trình" title="Sự Kiện" s={s} />
-                    </div>
-
-                    <div className="max-w-md mx-auto space-y-0">
-                        {events.map((evt, idx) => (
-                            <React.Fragment key={evt.id}>
-                                <div className="reveal-left flex flex-col items-center text-center relative py-2">
-                                    {/* Event Icon Circle */}
-                                    <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-4 border-2 floral-shadow ${s.accentBg}`}>
-                                        {idx === 0
-                                            ? <Heart className="w-5 h-5 fill-current" />
-                                            : <Gift className="w-5 h-5" />
-                                        }
-                                    </div>
-
-                                    {/* Event Details */}
-                                    <h4 className={`${s.title} text-lg sm:text-xl font-semibold mb-2`}>{evt.title}</h4>
-                                    <p className={`text-[11px] sm:text-xs ${s.accent} tracking-[0.15em] uppercase font-semibold mb-3`}>
-                                        {evt.time} — {evt.date.split('-').reverse().join(' | ')}
-                                    </p>
-                                    <p className="text-sm opacity-75 mb-1 px-4 leading-relaxed">{evt.location}</p>
-                                    {evt.description && <p className="text-xs opacity-60 italic mt-1 px-6">{evt.description}</p>}
-
-                                    {/* Action Buttons */}
-                                    <div className="flex gap-3 mt-4">
-                                        {mapLink && (
-                                            <a href={mapLink} target="_blank" rel="noopener noreferrer"
-                                                className={`inline-flex items-center gap-1.5 px-5 py-2.5 text-[10px] sm:text-[11px] uppercase tracking-[0.15em] font-bold border transition-all active:scale-95 ${s.accentBg} rounded-sm`}>
-                                                <MapPin className="w-3.5 h-3.5" /> Chỉ Đường
-                                            </a>
-                                        )}
-                                        <a href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(evt.title)}&dates=${evt.date.replace(/-/g, '')}T${evt.time.replace(':', '')}00Z/${evt.date.replace(/-/g, '')}T${String(parseInt(evt.time) + 2).padStart(2, '0')}${evt.time.split(':')[1]}00Z&location=${encodeURIComponent(evt.location)}`}
-                                            target="_blank" rel="noopener noreferrer"
-                                            className={`inline-flex items-center gap-1.5 px-5 py-2.5 text-[10px] sm:text-[11px] uppercase tracking-[0.15em] font-bold border rounded-sm transition-all active:scale-95 ${isDark ? 'border-stone-600 text-stone-300 hover:bg-stone-700' : 'border-current/20 hover:bg-black/5'}`}>
-                                            <Calendar className="w-3.5 h-3.5" /> Lưu Lịch
-                                        </a>
-                                    </div>
-                                </div>
-
-                                {/* Connector Line between events */}
-                                {idx < events.length - 1 && (
-                                    <div className="flex justify-center py-3">
-                                        <div className="w-px h-12 event-connector"></div>
-                                    </div>
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* ============================== */}
-            {/* 5. LOCATION (Fallback)         */}
-            {/* ============================== */}
-            {(location || address) && (!events || events.length === 0) && (
-                <section className="py-14 sm:py-20 px-6 text-center reveal-zoom">
-                    <SectionHeader subtitle="Địa Điểm" title="Tổ Chức" s={s} />
-                    <div className={`glass-card-v2 p-6 sm:p-8 rounded-2xl border floral-shadow max-w-sm mx-auto ${s.cardBorder}`}>
-                        <p className={`${s.title} font-bold text-lg mb-2 ${s.accent}`}>{location}</p>
-                        <p className="text-sm opacity-75 mb-6 px-4">{address}</p>
-                        {mapLink && (
-                            <a href={mapLink} target="_blank" rel="noopener noreferrer"
-                                className={`inline-flex items-center justify-center gap-2 px-6 py-3 font-bold text-[11px] tracking-[0.15em] uppercase transition-all active:scale-95 shadow-md ${s.accentBg} rounded-sm`}>
-                                <MapPin className="w-4 h-4" /> Xem Bản Đồ
-                            </a>
+                {/* ── HERO SECTION ── */}
+                <section className="inv-hero">
+                    {effectType && <FloatingEffect type={effectType} />}
+                    {data.couplePhoto && (
+                        <img src={data.couplePhoto} alt="Ảnh cưới" className="inv-hero-img"
+                            style={data.photoConfig ? {
+                                transform: `scale(${data.photoConfig.scale}) translate(${data.photoConfig.x}px, ${data.photoConfig.y}px)`
+                            } : undefined}
+                        />
+                    )}
+                    <div className="inv-hero-overlay" />
+                    <div className="inv-hero-content rv">
+                        <p className="inv-label">Lễ Thành Hôn</p>
+                        <h1 className="inv-couple-name">{groomName} <span className="inv-ampersand">&</span> {brideName}</h1>
+                        {fmtDate && (
+                            <p className="inv-date-line">
+                                <Calendar size={14} className="inline -mt-0.5" /> {fmtDate}
+                                {data.time && <> · <Clock size={14} className="inline -mt-0.5" /> {data.time}</>}
+                            </p>
                         )}
-                    </div>
-                </section>
-            )}
+                        {data.lunarDate && <p className="inv-lunar">(Âm lịch: {data.lunarDate})</p>}
+                        <p className="inv-wishes">{data.wishes}</p>
 
-            {/* ============================== */}
-            {/* 6. PHOTO GALLERY (Bento Grid)  */}
-            {/* ============================== */}
-            {galleryImages && galleryImages.length > 0 && (
-                <section className="py-14 sm:py-20 px-2 sm:px-6">
-                    <div className="reveal">
-                        <SectionHeader subtitle="Album Ảnh" title="Khoảnh Khắc" s={s} />
-                    </div>
-
-                    {/* Bento Grid like reference */}
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 max-w-2xl mx-auto">
-                        {galleryImages.map((img, i) => (
-                            <div
-                                key={i}
-                                className={`reveal-zoom overflow-hidden relative group cursor-pointer floral-shadow ${i === 0 ? 'col-span-2 aspect-[16/9]' : 'aspect-[3/4]'} rounded-lg sm:rounded-xl`}
-                                onClick={() => setLightboxImg(img)}
-                            >
-                                <img src={img} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={`Ảnh ${i + 1}`} loading="lazy" />
-                                {/* Subtle hover overlay */}
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
-                                    <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-70 transition-opacity duration-300" />
-                                </div>
+                        {/* Countdown inside hero */}
+                        {hasCountdown && (
+                            <div className="inv-countdown-row">
+                                <div className="inv-cd-unit"><span className="inv-cd-num">{countdown.d}</span><span className="inv-cd-label">Ngày</span></div>
+                                <div className="inv-cd-sep" />
+                                <div className="inv-cd-unit"><span className="inv-cd-num">{countdown.h}</span><span className="inv-cd-label">Giờ</span></div>
+                                <div className="inv-cd-sep" />
+                                <div className="inv-cd-unit"><span className="inv-cd-num">{countdown.m}</span><span className="inv-cd-label">Phút</span></div>
+                                <div className="inv-cd-sep" />
+                                <div className="inv-cd-unit"><span className="inv-cd-num">{countdown.s}</span><span className="inv-cd-label">Giây</span></div>
                             </div>
-                        ))}
+                        )}
+                        <ChevronDown size={24} className="mx-auto mt-4 animate-bounce opacity-50" style={{ color: '#EFCB84' }} />
                     </div>
                 </section>
-            )}
 
-            {/* Lightbox */}
-            {lightboxImg && (
-                <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 animate-fadeIn" onClick={() => setLightboxImg(null)}>
-                    <img src={lightboxImg} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" alt="Lightbox" />
-                    <button className="absolute top-6 right-6 text-white/70 hover:text-white text-3xl font-light transition-colors" onClick={() => setLightboxImg(null)}>✕</button>
-                </div>
-            )}
-
-            {/* ============================== */}
-            {/* 7. LOVE STORY (Timeline)       */}
-            {/* ============================== */}
-            {loveStory && loveStory.length > 0 && (
-                <section className={`py-14 sm:py-20 px-6 ${s.sectionAlt} inner-glow`}>
-                    <div className="reveal">
-                        <SectionHeader subtitle="Câu Chuyện Tình Yêu" title="Our Story" s={s} />
-                    </div>
-
-                    <div className="relative max-w-sm mx-auto">
-                        {/* Center timeline line */}
-                        <div className="absolute left-[15px] top-4 bottom-4 w-px bg-current opacity-10"></div>
-
-                        {loveStory.map((evt, idx) => (
-                            <div key={evt.id} className={`reveal-right relative pl-10 mb-8 last:mb-0`}>
-                                {/* Timeline dot */}
-                                <div className={`absolute left-0 top-2 w-8 h-8 rounded-full flex items-center justify-center ${s.bg} border-2 ${isDark ? 'border-yellow-500/40' : 'border-current/20'}`}>
-                                    <Heart className={`w-3 h-3 fill-current ${s.accent}`} />
-                                </div>
-
-                                {/* Content card */}
-                                <div className={`glass-card-v2 p-4 sm:p-5 rounded-2xl border ${s.cardBorder} floral-shadow`}>
-                                    <span className={`inline-block text-[10px] font-bold uppercase tracking-wider opacity-50 px-2 py-0.5 rounded mb-2 ${isDark ? 'bg-stone-700' : 'bg-black/5'}`}>
-                                        {evt.date}
-                                    </span>
-                                    <h4 className={`${s.title} font-bold text-sm sm:text-base mt-1 mb-1.5 ${s.accent}`}>{evt.title}</h4>
-                                    <p className="text-xs sm:text-sm opacity-75 leading-relaxed">{evt.description}</p>
-                                    {evt.photo && (
-                                        <div className="mt-3 rounded-xl overflow-hidden floral-shadow cursor-pointer" onClick={() => setLightboxImg(evt.photo!)}>
-                                            <img src={evt.photo} alt={evt.title} className="w-full h-32 sm:h-40 object-cover hover:scale-105 transition-transform duration-500" loading="lazy" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* ============================== */}
-            {/* 8. BANKING / GIFT              */}
-            {/* ============================== */}
-            {vietQrUrl && (
-                <section className="py-14 sm:py-20 px-6 text-center reveal-zoom">
-                    <SectionHeader subtitle="Hộp Mừng Cưới" title="Gửi Lời Chúc Mừng" s={s} />
-
-                    <div className={`glass-card-v2 p-6 sm:p-8 rounded-2xl border floral-shadow max-w-xs mx-auto ${s.cardBorder}`}>
-                        <div className="bg-white p-3 rounded-xl shadow-inner mb-5 inline-block">
-                            <img src={vietQrUrl} alt="QR Code" className="w-36 h-36 sm:w-44 sm:h-44 object-contain" />
-                        </div>
-                        <div className="text-center space-y-1.5">
-                            <p className="text-[10px] uppercase tracking-[0.2em] opacity-50 font-semibold">{bankInfo?.bankId}</p>
-                            <p className={`font-mono text-lg sm:text-xl font-bold tracking-wider ${s.accent}`}>{bankInfo?.accountNumber}</p>
-                            <p className="font-bold text-sm uppercase tracking-wide">{bankInfo?.accountName}</p>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* ============================== */}
-            {/* 9. RSVP & GUESTBOOK            */}
-            {/* ============================== */}
-            <section className={`py-14 sm:py-20 px-6 text-center ${s.sectionAlt}`}>
-                <div className="reveal">
-                    <OrnamentalDivider templateId={templateId} className="mb-4" />
-                    <SectionHeader subtitle="Xác Nhận" title="Tham Dự & Lưu Bút" s={s} className="mb-8" />
-                </div>
-
-                <div className="max-w-sm mx-auto space-y-4">
-                    {rsvpEnabled && (
-                        <div className="reveal-left">
-                            <button onClick={onRSVP}
-                                className={`w-full py-4 font-bold text-[11px] sm:text-xs tracking-[0.2em] uppercase shadow-lg transition-all active:scale-[0.97] flex items-center justify-center gap-2 rounded-sm ${s.accentBg}`}>
-                                <Send className="w-4 h-4" /> Xác Nhận Tham Dự
-                            </button>
-                            {rsvpDeadline && <p className="text-[10px] opacity-50 mt-2">Vui lòng phản hồi trước: {new Date(rsvpDeadline).toLocaleDateString('vi-VN')}</p>}
-                        </div>
-                    )}
-
-                    {guestbookEnabled && (
-                        <div className="reveal-right mt-4">
-                            <button onClick={onGuestbook}
-                                className={`w-full py-4 font-bold text-[11px] sm:text-xs tracking-[0.2em] uppercase border-2 shadow-sm transition-all active:scale-[0.97] flex items-center justify-center gap-2 rounded-sm ${isDark ? 'border-stone-600 text-stone-300 hover:bg-stone-800' : 'border-current/20 hover:bg-black/5'}`}>
-                                <MessageCircle className="w-4 h-4" /> Gửi Lời Chúc
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Guest Wishes Display */}
-                {guestbookEnabled && guestWishes && guestWishes.length > 0 && (
-                    <div className="mt-12 max-w-md mx-auto text-left space-y-3">
-                        <h4 className={`${s.title} text-[10px] sm:text-xs uppercase tracking-[0.2em] text-center mb-6 opacity-50 font-semibold`}>Lời chúc từ mọi người</h4>
-                        <div className="max-h-[320px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                            {guestWishes.map(w => (
-                                <div key={w.id} className={`glass-card-v2 p-4 rounded-xl border ${s.cardBorder} floral-shadow reveal`}>
-                                    <p className="font-bold text-sm mb-1">{w.name}</p>
-                                    <p className="text-xs opacity-75 leading-relaxed italic">"{w.message}"</p>
-                                    <p className="text-[9px] opacity-35 mt-2">{new Date(w.createdAt).toLocaleDateString('vi-VN')}</p>
+                {/* ── LOVE STORY ── */}
+                {hasLoveStory && (
+                    <section className="inv-section rv">
+                        <h2 className="inv-section-title">Chuyện Tình Yêu</h2>
+                        <Divider />
+                        <div className="inv-story-timeline">
+                            {data.loveStory!.map((ev, i) => (
+                                <div key={i} className="inv-story-item rv" style={{ animationDelay: `${i * 0.1}s` }}>
+                                    <div className="inv-story-dot" />
+                                    <div className="inv-story-card">
+                                        <span className="inv-story-year">{ev.year}</span>
+                                        <h4 className="inv-story-heading">{ev.title}</h4>
+                                        <p className="inv-story-text">{ev.description}</p>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </section>
                 )}
-            </section>
 
-            {/* ============================== */}
-            {/* FOOTER                         */}
-            {/* ============================== */}
-            <footer className="py-12 sm:py-16 text-center">
-                <StickerDecor emoji={footerSticker} size="text-2xl" className="mb-4" />
-                <OrnamentalDivider templateId={templateId} className="mb-4" />
-                <p className={`${s.script} text-2xl sm:text-3xl mb-3 ${s.accent}`}>{groomName} &amp; {brideName}</p>
-                <p className="text-[8px] uppercase tracking-[0.5em] font-semibold opacity-30">WEDPLAN AI</p>
-            </footer>
+                {/* ── EVENTS / TIMELINE ── */}
+                {hasEvents && (
+                    <section className="inv-section inv-section-alt rv">
+                        <h2 className="inv-section-title">Chương Trình</h2>
+                        <Divider />
+                        <div className="inv-events">
+                            {data.events!.map((ev, i) => (
+                                <div key={i} className="inv-event-card rv" style={{ animationDelay: `${i * 0.12}s` }}>
+                                    <div className="inv-event-icon">
+                                        <Heart size={16} />
+                                    </div>
+                                    <h4 className="inv-event-name">{ev.title}</h4>
+                                    {ev.description && <p className="inv-event-desc">{ev.description}</p>}
+                                    <div className="inv-event-meta">
+                                        {ev.time && <span><Clock size={13} /> {ev.time}</span>}
+                                        {ev.date && <span><Calendar size={13} /> {ev.date}</span>}
+                                    </div>
+                                    {ev.location && (
+                                        <div className="inv-event-meta">
+                                            <span><MapPin size={13} /> {ev.location}</span>
+                                        </div>
+                                    )}
+                                    {ev.mapLink && (
+                                        <a href={ev.mapLink} target="_blank" rel="noopener noreferrer" className="inv-map-link">
+                                            Xem Bản Đồ →
+                                        </a>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
-            {/* Spacer for sticky bottom bar in PublicView */}
-            <div className="h-24"></div>
-        </div>
+                {/* ── GALLERY ── */}
+                {hasGallery && (
+                    <section className="inv-section rv">
+                        <h2 className="inv-section-title"><Camera size={20} className="inline -mt-1 mr-2" />Khoảnh Khắc</h2>
+                        <Divider />
+                        <div className="inv-gallery">
+                            {data.galleryImages!.map((img, i) => (
+                                <div
+                                    key={i}
+                                    className={`inv-gallery-item ${i === 0 ? 'inv-gallery-wide' : ''}`}
+                                    onClick={() => setLbIndex(i)}
+                                >
+                                    <img src={img} alt={`Ảnh ${i + 1}`} loading="lazy" />
+                                    <div className="inv-gallery-hover"><Camera size={20} /></div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* ── GIFT / QR CODE ── */}
+                {hasBank && (
+                    <section className="inv-section inv-section-alt rv">
+                        <h2 className="inv-section-title"><Gift size={20} className="inline -mt-1 mr-2" />Mừng Cưới</h2>
+                        <Divider />
+                        <p className="inv-gift-text">
+                            Sự hiện diện của quý khách là món quà ý nghĩa nhất. Nếu muốn gửi lời chúc phúc, xin vui lòng quét mã QR dưới đây.
+                        </p>
+                        <div className="inv-qr-card">
+                            <QRCodeImage
+                                bankId={data.bankInfo.bankId}
+                                accountNumber={data.bankInfo.accountNumber}
+                                accountName={data.bankInfo.accountName}
+                            />
+                            <div className="inv-bank-info">
+                                <span className="inv-bank-name">{data.bankInfo.bankId.toUpperCase()}</span>
+                                <span className="inv-bank-number">{data.bankInfo.accountNumber}</span>
+                                <span className="inv-bank-holder">{data.bankInfo.accountName}</span>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* ── RSVP ── */}
+                {hasRSVP && (
+                    <section className="inv-section rv">
+                        <h2 className="inv-section-title">Xác Nhận Tham Dự</h2>
+                        <Divider />
+                        {data.rsvpDeadline && <p className="inv-rsvp-deadline">Vui lòng phản hồi trước {data.rsvpDeadline}</p>}
+                        <button className="inv-rsvp-btn">
+                            <Send size={16} /> Gửi Phản Hồi (RSVP)
+                        </button>
+                    </section>
+                )}
+
+                {/* ── GUESTBOOK ── */}
+                {data.guestbookEnabled && (
+                    <section className="inv-section inv-section-alt rv">
+                        <h2 className="inv-section-title"><MessageCircle size={20} className="inline -mt-1 mr-2" />Sổ Lưu Bút</h2>
+                        <Divider />
+                        {data.guestWishes && data.guestWishes.length > 0 ? (
+                            <div className="inv-wishes-list">
+                                {data.guestWishes.map((w, i) => (
+                                    <div key={i} className="inv-wish-card rv">
+                                        <p className="inv-wish-text">"{w.message}"</p>
+                                        <span className="inv-wish-author">— {w.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="inv-gift-text">Chưa có lời chúc nào. Hãy là người đầu tiên!</p>
+                        )}
+                    </section>
+                )}
+
+                {/* ── FOOTER ── */}
+                <footer className="inv-footer rv">
+                    <p className="inv-footer-names">{groomName} & {brideName}</p>
+                    <Divider />
+                    <p className="inv-footer-text">Built with love · WedPlan AI</p>
+                </footer>
+
+            </div>
+
+            {/* ════════════════════════════════════════════
+                SCOPED STYLES — Timeless Heritage Design
+            ════════════════════════════════════════════ */}
+            <style>{`
+/* ── RESET & CONTAINER ── */
+.inv-preview {
+    --primary: #7c1d00;
+    --surface: #fdf8f6;
+    --surface-dim: #f1edeb;
+    --on-surface: #1c1b1b;
+    --on-surface-variant: #58413b;
+    --rose-gold: #EFCB84;
+    --deep-earth: #61564F;
+    --ink: #2A2626;
+    --primary-container: #a12f0c;
+    --outline-variant: #e0bfb7;
+
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--surface);
+    color: var(--on-surface);
+    position: relative;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── SCROLL REVEAL ── */
+.rv {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s cubic-bezier(.23,1,.32,1), transform 0.7s cubic-bezier(.23,1,.32,1);
+}
+.rv.revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ── FLOATING PARTICLES ── */
+.float-particle {
+    animation: floatDown var(--fd) linear var(--fdl) infinite;
+}
+@keyframes floatDown {
+    0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.6; }
+    100% { transform: translateY(100vh) translateX(var(--fdr)) rotate(360deg); opacity: 0; }
+}
+
+/* ── MUSIC BUTTON ── */
+.inv-music-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(124,29,0,0.3);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.inv-music-btn:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(124,29,0,0.4); }
+
+/* ════════════════════════════════
+   HERO
+   ════════════════════════════════ */
+.inv-hero {
+    position: relative;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 2.5rem;
+    overflow: hidden;
+}
+.inv-hero-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+.inv-hero-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        to top,
+        rgba(253,248,246, 0.95) 0%,
+        rgba(253,248,246, 0.7) 30%,
+        rgba(0,0,0, 0.15) 60%,
+        rgba(0,0,0, 0.3) 100%
+    );
+}
+.inv-hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 0 2rem;
+    width: 100%;
+}
+.inv-label {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+}
+.inv-couple-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 10vw, 2.8rem);
+    font-weight: 400;
+    color: var(--primary);
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+}
+.inv-ampersand {
+    font-style: italic;
+    color: var(--rose-gold);
+    margin: 0 0.3em;
+}
+.inv-date-line {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.inv-lunar {
+    font-size: 12px;
+    color: var(--deep-earth);
+    font-style: italic;
+    margin-bottom: 0.75rem;
+}
+.inv-wishes {
+    font-family: 'Source Serif 4', serif;
+    font-size: 14px;
+    color: var(--on-surface-variant);
+    font-style: italic;
+    max-width: 320px;
+    margin: 0 auto 1.25rem;
+    line-height: 1.6;
+}
+
+/* ── COUNTDOWN ── */
+.inv-countdown-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(253,248,246,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.85rem 1.25rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid rgba(229,226,224,0.5);
+    margin-top: 0.5rem;
+}
+.inv-cd-unit { text-align: center; }
+.inv-cd-num {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
+    font-weight: 400;
+    color: var(--primary);
+    line-height: 1;
+    display: block;
+}
+.inv-cd-label {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--on-surface-variant);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    display: block;
+}
+.inv-cd-sep {
+    width: 1px;
+    height: 28px;
+    background: var(--rose-gold);
+    opacity: 0.5;
+}
+
+/* ════════════════════════════════
+   SECTIONS
+   ════════════════════════════════ */
+.inv-section {
+    padding: 3.5rem 2rem;
+}
+.inv-section-alt {
+    background: var(--surface-dim);
+}
+.inv-section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.4rem, 6vw, 1.75rem);
+    font-weight: 600;
+    color: var(--primary);
+    text-align: center;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+}
+
+/* ── LOVE STORY TIMELINE ── */
+.inv-story-timeline {
+    position: relative;
+    padding-left: 24px;
+    border-left: 2px solid var(--outline-variant);
+    margin-left: 8px;
+}
+.inv-story-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+.inv-story-dot {
+    position: absolute;
+    left: -31px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 3px var(--outline-variant);
+}
+.inv-story-card {
+    padding: 1rem 1.25rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid rgba(224,191,183,0.3);
+}
+.inv-story-year {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--rose-gold);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.inv-story-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--on-surface);
+    margin: 4px 0;
+}
+.inv-story-text {
+    font-size: 14px;
+    color: var(--on-surface-variant);
+    line-height: 1.6;
+}
+
+/* ── EVENTS ── */
+.inv-events {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.inv-event-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid rgba(224,191,183,0.3);
+    transition: transform 0.3s;
+}
+.inv-event-card:hover { transform: translateY(-2px); }
+.inv-event-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(124,29,0,0.08);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+}
+.inv-event-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+}
+.inv-event-desc {
+    font-size: 14px;
+    color: var(--on-surface-variant);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+.inv-event-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 13px;
+    color: var(--on-surface);
+    margin-bottom: 0.25rem;
+}
+.inv-event-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.inv-event-meta svg { color: var(--rose-gold); }
+.inv-map-link {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--primary);
+    border-bottom: 1px solid var(--primary);
+    padding-bottom: 2px;
+    transition: color 0.2s;
+    text-decoration: none;
+}
+.inv-map-link:hover { color: var(--primary-container); }
+
+/* ── GALLERY ── */
+.inv-gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.inv-gallery-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid rgba(239,203,132,0.3);
+}
+.inv-gallery-wide {
+    grid-column: span 2;
+}
+.inv-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(.23,1,.32,1);
+}
+.inv-gallery-item:not(.inv-gallery-wide) img { height: 180px; }
+.inv-gallery-wide img { height: 220px; }
+.inv-gallery-item:hover img { transform: scale(1.06); }
+.inv-gallery-hover {
+    position: absolute;
+    inset: 0;
+    background: rgba(124,29,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.inv-gallery-item:hover .inv-gallery-hover { opacity: 1; }
+
+/* ── GIFT / QR ── */
+.inv-gift-text {
+    font-size: 14px;
+    color: var(--on-surface-variant);
+    text-align: center;
+    line-height: 1.7;
+    max-width: 340px;
+    margin: 0 auto 1.5rem;
+}
+.inv-qr-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid rgba(239,203,132,0.5);
+    max-width: 280px;
+    margin: 0 auto;
+}
+.inv-bank-info {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.inv-bank-name {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.inv-bank-number {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--on-surface);
+    letter-spacing: 0.05em;
+}
+.inv-bank-holder {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+}
+
+/* ── RSVP ── */
+.inv-rsvp-deadline {
+    text-align: center;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    margin-bottom: 1rem;
+}
+.inv-rsvp-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 4px 16px rgba(124,29,0,0.25);
+}
+.inv-rsvp-btn:hover { background: var(--primary-container); transform: translateY(-1px); }
+
+/* ── WISHES ── */
+.inv-wishes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.inv-wish-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    border: 1px solid rgba(224,191,183,0.2);
+}
+.inv-wish-text {
+    font-style: italic;
+    font-size: 14px;
+    color: var(--on-surface);
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+.inv-wish-author {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    font-weight: 500;
+}
+
+/* ── FOOTER ── */
+.inv-footer {
+    padding: 2.5rem 2rem;
+    text-align: center;
+    background: var(--surface-dim);
+}
+.inv-footer-names {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+}
+.inv-footer-text {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 11px;
+    color: var(--on-surface-variant);
+    letter-spacing: 0.05em;
+}
+
+/* ── MOBILE POLISH ── */
+@media (max-width: 400px) {
+    .inv-section { padding: 2.5rem 1.25rem; }
+    .inv-hero-content { padding: 0 1.25rem; }
+    .inv-gallery-item:not(.inv-gallery-wide) img { height: 140px; }
+    .inv-gallery-wide img { height: 180px; }
+}
+            `}</style>
+        </>
     );
 };
 

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Thanh &amp; An - Lễ Cưới</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&amp;family=Source+Serif+4:wght@400;600&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "deep-earth": "#61564F",
+                      "on-secondary-fixed": "#261905",
+                      "on-secondary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary-fixed-variant": "#882000",
+                      "background": "#fdf8f6",
+                      "rose-gold": "#EFCB84",
+                      "on-tertiary": "#ffffff",
+                      "surface-bright": "#fdf8f6",
+                      "ink-charcoal": "#2A2626",
+                      "inverse-on-surface": "#f4f0ee",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#e5e2e0",
+                      "on-primary-container": "#ffbfae",
+                      "on-secondary-fixed-variant": "#55442b",
+                      "secondary-container": "#f8dfbc",
+                      "on-tertiary-fixed": "#261911",
+                      "primary-fixed-dim": "#ffb5a1",
+                      "on-surface-variant": "#58413b",
+                      "on-error-container": "#93000a",
+                      "surface-container-high": "#ebe7e5",
+                      "surface-dim": "#ddd9d7",
+                      "inverse-primary": "#ffb5a1",
+                      "tertiary-fixed": "#f7ded1",
+                      "inverse-surface": "#31302f",
+                      "surface-container": "#f1edeb",
+                      "tertiary-container": "#66544a",
+                      "tertiary": "#4d3d34",
+                      "primary-container": "#a12f0c",
+                      "outline-variant": "#e0bfb7",
+                      "surface-container-low": "#f7f3f1",
+                      "surface-tint": "#aa3613",
+                      "on-tertiary-fixed-variant": "#54433a",
+                      "surface-variant": "#e5e2e0",
+                      "secondary-fixed-dim": "#dbc3a2",
+                      "primary": "#7c1d00",
+                      "on-tertiary-container": "#e2c9bd",
+                      "outline": "#8c716a",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed-dim": "#dac2b5",
+                      "on-primary-fixed": "#3b0900",
+                      "on-surface": "#1c1b1b",
+                      "on-primary": "#ffffff",
+                      "secondary": "#6e5c41",
+                      "surface": "#fdf8f6",
+                      "primary-fixed": "#ffdbd1",
+                      "on-secondary-container": "#746146",
+                      "secondary-fixed": "#f8dfbc",
+                      "on-background": "#1c1b1b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "section-gap": "4rem",
+                      "container-margin": "2rem",
+                      "gutter": "1.5rem",
+                      "element-gap": "1rem"
+              },
+              "fontFamily": {
+                      "headline-lg": [
+                              "Playfair Display"
+                      ],
+                      "body-md": [
+                              "\"Source Serif 4\""
+                      ],
+                      "label-sm": [
+                              "Be Vietnam Pro"
+                      ],
+                      "countdown-num": [
+                              "Playfair Display"
+                      ],
+                      "display-script": [
+                              "Playfair Display"
+                      ],
+                      "headline-lg-mobile": [
+                              "Playfair Display"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "countdown-num": [
+                              "36px",
+                              {
+                                      "lineHeight": "1",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-script": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .watercolor-texture {
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.05"/></svg>');
+            background-repeat: repeat;
+        }
+        .watercolor-edge {
+            mask-image: radial-gradient(white, black);
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
+        }
+        
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+        
+        /* Form input underline animation */
+        .input-underline {
+            background: linear-gradient(to right, theme('colors.primary') 50%, theme('colors.outline-variant') 50%);
+            background-size: 200% 100%;
+            background-position: 100% 0;
+            transition: background-position 0.3s ease;
+        }
+        .input-underline:focus-within {
+            background-position: 0 0;
+        }
+
+        /* Carousel Hide Scrollbar */
+        .carousel-container::-webkit-scrollbar {
+            display: none;
+        }
+        .carousel-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md watercolor-texture antialiased flex flex-col min-h-screen">
+<!-- Top Navigation (Desktop & Shared Style Base) -->
+<header class="docked full-width top-0 sticky z-50 backdrop-blur-xl bg-surface/90 shadow-sm transition-all duration-300" id="topNav">
+<div class="max-w-[480px] md:max-w-7xl mx-auto flex justify-between items-center px-container-margin h-20">
+<!-- Brand Logo -->
+<a class="font-display-script text-display-script text-primary italic" href="#">Timeless Heritage</a>
+<!-- Desktop Navigation Links -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-secondary hover:text-primary transition-colors font-label-sm text-label-sm hover:opacity-80" href="#story">Our Story</a>
+<a class="text-secondary hover:text-primary transition-colors font-label-sm text-label-sm hover:opacity-80" href="#timeline">Timeline</a>
+<a class="text-secondary hover:text-primary transition-colors font-label-sm text-label-sm hover:opacity-80" href="#gallery">Gallery</a>
+<a class="text-primary border-b border-primary pb-1 font-label-sm text-label-sm hover:opacity-80" href="#rsvp">RSVP</a>
+</nav>
+<!-- Trailing Action (Desktop) -->
+<div class="hidden md:block">
+<a class="text-primary hover:opacity-80 transition-opacity font-label-sm text-label-sm flex items-center gap-2" href="#gift">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">redeem</span>
+                    Mừng Cưới
+                </a>
+</div>
+<!-- Mobile Menu Toggle -->
+<button aria-label="Toggle Menu" class="md:hidden text-primary p-2" id="mobileMenuBtn">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<!-- Mobile Side Navigation -->
+<div class="fixed inset-0 z-[60] hidden bg-surface/50 backdrop-blur-sm" id="mobileNavOverlay"></div>
+<nav class="fixed inset-y-0 right-0 w-64 z-[70] bg-surface shadow-xl flex flex-col h-full p-6 gap-element-gap transform translate-x-full transition-transform duration-300 ease-in-out" id="mobileNav">
+<div class="flex justify-between items-center mb-8">
+<div class="flex flex-col">
+<span class="font-display-script text-headline-lg-mobile text-primary">Thanh &amp; An</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">12.12.2024</span>
+</div>
+<button aria-label="Close Menu" class="text-on-surface-variant p-2" id="closeMobileNav">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-4 p-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">home</span> Home
+            </a>
+<a class="flex items-center gap-4 p-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-sm text-label-sm" href="#story">
+<span class="material-symbols-outlined">favorite</span> Our Story
+            </a>
+<a class="flex items-center gap-4 p-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-sm text-label-sm" href="#timeline">
+<span class="material-symbols-outlined">event_note</span> Timeline
+            </a>
+<a class="flex items-center gap-4 p-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-sm text-label-sm" href="#gallery">
+<span class="material-symbols-outlined">photo_library</span> Gallery
+            </a>
+<a class="flex items-center gap-4 p-3 rounded-xl text-primary font-bold bg-secondary-container/30 font-label-sm text-label-sm translate-x-1 transition-transform" href="#rsvp">
+<span class="material-symbols-outlined">mail</span> RSVP
+            </a>
+</div>
+<div class="mt-auto">
+<a class="flex items-center justify-center gap-2 w-full p-4 bg-primary-container text-on-primary rounded-xl font-label-sm text-label-sm hover:opacity-90 transition-opacity" href="#gift">
+<span class="material-symbols-outlined">redeem</span> Mừng Cưới
+            </a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-[480px] md:max-w-4xl mx-auto flex flex-col">
+<!-- Hero Section -->
+<section class="relative min-h-[85vh] flex flex-col items-center justify-center py-section-gap px-container-margin overflow-hidden">
+<!-- Watercolor floral accents -->
+<div class="absolute top-0 left-0 w-64 h-64 bg-[url('https://images.unsplash.com/photo-1572454591674-2739f30d8c77?q=80&amp;w=600&amp;auto=format&amp;fit=crop')] bg-cover bg-center opacity-20 mix-blend-multiply rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2"></div>
+<div class="absolute bottom-0 right-0 w-80 h-80 bg-[url('https://images.unsplash.com/photo-1490750967868-88aa4486c946?q=80&amp;w=600&amp;auto=format&amp;fit=crop')] bg-cover bg-center opacity-20 mix-blend-multiply rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
+<div class="relative z-10 text-center flex flex-col items-center gap-6">
+<p class="font-label-sm text-label-sm text-secondary tracking-[0.2em] uppercase">Save The Date</p>
+<h1 class="font-display-script text-[64px] md:text-[80px] leading-tight text-primary text-center">Thanh <span class="text-rose-gold text-4xl mx-2">&amp;</span> An</h1>
+<div class="w-12 h-[1px] bg-outline-variant my-4"></div>
+<div class="flex flex-col items-center gap-2">
+<p class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-deep-earth">12 . 12 . 2024</p>
+<p class="font-body-md text-body-md text-on-surface-variant italic">Khu Vườn Mùa Xuân, Hà Nội</p>
+</div>
+</div>
+<div class="mt-16 w-64 h-80 md:w-80 md:h-[400px] rounded-t-full overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border-4 border-surface border-b-0 relative z-10">
+<div class="w-full h-full bg-surface-container-high bg-cover bg-center" data-alt="A delicate and romantic watercolor illustration of a beautiful wedding couple standing in a lush, ethereal spring garden. The setting is filled with soft green foliage, pale pink blossoms, and creamy white floral arches. The mood is intimate, serene, and sophisticated, illuminated by gentle, diffused sunlight. The style is hand-painted watercolor with visible paper texture, soft blended edges, and a sophisticated pastel palette of mint green, blush pink, and cream, perfectly matching an elegant wedding invitation." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA0afdFVjyM_mRq1Iy9KBJnWOfaYTNHO0YTeEerNZILshjVRito5XJEs5pKeDaxA95U80qyulKjM6SzfXLjQIpKbxJbRYgRbXHokMgCgJplYz24R9tPmmtTIkCeqPoSpPBXFAo5kgpxu9f2mS0p1BAYjqrV7s-Y4_rwzMMmECCf9VFi_mcrW4h0A6pVxXzokw9ML12hiTegBXn2diQ2t9663QkTCjB855UVAS9ouUS7RfE7pbq1Zt9OZmURO3M4A2iv6m4XNkiXTPI')"></div>
+</div>
+</section>
+<!-- Our Story (Bento Concept) -->
+<section class="py-section-gap px-container-margin relative z-10" id="story">
+<div class="text-center mb-12">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary mb-4">Chuyện Tình Yêu</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-lg mx-auto">Mỗi chặng đường đều được ghi dấu bằng những kỷ niệm đẹp đẽ, nhẹ nhàng tựa như một khu vườn mùa xuân nở rộ.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Large Feature Card -->
+<div class="md:col-span-8 bg-surface rounded-xl shadow-sm border border-surface-variant overflow-hidden flex flex-col relative group">
+<div class="h-64 w-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="A romantic close-up photo of a couple holding hands intimately. The focus is on their hands intertwined, with soft natural light highlighting delicate details. The background is a beautifully blurred garden setting with soft greenery and faint hints of blush pink flowers. The aesthetic is elegant, tactile, and emotional, with a sophisticated, light-mode visual style emphasizing warmth and tenderness." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB20FtecEkpKnds_r3m-g5NY0kv0YWOXUr_CIsYgA3stEyCv1JPj9GUkdu8grVtrOZ7HlHPixsnHwKXyL2AleHudcA0Pv-pDTl4Ij2NPVMaY-AwilB8FjEff5kzbWMGnbjKiEVH5vRs6QecTfu-NS3C4SPu3tzSc66mqQ6f4L-_lv6qMQB6pjOqL-yxSB5abIDppbeM6wa4LZo0vmf9ViB6oMhh_x_mwWD4PgxeYvXrsgfutSg14c3qbYeunJ8Ae5oTewTY0FGXASM')"></div>
+<div class="p-6 bg-surface/90 backdrop-blur-md absolute bottom-0 inset-x-0 border-t border-surface-variant/50">
+<span class="font-label-sm text-label-sm text-secondary mb-2 block">Lần Đầu Gặp Gỡ</span>
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-deep-earth">Mùa Thu Năm Ấy</h3>
+</div>
+</div>
+<!-- Small Cards -->
+<div class="md:col-span-4 flex flex-col gap-6">
+<div class="flex-1 bg-surface-container-low rounded-xl p-6 shadow-sm border border-surface-variant flex flex-col justify-center items-center text-center">
+<span class="material-symbols-outlined text-primary text-4xl mb-4" style="font-variation-settings: 'wght' 200;">favorite_border</span>
+<h4 class="font-headline-lg-mobile text-headline-lg-mobile text-deep-earth mb-2">5 Năm</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Gắn Bó Cùng Nhau</p>
+</div>
+<div class="flex-1 bg-secondary-container/20 rounded-xl p-6 shadow-sm border border-secondary-container/30 overflow-hidden relative">
+<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-[url('https://images.unsplash.com/photo-1508610048659-a06b669e3321?q=80&amp;w=400&amp;auto=format&amp;fit=crop')] bg-cover opacity-10 rounded-full blur-md"></div>
+<h4 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-2 relative z-10">Lời Cầu Hôn</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm relative z-10 italic">"Trong hàng vạn khoảnh khắc, anh chỉ muốn giữ lại khoảnh khắc có em."</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Gallery Carousel (Desktop Focus) -->
+<section class="py-section-gap w-full relative z-10 overflow-hidden" id="gallery">
+<div class="text-center mb-12 px-container-margin">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary mb-4">Khoảnh Khắc</h2>
+<div class="w-12 h-[1px] bg-rose-gold mx-auto"></div>
+</div>
+<!-- Horizontal Scroll Container -->
+<div class="flex gap-4 overflow-x-auto snap-x snap-mandatory px-container-margin pb-8 carousel-container md:gap-8 md:px-12">
+<!-- Image 1 -->
+<div class="snap-center shrink-0 w-[80vw] md:w-[600px] aspect-[4/5] md:aspect-video rounded-xl overflow-hidden shadow-md border-[6px] border-surface relative">
+<div class="w-full h-full bg-cover bg-center" data-alt="A sweeping, high-quality photograph of an elegant outdoor wedding setup in a sun-drenched botanical garden. Soft, creamy sunlight filters through ancient trees onto delicate floral arrangements of blush and ivory roses. The mood is highly romantic, luxurious, and peaceful. The color palette emphasizes pale greens, soft pinks, and warm whites, perfectly suited for a high-end, garden romance editorial style." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDD-4BbDyMqQzL20QOo_QBHTSnwtgmp3AnCuB7QIma3ZoJITOfJcX57vSmKJGHlEcO1l8351yBBRDGsr42M9dKC1m_htYrnwBLi1xtZlr-6VSnX2x515KAzhdMTDh75fWYrx2Ma8m_sKXmkHMHBN7PDUiwpwhi63_4BIV3P9q1mvYYdrmoWf8UUgTZAHzz6RLiyVmLgJvVlmLnjO0vBxIGlftFJYmkTzz9NQIkfcyoVNtXxW9V4wqAZEjB4bl3f11iR8R6Q7LD_oL4')"></div>
+</div>
+<!-- Image 2 -->
+<div class="snap-center shrink-0 w-[80vw] md:w-[400px] aspect-[3/4] rounded-xl overflow-hidden shadow-md border-[6px] border-surface relative mt-0 md:mt-12">
+<div class="w-full h-full bg-cover bg-center" data-alt="An intimate, artistic portrait of a bride and groom standing amidst a lush garden of pale hydrangeas and ferns. They are styled elegantly in modern, sophisticated wedding attire. The image is bathed in soft, diffused afternoon light, creating a dreamy, ethereal glow around them. The aesthetic is tactile minimalism, capturing a quiet, joyful moment with subtle tones of sage green, blush, and ivory." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAXMYzOeCs5oGLnyoMJBArLaJ3qg1WDMYYkmPvETAr_H-BTVjwSR5MdiilsB1W8I7uOC2KNKDPnsdLRvytuFySOh0jcGA2x2rovwVwDRZPO02b29bCJICqEE7DSPffBm7FZhcjD1Z3NzgM_9L0H1uLDNAtDMhXAfUGIttIQKpG1t82QI6VZAhtVA3ySiUS9pyc1C0c6dcC7P51w5r-6wi5AUl3LBzoC2aLs4V7I5IIUJ-Dwny9zvyZkcn26miNCrA692cBRrhz_DKU')"></div>
+</div>
+<!-- Image 3 -->
+<div class="snap-center shrink-0 w-[80vw] md:w-[600px] aspect-[4/5] md:aspect-video rounded-xl overflow-hidden shadow-md border-[6px] border-surface relative">
+<div class="w-full h-full bg-cover bg-center" data-alt="A close-up, highly detailed photograph of delicate wedding details resting on beautiful textured paper. The composition includes a pair of minimalist gold wedding rings, a sprig of fresh eucalyptus, and soft blush flower petals. The lighting is bright and high-key, creating soft, gentle shadows that emphasize the texture of the paper and the metallic gleam. The style is editorial, sophisticated, and light-mode compatible." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDN8Dc-K-g6M8t-P_6YLHTghgag3W7QSPpM9ZOR47UJVihOCn0jfVnK9a7OSwWGGgA3ji-2oW0NaQMXtzflBH5vUkQHAmz-4x34xa-XtesYSWP94KLkgCGrbbhI17J-TSExA2RIEksVg66TM4_5wwNQI9MArIO7ft7rcb--gV27e1tu06FfBwPGJoWQaehvfN50zrxuC627Bri9_hA6BszlW9TqQZskQfJDARWcmSRaRzBfkqxA1S3lSOAXrZF4l7-xK-OvxcOVAYk')"></div>
+</div>
+</div>
+<div class="flex justify-center gap-2 mt-4 text-outline-variant md:hidden">
+<span class="material-symbols-outlined text-sm">swipe</span>
+<span class="font-label-sm text-label-sm">Vuốt để xem thêm</span>
+</div>
+</section>
+<!-- RSVP Form (Handwritten Letter Concept) -->
+<section class="py-section-gap px-container-margin relative z-10 flex justify-center" id="rsvp">
+<div class="w-full max-w-2xl bg-surface-container-lowest rounded-sm shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] p-8 md:p-12 relative overflow-hidden">
+<!-- Decorative Corners -->
+<div class="absolute top-4 left-4 w-12 h-12 border-t border-l border-rose-gold/50"></div>
+<div class="absolute top-4 right-4 w-12 h-12 border-t border-r border-rose-gold/50"></div>
+<div class="absolute bottom-4 left-4 w-12 h-12 border-b border-l border-rose-gold/50"></div>
+<div class="absolute bottom-4 right-4 w-12 h-12 border-b border-r border-rose-gold/50"></div>
+<div class="text-center mb-10">
+<h2 class="font-display-script text-display-script text-primary mb-2">Thư Hồi Đáp</h2>
+<p class="font-body-md text-body-md text-on-surface-variant italic">Sự hiện diện của bạn là món quà vô giá</p>
+</div>
+<form class="flex flex-col gap-8">
+<!-- Line Input -->
+<div class="relative group">
+<label class="font-label-sm text-label-sm text-secondary absolute top-0 left-0 -translate-y-5 transition-all group-focus-within:text-primary group-focus-within:-translate-y-6" for="name">Tên của bạn là...</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/50 focus:ring-0 px-0 py-2 font-body-md text-body-md text-deep-earth focus:border-transparent input-underline relative z-10" id="name" placeholder="Nguyễn Văn A" type="text"/>
+</div>
+<!-- Line Input -->
+<div class="relative group mt-4">
+<label class="font-label-sm text-label-sm text-secondary absolute top-0 left-0 -translate-y-5 transition-all group-focus-within:text-primary group-focus-within:-translate-y-6" for="guests">Bạn sẽ đi cùng...</label>
+<select class="w-full bg-transparent border-0 border-b border-outline-variant/50 focus:ring-0 px-0 py-2 font-body-md text-body-md text-deep-earth focus:border-transparent input-underline relative z-10 appearance-none" id="guests">
+<option value="1">Chỉ mình tôi</option>
+<option value="2">Tôi đi cùng 1 người</option>
+<option value="3">Tôi đi cùng gia đình</option>
+</select>
+<div class="absolute right-0 top-3 pointer-events-none text-secondary">
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+</div>
+<!-- Radio Options -->
+<div class="mt-6">
+<p class="font-label-sm text-label-sm text-secondary mb-4">Bạn sẽ tham dự chứ?</p>
+<div class="flex flex-col sm:flex-row gap-4">
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center">
+<input checked="" class="peer sr-only" name="attendance" type="radio"/>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant peer-checked:border-primary transition-colors"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-primary absolute scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+<span class="font-body-md text-body-md text-deep-earth group-hover:text-primary transition-colors">Chắc chắn rồi!</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center">
+<input class="peer sr-only" name="attendance" type="radio"/>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant peer-checked:border-primary transition-colors"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-primary absolute scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+<span class="font-body-md text-body-md text-deep-earth group-hover:text-primary transition-colors">Rất tiếc, tôi không thể</span>
+</label>
+</div>
+</div>
+<button class="mt-8 bg-primary-container text-on-primary-container font-label-sm text-label-sm uppercase tracking-widest py-4 px-8 rounded-sm hover:opacity-90 transition-opacity self-center w-full md:w-auto shadow-sm" type="button">
+                        Gửi Phản Hồi
+                    </button>
+</form>
+</div>
+</section>
+<!-- Gifting Section with QR -->
+<section class="py-section-gap px-container-margin relative z-10 mb-12" id="gift">
+<div class="max-w-md mx-auto bg-surface-container-high rounded-2xl p-8 shadow-sm flex flex-col items-center text-center relative overflow-hidden border border-surface-variant">
+<!-- Floral accents behind QR -->
+<div class="absolute -top-10 -left-10 w-32 h-32 bg-[url('https://images.unsplash.com/photo-1550005809-91ad75fb315f?q=80&amp;w=400&amp;auto=format&amp;fit=crop')] bg-cover opacity-20 mix-blend-multiply rounded-full blur-md"></div>
+<div class="absolute -bottom-10 -right-10 w-40 h-40 bg-[url('https://images.unsplash.com/photo-1508610048659-a06b669e3321?q=80&amp;w=400&amp;auto=format&amp;fit=crop')] bg-cover opacity-20 mix-blend-multiply rounded-full blur-lg"></div>
+<span class="material-symbols-outlined text-primary text-4xl mb-4 relative z-10" style="font-variation-settings: 'wght' 200;">redeem</span>
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary mb-2 relative z-10">Mừng Cưới</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm mb-8 relative z-10">Gửi lời chúc phúc đến cô dâu chú rể</p>
+<!-- Floral Framed QR -->
+<div class="relative z-10 p-2 border-2 border-rose-gold/30 rounded-xl bg-surface mb-6">
+<img alt="QR Code Mừng Cưới" class="w-48 h-48 rounded-lg object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuibOptRYuqcc-Za4EuJl9pGtj0rUysQKJcXl0OZlvy3dASc00fFX_6TMPJs6ph3vXpQO2vzBnF4AATLftRlXFX8TpcK5OI3FdWTs8u_9y4tgJu8M0g4cVd6SGDSCU8madxWwqi42T39pr-cSOIveSm6GIBA1DLAtAhqPMhJLUDFTE5545el1H9siFG9pdBIS3MhgGAwCz8mvIGPVhiOi4NXq0ksieROwweBc4id_fLzy6of6nY2xiLTA"/>
+</div>
+<div class="relative z-10 w-full space-y-2">
+<p class="font-label-sm text-label-sm text-deep-earth">Ngân hàng: <span class="font-bold text-primary">Vietcombank</span></p>
+<div class="flex items-center justify-center gap-2 bg-surface py-2 px-4 rounded-lg border border-surface-variant">
+<span class="font-body-md text-body-md text-deep-earth tracking-wider">123 456 7890</span>
+<button aria-label="Copy số tài khoản" class="text-secondary hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+</button>
+</div>
+<p class="font-label-sm text-label-sm text-deep-earth mt-2">Chủ TK: NGUYEN VAN A</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="full-width py-section-gap bg-surface-container-low border-t border-outline-variant/30 z-10">
+<div class="max-w-[480px] md:max-w-4xl mx-auto px-container-margin text-center flex flex-col items-center gap-element-gap">
+<span class="font-headline-lg text-headline-lg text-primary">Thanh &amp; An</span>
+<div class="flex gap-6 mt-4">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-sm text-label-sm" href="#">Privacy</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-sm text-label-sm" href="#">Map</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-sm text-label-sm" href="#">Contact</a>
+</div>
+<p class="text-on-surface-variant font-label-sm text-label-sm mt-8 opacity-60">© 2024 Thanh &amp; An. Built with love.</p>
+</div>
+</footer>
+<!-- Interactive Scripts -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const closeMobileNav = document.getElementById('closeMobileNav');
+            const mobileNav = document.getElementById('mobileNav');
+            const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+
+            function toggleMenu() {
+                const isClosed = mobileNav.classList.contains('translate-x-full');
+                if (isClosed) {
+                    mobileNav.classList.remove('translate-x-full');
+                    mobileNavOverlay.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    mobileNav.classList.add('translate-x-full');
+                    mobileNavOverlay.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            }
+
+            mobileMenuBtn.addEventListener('click', toggleMenu);
+            closeMobileNav.addEventListener('click', toggleMenu);
+            mobileNavOverlay.addEventListener('click', toggleMenu);
+
+            // Close menu on link click
+            const mobileLinks = mobileNav.querySelectorAll('a');
+            mobileLinks.forEach(link => {
+                link.addEventListener('click', toggleMenu);
+            });
+
+            // Sticky Header Glass Effect on Scroll
+            const topNav = document.getElementById('topNav');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    topNav.classList.add('shadow-md');
+                    topNav.classList.replace('bg-surface/90', 'bg-surface/95');
+                } else {
+                    topNav.classList.remove('shadow-md');
+                    topNav.classList.replace('bg-surface/95', 'bg-surface/90');
+                }
+            });
+        });
+    </script>
+</body></html>
