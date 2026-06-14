@@ -131,30 +131,97 @@ export const DEFAULT_GUEST_USER: UserProfile = {
 };
 
 export const INITIAL_INVITATION: InvitationData = {
-  groomName: '',
-  brideName: '',
-  date: '',
-  time: '',
-  location: '',
-  address: '',
-  mapLink: '',
-  wishes: 'Trân trọng kính mời bạn đến chung vui cùng gia đình chúng tôi!',
+  groomName: 'Hoàng',
+  brideName: 'Hoa',
+  groomParents: { father: 'Ông Nguyễn Văn Nam', mother: 'Bà Trần Thị Lan' },
+  brideParents: { father: 'Ông Lê Văn Dũng', mother: 'Bà Phạm Thị Mai' },
+  date: '2026-10-20',
+  time: '11:00',
+  location: 'Nhà hàng tiệc cưới Trống Đồng Palace',
+  address: 'Số 1, Phố Lý Thường Kiệt, Hoàn Kiếm, Hà Nội',
+  mapLink: 'https://maps.google.com',
+  wishes: 'Sự hiện diện của quý khách là niềm vinh hạnh cho gia đình chúng tôi!',
   bankInfo: {
-    bankId: '',
-    accountNumber: '',
-    accountName: '',
+    bankId: '970436', // Vietcombank
+    accountNumber: '123456789',
+    accountName: 'NGUYEN VAN HOANG',
     qrTemplate: 'compact2',
   },
   photoConfig: { scale: 1, x: 0, y: 0 },
   themeColor: '#e11d48',
   templateId: 'modern',
-  musicUrl: '',
-  // Feature flags — off by default
-  countdownEnabled: false,
-  rsvpEnabled: false,
-  rsvpDeadline: '',
-  guestbookEnabled: false,
-  petalEffect: 'none',
-  loveStory: [],
-  guestWishes: [],
+  musicUrl: '/wedding-music.mp3', // Romantic wedding piano music
+  couplePhoto: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+  galleryImages: [
+    'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1520854221256-17451cc331bf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1583939003579-730e3918a45a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+  ],
+  // Feature flags
+  countdownEnabled: true,
+  rsvpEnabled: true,
+  rsvpDeadline: '2026-10-10',
+  guestbookEnabled: true,
+  petalEffect: 'hearts',
+  events: [
+    {
+      id: 'evt-1',
+      title: 'Lễ Đón Khách',
+      time: '10:30',
+      date: '2026-10-20',
+      location: 'Sảnh Đón Khách, Trống Đồng Palace'
+    },
+    {
+      id: 'evt-2',
+      title: 'Cử Hành Hôn Lễ',
+      time: '11:00',
+      date: '2026-10-20',
+      location: 'Hội Trường Chính, Trống Đồng Palace'
+    },
+    {
+      id: 'evt-3',
+      title: 'Tiệc Mặn',
+      time: '11:30',
+      date: '2026-10-20',
+      location: 'Hội Trường Chính, Trống Đồng Palace'
+    }
+  ],
+  loveStory: [
+    {
+      id: 'ls-1',
+      date: 'Tháng 12, 2020',
+      title: 'Lần Đầu Gặp Gỡ',
+      description: 'Chúng tôi quen nhau qua một buổi chiều đông Hà Nội tại một quán cà phê nhỏ góc phố cũ.',
+      photo: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      id: 'ls-2',
+      date: 'Tháng 2, 2022',
+      title: 'Lời Yêu Đầu Tiên',
+      description: 'Dưới bầu trời đầy sao của Đà Lạt, lời tỏ tình chính thức đã được nói ra đầy ngại ngùng.',
+      photo: 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      id: 'ls-3',
+      date: 'Tháng 8, 2026',
+      title: 'Cầu Hôn',
+      description: 'Một bất ngờ không thể nào quên trước sự chứng kiến của những người bạn thân thiết nhất.',
+      photo: 'https://images.unsplash.com/photo-1606800052052-a08af7148866?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+    }
+  ],
+  guestWishes: [
+    {
+      id: 'gw-1',
+      name: 'Nguyễn Văn A',
+      message: 'Chúc hai bạn trăm năm hạnh phúc, sớm sinh quý tử!',
+      createdAt: '2024-01-10T10:00:00Z'
+    },
+    {
+      id: 'gw-2',
+      name: 'Trần Thị B',
+      message: 'Happy Wedding! Chúc hai vợ chồng mãi mãi yêu thương nhau như ngày đầu.',
+      createdAt: '2024-01-10T11:30:00Z'
+    }
+  ],
 };
