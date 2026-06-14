@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent } from '../../types';
 import InvitationPreview from './InvitationPreview';
+import { uploadInvitationImage } from '../../services/cloudService';
 import {
     Palette, MapPin, Calendar, Heart, QrCode, Download, X,
     Save, Type, Image as ImageIcon, ExternalLink,
@@ -40,9 +41,11 @@ const InvitationManager: React.FC = () => {
     const { invitation, updateInvitation, user } = useStore();
     const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'STICKERS' | 'LOVE_STORY' | null>('GENERAL');
     const [isExporting, setIsExporting] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [showQRPanel, setShowQRPanel] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
 
     const handleChange = (field: keyof InvitationData, value: any) => {
         updateInvitation({ [field]: value });
@@ -59,25 +62,49 @@ const InvitationManager: React.FC = () => {
         });
     };
 
-    // Cover Photo Upload Handler (Converts to Base64 to fix CORS export issue)
-    const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Cover Photo Upload Handler (Uploads to Supabase)
+    const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            // Check size (limit to 2MB for performance)
+        if (file && user?.uid) {
             if (file.size > 2 * 1024 * 1024) {
                 alert("Vui lòng chọn ảnh dung lượng dưới 2MB để tối ưu tốc độ.");
                 return;
             }
-
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                handleChange('couplePhoto', reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            setUploadingImage(true);
+            try {
+                const url = await uploadInvitationImage(file, user.uid);
+                if (url) handleChange('couplePhoto', url);
+            } catch (err) {
+                alert('Có lỗi xảy ra khi tải ảnh bìa.');
+            } finally {
+                setUploadingImage(false);
+            }
+        } else if (!user?.uid) {
+            alert('Lỗi: Phiên đăng nhập hết hạn.');
         }
     };
 
     // Gallery Handling
+    const handleAddGalleryImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files && files.length > 0 && user?.uid) {
+            setUploadingImage(true);
+            try {
+                const newUrls: string[] = [];
+                for (let i = 0; i < files.length; i++) {
+                    const url = await uploadInvitationImage(files[i], user.uid);
+                    if (url) newUrls.push(url);
+                }
+                const currentGallery = invitation.galleryImages || [];
+                handleChange('galleryImages', [...currentGallery, ...newUrls]);
+            } catch (err) {
+                alert('Có lỗi khi tải ảnh lên album.');
+            } finally {
+                setUploadingImage(false);
+            }
+        }
+    };
+
     const handleAddGalleryImage = () => {
         const url = prompt("Nhập đường dẫn ảnh (URL):");
         if (url) {
@@ -317,15 +344,16 @@ const InvitationManager: React.FC = () => {
                                     <div className="relative group flex-1">
                                         <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                         <input className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
-                                            value={invitation.couplePhoto || ''} onChange={e => handleChange('couplePhoto', e.target.value)} placeholder="Nhập URL hoặc tải lên..." />
+                                            value={invitation.couplePhoto || ''} onChange={e => handleChange('couplePhoto', e.target.value)} placeholder="Nhập URL hoặc tải lên..." disabled={uploadingImage} />
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => coverInputRef.current?.click()}
-                                        className="bg-white border border-gray-200 hover:border-rose-300 text-gray-600 hover:text-rose-500 px-3 rounded-lg shadow-sm transition-colors"
+                                        disabled={uploadingImage}
+                                        className="bg-white border border-gray-200 hover:border-rose-300 text-gray-600 hover:text-rose-500 px-3 rounded-lg shadow-sm transition-colors disabled:opacity-50"
                                         title="Tải ảnh từ máy"
                                     >
-                                        <Upload className="w-5 h-5" />
+                                        {uploadingImage ? <div className="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div> : <Upload className="w-5 h-5" />}
                                     </button>
                                 </div>
                                 <p className="text-[10px] text-gray-400 mt-1 italic">* Mẹo: Sử dụng nút tải lên để đảm bảo ảnh hiển thị tốt khi xuất QR.</p>
@@ -347,11 +375,44 @@ const InvitationManager: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Nhạc Nền (URL mp3)</label>
-                                <div className="relative">
-                                    <Music className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
-                                        value={invitation.musicUrl || ''} onChange={e => handleChange('musicUrl', e.target.value)} placeholder="https://example.com/music.mp3" />
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center justify-between">
+                                    <span>Thư Viện Nhạc Nền</span>
+                                </label>
+                                <div className="space-y-3">
+                                    <select 
+                                        className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none bg-white cursor-pointer"
+                                        value={
+                                            ['/audio/romantic.mp3', '/audio/piano.mp3', ''].includes(invitation.musicUrl || '') 
+                                            ? (invitation.musicUrl || '') 
+                                            : 'custom'
+                                        }
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === 'custom') {
+                                                handleChange('musicUrl', ' '); 
+                                            } else {
+                                                handleChange('musicUrl', val);
+                                            }
+                                        }}
+                                    >
+                                        <option value="">Không phát nhạc</option>
+                                        <option value="/audio/romantic.mp3">Nhạc Lãng Mạn (Mặc định)</option>
+                                        <option value="/audio/piano.mp3">Nhạc Piano Nhẹ Nhàng</option>
+                                        <option value="custom">Tùy chỉnh (Nhập URL mp3 riêng)</option>
+                                    </select>
+
+                                    {!['/audio/romantic.mp3', '/audio/piano.mp3', ''].includes(invitation.musicUrl || '') && (
+                                        <div className="relative animate-fadeIn">
+                                            <Music className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input 
+                                                className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none"
+                                                value={(invitation.musicUrl || '').trim()} 
+                                                onChange={e => handleChange('musicUrl', e.target.value)} 
+                                                placeholder="https://example.com/music.mp3" 
+                                                autoFocus
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -527,6 +588,14 @@ const InvitationManager: React.FC = () => {
                     <SectionToggle id="GALLERY" label="Album Ảnh" icon={ImageIcon} />
                     {activeSection === 'GALLERY' && (
                         <div className="p-5 bg-gray-50 animate-fadeIn">
+                            <input
+                                type="file"
+                                ref={galleryInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                multiple
+                                onChange={handleAddGalleryImagesUpload}
+                            />
                             <div className="grid grid-cols-3 gap-2 mb-3">
                                 {(invitation.galleryImages || []).map((img, idx) => (
                                     <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
@@ -537,9 +606,9 @@ const InvitationManager: React.FC = () => {
                                         </button>
                                     </div>
                                 ))}
-                                <button type="button" onClick={handleAddGalleryImage} className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-rose-400 hover:text-rose-500 transition-colors bg-white">
-                                    <ImageIcon className="w-6 h-6 mb-1" />
-                                    <span className="text-[10px] font-bold uppercase">Thêm ảnh</span>
+                                <button type="button" onClick={() => galleryInputRef.current?.click()} disabled={uploadingImage} className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-rose-400 hover:text-rose-500 transition-colors bg-white disabled:opacity-50">
+                                    {uploadingImage ? <div className="w-6 h-6 border-2 border-rose-500 border-t-transparent rounded-full animate-spin mb-1"></div> : <Upload className="w-6 h-6 mb-1" />}
+                                    <span className="text-[10px] font-bold uppercase">{uploadingImage ? 'Đang tải...' : 'Tải lên'}</span>
                                 </button>
                             </div>
                             <p className="text-[10px] text-gray-400 text-center">Khuyên dùng: Ảnh kích thước dưới 1MB để tải nhanh.</p>
@@ -776,12 +845,33 @@ const InvitationManager: React.FC = () => {
                                                 onChange={e => handleUpdateLoveStory(idx, 'description', e.target.value)}
                                                 placeholder="Mô tả khoảnh khắc..."
                                             />
-                                            <input
-                                                className="text-xs text-gray-500 w-full p-1.5 rounded border border-gray-100 focus:border-rose-300 outline-none bg-gray-50"
-                                                value={evt.photo || ''}
-                                                onChange={e => handleUpdateLoveStory(idx, 'photo', e.target.value)}
-                                                placeholder="URL ảnh (tùy chọn)..."
-                                            />
+                                            <div className="flex gap-2">
+                                                <input
+                                                    className="flex-1 text-xs text-gray-500 p-1.5 rounded border border-gray-100 focus:border-rose-300 outline-none bg-gray-50"
+                                                    value={evt.photo || ''}
+                                                    onChange={e => handleUpdateLoveStory(idx, 'photo', e.target.value)}
+                                                    placeholder="URL ảnh (tùy chọn)..."
+                                                    disabled={uploadingImage}
+                                                />
+                                                <label className={`cursor-pointer bg-white border border-gray-200 text-gray-600 px-2 py-1.5 rounded shadow-sm hover:border-rose-300 transition-colors flex items-center justify-center ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`} title="Tải ảnh lên">
+                                                    <Upload className="w-3.5 h-3.5" />
+                                                    <input 
+                                                        type="file" 
+                                                        className="hidden" 
+                                                        accept="image/*" 
+                                                        onChange={async (e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file && user?.uid) {
+                                                                setUploadingImage(true);
+                                                                try {
+                                                                    const url = await uploadInvitationImage(file, user.uid);
+                                                                    if (url) handleUpdateLoveStory(idx, 'photo', url);
+                                                                } finally { setUploadingImage(false); }
+                                                            }
+                                                        }} 
+                                                    />
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

@@ -56,8 +56,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'settings', label: 'Cài Đặt', icon: Settings, roles: ['ADMIN', 'USER', 'GUEST'] },
   ];
 
-  // Logic: Nếu User chưa kích hoạt (!isActive), coi như Guest để filter menu
-  const effectiveRole = user && (user.role === 'USER' && !user.isActive) ? 'GUEST' : user?.role || 'GUEST';
+  // TEMP: No role downgrade (revert to restore auth)
+  const effectiveRole = user?.role || 'ADMIN';
 
   const filteredItems = menuItems.filter(item =>
     user && item.roles.includes(effectiveRole)

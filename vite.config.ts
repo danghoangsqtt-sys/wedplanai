@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom'],
-            'vendor-appwrite': ['appwrite'],
+            'vendor-supabase': ['@supabase/supabase-js'],
             'vendor-charts': ['recharts'],
             'vendor-utils': ['jspdf', 'html2canvas', 'pptxgenjs'],
           }

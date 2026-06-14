@@ -76,7 +76,7 @@ export type UserRole = 'ADMIN' | 'USER' | 'GUEST';
 export type ShareStatus = 'pending' | 'active' | 'revoked';
 
 export interface SharedPlan {
-  id: string;           // Appwrite document ID
+  id: string;           // Supabase row ID
   ownerUid: string;
   ownerEmail: string;
   ownerName: string;
@@ -98,7 +98,7 @@ export interface UserProfile {
   isActive: boolean; // Trạng thái kích hoạt tài khoản
   joinedAt?: string; // Ngày đăng ký
   allowCustomApiKey: boolean; // Quyền nhập API Key cá nhân (cho USER)
-  enableCloudStorage: boolean; // Quyền lưu trữ dữ liệu lên Firebase
+  enableCloudStorage: boolean; // Quyền lưu trữ dữ liệu lên Supabase Cloud
   weddingDate?: string | null; // Ngày cưới (ISO String YYYY-MM-DD)
   showCountdown?: boolean; // Hiển thị đếm ngược dashboard
 }

@@ -104,7 +104,7 @@ const callGeminiDirect = async (
 
       // Exponential backoff: 1s, 2s, 4s...
       const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
-      console.log(`Retrying in ${delay}ms...`);
+      console.warn(`Retrying in ${delay}ms...`);
       await sleep(delay);
     }
   }
@@ -241,9 +241,8 @@ Người dùng đang cần thực hiện công việc: "${taskName}" (Mảng: ${
 Hãy đưa ra 3-5 gạch đầu dòng mẹo thực tế, ngắn gọn, thiết thực để giúp họ hoàn thành công việc này tốt nhất (tránh bỡ ngỡ, tiết kiệm chi phí, hoặc phòng rủi ro). Không cần lời chào.`;
 
   try {
-    const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
-    const response = await callAIWithRetry(ai, "gemini-2.5-flash", systemPrompt);
-    return response.trim();
+    const response = await callGeminiDirect(systemPrompt, `Mẹo cho: ${taskName}`, false, apiKey);
+    return (response ?? '').trim();
   } catch (error: any) {
     console.error("AI Task Tip Error:", error);
     return "Không thể kết nối AI. Vui lòng kiểm tra lại cấu hình.";

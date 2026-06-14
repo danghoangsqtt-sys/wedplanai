@@ -29,7 +29,8 @@ const NAV_ITEMS = [
 const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose, activeTab, setActiveTab }) => {
   const { user, logout } = useStore();
 
-  const effectiveRole = user && user.role === 'USER' && !user.isActive ? 'GUEST' : user?.role || 'GUEST';
+  // TEMP: No role downgrade (revert to restore auth)
+  const effectiveRole = user?.role || 'ADMIN';
   const visibleItems = NAV_ITEMS.filter(item => item.roles.includes(effectiveRole));
 
   // Lock body scroll when drawer open

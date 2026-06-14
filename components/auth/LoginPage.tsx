@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HeartHandshake, UserCircle2, AlertCircle, X, Loader2 } from 'lucide-react';
-import { account, OAuthProvider } from '../../lib/appwrite';
+import { supabase } from '../../lib/supabase';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -11,17 +11,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError('');
-    // Redirect-based OAuth — browser navigates to Google, then back to app.
-    // App.tsx initSession() detects the new session on return.
-    const origin = window.location.origin;
-    account.createOAuth2Session(
-      OAuthProvider.Google,
-      `${origin}/`,
-      `${origin}/?auth_error=1`
-    );
+    try {
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (authError) {
+        setError(authError.message);
+        setIsLoading(false);
+      }
+      // Browser will redirect to Google — no need to do anything else
+    } catch (e: any) {
+      setError(e.message || 'Đăng nhập thất bại.');
+      setIsLoading(false);
+    }
   };
 
   const handleGuestLogin = () => {

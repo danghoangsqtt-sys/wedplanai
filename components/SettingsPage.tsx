@@ -2,8 +2,9 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { validateGeminiKey } from '../services/aiService';
-import { storage, BUCKET_ID, ID } from '../lib/appwrite';
+import { supabase } from '../lib/supabase';
 import SharedPlanSection from './SharedPlanSection';
+import { ADMIN_CONTACT } from '../data/initialData';
 import {
    User, Calendar, Settings as SettingsIcon, Database,
    Key, Shield, Cloud, Download, Upload, Trash2,
@@ -112,9 +113,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
       setIsUploading(true);
       try {
-         const result = await storage.createFile(BUCKET_ID, ID.unique(), file);
-         const downloadURL = storage.getFilePreview(BUCKET_ID, result.$id, 256, 256).toString();
-         updateUser(user!.uid, { photoURL: downloadURL });
+         const fileExt = file.name.split('.').pop();
+         const fileName = `${user!.uid}_avatar_${Date.now()}.${fileExt}`;
+         const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('wedkho')
+            .upload(`avatars/${fileName}`, file, { upsert: true });
+
+         if (uploadError) throw uploadError;
+
+         const { data: urlData } = supabase.storage
+            .from('wedkho')
+            .getPublicUrl(uploadData.path);
+
+         updateUser(user!.uid, { photoURL: urlData.publicUrl });
       } catch (error: any) {
          console.error("Upload error:", error);
          alert(`Lỗi khi tải ảnh: ${error.message}`);
@@ -406,10 +417,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                  {user.enableCloudStorage ? 'Active' : 'Disabled'}
                               </span>
                            </div>
-                           <p className="text-xs text-blue-600/70 font-semibold mb-2">Powered by Appwrite Cloud · Singapore</p>
+                           <p className="text-xs text-blue-600/70 font-semibold mb-2">Powered by Supabase Cloud · PostgreSQL</p>
                            <p className="text-sm text-gray-600 mb-4 max-w-lg leading-relaxed">
                               {user.enableCloudStorage
-                                 ? "Dữ liệu của bạn được đồng bộ an toàn trên Appwrite Cloud theo thời gian thực. Truy cập từ mọi thiết bị, không lo mất dữ liệu."
+                                 ? "Dữ liệu của bạn được đồng bộ an toàn trên Supabase Cloud theo thời gian thực. Truy cập từ mọi thiết bị, không lo mất dữ liệu."
                                  : "Dữ liệu chỉ lưu trên trình duyệt này. Nếu xóa cache hoặc đổi máy, bạn sẽ mất toàn bộ kế hoạch cưới."}
                            </p>
                            {(user.role === 'GUEST' || (user.role === 'USER' && !user.isActive)) ? (
@@ -586,7 +597,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                               <p className="text-sm text-amber-700 mt-1">
                                  Hiện tại bạn không thể nhập API Key hoặc sử dụng các tính năng nâng cao.
                                  <br />
-                                 <strong>Vui lòng liên hệ Admin: 0343019101 hoặc danghoang.sqtt@gmail.com để mở khóa.</strong>
+                                 <strong>Vui lòng liên hệ Admin: {ADMIN_CONTACT.text} để mở khóa.</strong>
                               </p>
                            </div>
                         </div>
@@ -768,7 +779,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     </div>
                                     <div>
                                        <p className="text-xs font-bold text-gray-400 uppercase">Zalo / Phone</p>
-                                       <p className="font-bold text-gray-800 text-sm">{adminContact.phoneNumber || '0343019101'} (Liên hệ trực tiếp)</p>
+                                       <p className="font-bold text-gray-800 text-sm">{adminContact.phoneNumber || ADMIN_CONTACT.phone} (Liên hệ trực tiếp)</p>
                                     </div>
                                  </div>
                               </div>

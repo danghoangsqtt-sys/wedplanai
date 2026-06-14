@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { loadPublicInvitation } from '../../services/cloudService';
 import { InvitationData, GuestWish } from '../../types';
 import InvitationPreview from './InvitationPreview';
-import { Loader2, AlertCircle, MailOpen, Volume2, VolumeX, Heart, Mail, X, CheckCircle2, Send, Users, MessageCircle } from 'lucide-react';
+import { Loader2, AlertCircle, MailOpen, Volume2, VolumeX, Heart, Mail, X, CheckCircle2, Send, Users, MessageCircle, Music } from 'lucide-react';
 
 // --- RSVP MODAL ---
 interface RSVPModalProps {
@@ -581,13 +581,13 @@ const PublicInvitationView: React.FC = () => {
     const hasActions = data.rsvpEnabled || data.guestbookEnabled;
 
     return (
-        <div className="min-h-screen bg-[#f0f0f0] flex justify-center relative">
+        <div className="min-h-[100dvh] bg-[#f0f0f0] flex justify-center relative">
 
             {/* Desktop subtle background pattern */}
             <div className="invite-desktop-pattern hidden lg:block fixed inset-0 pointer-events-none" aria-hidden />
 
             {/* Invitation content */}
-            <div className={`w-full max-w-md bg-white shadow-2xl min-h-screen relative ${hasActions ? 'pb-20' : ''}`}>
+            <div className={`w-full max-w-md bg-white shadow-2xl min-h-[100dvh] relative ${hasActions ? 'pb-20' : ''}`}>
                 <InvitationPreview
                     data={invitationWithWishes}
                     onRSVP={() => setShowRSVP(true)}
@@ -600,22 +600,6 @@ const PublicInvitationView: React.FC = () => {
                 <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
                     <div className="w-full max-w-md pointer-events-auto">
                         <div className="mx-3 mb-3 bg-white/90 backdrop-blur-xl rounded-2xl border border-rose-100 shadow-2xl shadow-black/15 px-3 py-2.5 flex items-center gap-2">
-
-                            {/* Music toggle */}
-                            {data.musicUrl && (
-                                <button
-                                    type="button"
-                                    onClick={toggleMusic}
-                                    className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isPlaying ? 'bg-rose-50 text-rose-500' : 'bg-gray-100 text-gray-400'}`}
-                                    title={isPlaying ? 'Tắt nhạc' : 'Bật nhạc'}
-                                    aria-label={isPlaying ? 'Tắt nhạc' : 'Bật nhạc'}
-                                >
-                                    {isPlaying
-                                        ? <Volume2 className="w-5 h-5 animate-pulse" />
-                                        : <VolumeX className="w-5 h-5" />
-                                    }
-                                </button>
-                            )}
 
                             {/* RSVP */}
                             {data.rsvpEnabled && (
@@ -645,17 +629,47 @@ const PublicInvitationView: React.FC = () => {
                 </div>
             )}
 
-            {/* Music button when no action bar */}
-            {!hasActions && data.musicUrl && (
-                <button
-                    type="button"
-                    onClick={toggleMusic}
-                    className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full shadow-xl flex items-center justify-center text-rose-600 hover:scale-110 transition-transform border border-rose-100"
-                    title={isPlaying ? 'Tắt nhạc' : 'Bật nhạc'}
-                    aria-label={isPlaying ? 'Tắt nhạc' : 'Bật nhạc'}
-                >
-                    {isPlaying ? <Volume2 className="w-5 h-5 animate-pulse" /> : <VolumeX className="w-5 h-5 text-gray-400" />}
-                </button>
+            {/* Floating Vinyl Background Music Player */}
+            {data.musicUrl && (
+                <div className="fixed top-6 right-4 lg:right-6 z-[60]">
+                    <div className="relative">
+                        {/* Floating Music Notes */}
+                        {isPlaying && (
+                            <>
+                                <div className="absolute -top-2 -left-4 animate-float-music-note pointer-events-none text-rose-400">
+                                    <Music className="w-3 h-3 fill-current" />
+                                </div>
+                                <div className="absolute -top-4 left-4 animate-float-music-note-delayed pointer-events-none text-pink-400">
+                                    <Music className="w-4 h-4 fill-current" />
+                                </div>
+                            </>
+                        )}
+                        
+                        {/* Vinyl Disc */}
+                        <div 
+                            className={`w-12 h-12 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.15)] flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 ${isPlaying ? 'animate-spin-slow' : ''}`}
+                            style={{ background: 'radial-gradient(circle at center, #111 0%, #333 40%, #111 80%, #000 100%)' }}
+                            onClick={toggleMusic}
+                            title={isPlaying ? 'Tắt nhạc' : 'Bật nhạc'}
+                            aria-label={isPlaying ? 'Tắt nhạc' : 'Bật nhạc'}
+                        >
+                            {/* Center Label */}
+                            <div className="w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center z-10 border-2 border-gray-800"></div>
+                            
+                            {/* Vinyl grooves */}
+                            <div className="absolute inset-1 border border-white/5 rounded-full pointer-events-none" />
+                            <div className="absolute inset-2 border border-white/10 rounded-full pointer-events-none" />
+                            <div className="absolute inset-3 border border-white/5 rounded-full pointer-events-none" />
+                            
+                            {/* Paused Overlay */}
+                            {!isPlaying && (
+                                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-[1px]">
+                                    <VolumeX className="w-4 h-4 text-white/90" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Modals */}

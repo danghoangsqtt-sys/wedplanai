@@ -132,9 +132,9 @@ const PresentationGenerator: React.FC<PresentationGeneratorProps> = ({
       const completedTasks = budgetItems.length - pendingTasks.length;
       const percent = budgetItems.length > 0 ? Math.round((completedTasks / budgetItems.length) * 100) : 0;
       
-      slide2.addShape(pres.ShapeType.rect, { x: 0.5, y: 4.0, w: 9, h: 0.4, fill: { color: "F3F4F6" }, line: { color: "E5E7EB" }, r: 0.2 });
+      slide2.addShape(pres.ShapeType.rect, { x: 0.5, y: 4.0, w: 9, h: 0.4, fill: { color: "F3F4F6" }, line: { color: "E5E7EB" }, rectRadius: 0.2 });
       if (percent > 0) {
-        slide2.addShape(pres.ShapeType.rect, { x: 0.5, y: 4.0, w: 9 * (percent/100), h: 0.4, fill: { color: COLOR_PRIMARY }, r: 0.2 });
+        slide2.addShape(pres.ShapeType.rect, { x: 0.5, y: 4.0, w: 9 * (percent/100), h: 0.4, fill: { color: COLOR_PRIMARY }, rectRadius: 0.2 });
       }
       slide2.addText(`${percent}%`, { x: 8.8, y: 4.0, w: 0.7, h: 0.4, fontSize: 12, color: percent > 90 ? "FFFFFF" : COLOR_PRIMARY, bold: true, align: 'center', valign: 'middle' });
 

@@ -1,30 +1,30 @@
-import { databases, DB_ID, COLLECTIONS, ID, Query, Permission, Role } from '../lib/appwrite';
+import { supabase, TABLES } from '../lib/supabase';
 import { SharedPlan, UserProfile } from '../types';
 
-// --- CODE GENERATOR ---
+// --- CODE GENERATOR (FIX H4: 6 chars instead of 4) ---
 
 function generateShareCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I,O,0,1 to avoid confusion
   let code = '';
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `WED-${code}`;
 }
 
-// --- PARSE DOCUMENT ---
+// --- PARSE ROW ---
 
-function docToSharedPlan(doc: any): SharedPlan {
+function rowToSharedPlan(row: any): SharedPlan {
   return {
-    id: doc.$id,
-    ownerUid: doc.ownerUid,
-    ownerEmail: doc.ownerEmail,
-    ownerName: doc.ownerName || '',
-    partnerUid: doc.partnerUid || undefined,
-    partnerEmail: doc.partnerEmail || undefined,
-    shareCode: doc.shareCode,
-    status: doc.status,
-    createdAt: doc.createdAt,
+    id: row.id,
+    ownerUid: row.owner_uid,
+    ownerEmail: row.owner_email || '',
+    ownerName: row.owner_name || '',
+    partnerUid: row.partner_uid || undefined,
+    partnerEmail: row.partner_email || undefined,
+    shareCode: row.share_code,
+    status: row.status,
+    createdAt: new Date(row.created_at).getTime(),
   };
 }
 
@@ -39,31 +39,25 @@ export async function createShareInvite(owner: UserProfile): Promise<SharedPlan>
 
   const shareCode = generateShareCode();
 
-  const doc = await databases.createDocument(
-    DB_ID,
-    COLLECTIONS.PLAN_SHARES,
-    ID.unique(),
-    {
-      ownerUid: owner.uid,
-      ownerEmail: owner.email || '',
-      ownerName: owner.displayName || '',
-      shareCode,
+  const { data: row, error } = await supabase
+    .from(TABLES.PLAN_SHARES)
+    .insert({
+      owner_uid: owner.uid,
+      owner_email: owner.email || '',
+      owner_name: owner.displayName || '',
+      share_code: shareCode,
       status: 'pending',
-      createdAt: Date.now(),
-    },
-    [
-      Permission.read(Role.users()),
-      Permission.update(Role.users()),
-      Permission.delete(Role.user(owner.uid)),
-    ]
-  );
+    })
+    .select()
+    .single();
 
-  return docToSharedPlan(doc);
+  if (error) throw new Error(error.message);
+  return rowToSharedPlan(row);
 }
 
 // --- JOIN PLAN ---
 
-const SHARE_CODE_PATTERN = /^WED-[A-Z2-9]{4}$/;
+const SHARE_CODE_PATTERN = /^WED-[A-Z2-9]{4,6}$/;
 
 export async function joinPlanByCode(
   code: string,
@@ -72,102 +66,85 @@ export async function joinPlanByCode(
   const normalizedCode = code.trim().toUpperCase();
 
   if (!SHARE_CODE_PATTERN.test(normalizedCode)) {
-    throw new Error('Mã mời không hợp lệ. Định dạng đúng: WED-XXXX (4 ký tự chữ/số).');
+    throw new Error('Mã mời không hợp lệ. Định dạng đúng: WED-XXXXXX (4-6 ký tự chữ/số).');
   }
 
   // Find the plan share document by code
-  const result = await databases.listDocuments(
-    DB_ID,
-    COLLECTIONS.PLAN_SHARES,
-    [Query.equal('shareCode', normalizedCode)]
-  );
+  const { data: rows, error } = await supabase
+    .from(TABLES.PLAN_SHARES)
+    .select('*')
+    .eq('share_code', normalizedCode);
 
-  if (result.total === 0) {
+  if (error) throw new Error(error.message);
+  if (!rows || rows.length === 0) {
     throw new Error('Mã mời không tồn tại. Vui lòng kiểm tra lại.');
   }
 
-  const doc = result.documents[0];
+  const doc = rows[0];
 
   if (doc.status === 'revoked') {
     throw new Error('Mã mời này đã bị hủy bởi chủ kế hoạch.');
   }
 
-  if (doc.status === 'active' && doc.partnerUid && doc.partnerUid !== partner.uid) {
+  if (doc.status === 'active' && doc.partner_uid && doc.partner_uid !== partner.uid) {
     throw new Error('Kế hoạch này đã có người tham gia.');
   }
 
-  if (doc.ownerUid === partner.uid) {
+  if (doc.owner_uid === partner.uid) {
     throw new Error('Bạn không thể tham gia kế hoạch của chính mình.');
   }
 
   // Update the document to add partner
-  const updated = await databases.updateDocument(
-    DB_ID,
-    COLLECTIONS.PLAN_SHARES,
-    doc.$id,
-    {
-      partnerUid: partner.uid,
-      partnerEmail: partner.email || '',
+  const { data: updated, error: updateErr } = await supabase
+    .from(TABLES.PLAN_SHARES)
+    .update({
+      partner_uid: partner.uid,
+      partner_email: partner.email || '',
       status: 'active',
-    }
-  );
+    })
+    .eq('id', doc.id)
+    .select()
+    .single();
 
-  // Update user_data permissions to allow partner access
-  try {
-    await databases.updateDocument(
-      DB_ID,
-      COLLECTIONS.USER_DATA,
-      doc.ownerUid,
-      {}, // no data change, just permissions
-      [
-        Permission.read(Role.user(doc.ownerUid)),
-        Permission.update(Role.user(doc.ownerUid)),
-        Permission.delete(Role.user(doc.ownerUid)),
-        Permission.read(Role.user(partner.uid)),
-        Permission.update(Role.user(partner.uid)),
-      ]
-    );
-  } catch (e) {
-    console.warn('Could not update user_data permissions (doc may not exist yet):', e);
-  }
+  if (updateErr) throw new Error(updateErr.message);
 
-  return docToSharedPlan(updated);
+  return rowToSharedPlan(updated);
 }
 
 // --- QUERY PLANS ---
 
 export async function getSharedPlanAsOwner(uid: string): Promise<SharedPlan | null> {
   try {
-    const result = await databases.listDocuments(
-      DB_ID,
-      COLLECTIONS.PLAN_SHARES,
-      [
-        Query.equal('ownerUid', uid),
-        Query.notEqual('status', 'revoked'),
-        Query.orderDesc('createdAt'),
-        Query.limit(1),
-      ]
-    );
-    return result.total > 0 ? docToSharedPlan(result.documents[0]) : null;
-  } catch {
+    const { data: rows, error } = await supabase
+      .from(TABLES.PLAN_SHARES)
+      .select('*')
+      .eq('owner_uid', uid)
+      .neq('status', 'revoked')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+    return rows && rows.length > 0 ? rowToSharedPlan(rows[0]) : null;
+  } catch (err) {
+    console.warn('getSharedPlanAsOwner error:', err);
     return null;
   }
 }
 
 export async function getSharedPlanAsPartner(uid: string): Promise<SharedPlan | null> {
   try {
-    const result = await databases.listDocuments(
-      DB_ID,
-      COLLECTIONS.PLAN_SHARES,
-      [
-        Query.equal('partnerUid', uid),
-        Query.equal('status', 'active'),
-        Query.orderDesc('createdAt'),
-        Query.limit(1),
-      ]
-    );
-    return result.total > 0 ? docToSharedPlan(result.documents[0]) : null;
-  } catch {
+    const { data: rows, error } = await supabase
+      .from(TABLES.PLAN_SHARES)
+      .select('*')
+      .eq('partner_uid', uid)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+    return rows && rows.length > 0 ? rowToSharedPlan(rows[0]) : null;
+  } catch (err) {
+    console.warn('getSharedPlanAsPartner error:', err);
     return null;
   }
 }
@@ -188,41 +165,25 @@ export async function getMySharedPlan(uid: string): Promise<{ plan: SharedPlan; 
 // --- REVOKE / LEAVE ---
 
 export async function revokeShare(planId: string): Promise<void> {
-  await databases.updateDocument(
-    DB_ID,
-    COLLECTIONS.PLAN_SHARES,
-    planId,
-    { status: 'revoked' }
-  );
+  const { error } = await supabase
+    .from(TABLES.PLAN_SHARES)
+    .update({ status: 'revoked' })
+    .eq('id', planId);
+
+  if (error) throw new Error(error.message);
 }
 
-export async function leavePlan(planId: string, _partnerUid: string, ownerUid: string): Promise<void> {
+export async function leavePlan(planId: string, _partnerUid: string, _ownerUid: string): Promise<void> {
   // Remove partner from plan
-  await databases.updateDocument(
-    DB_ID,
-    COLLECTIONS.PLAN_SHARES,
-    planId,
-    {
-      partnerUid: '',
-      partnerEmail: '',
+  const { error } = await supabase
+    .from(TABLES.PLAN_SHARES)
+    .update({
+      partner_uid: null,
+      partner_email: '',
       status: 'pending', // Reset to pending so owner can re-invite
-    }
-  );
+    })
+    .eq('id', planId);
 
-  // Remove partner permissions from user_data
-  try {
-    await databases.updateDocument(
-      DB_ID,
-      COLLECTIONS.USER_DATA,
-      ownerUid,
-      {},
-      [
-        Permission.read(Role.user(ownerUid)),
-        Permission.update(Role.user(ownerUid)),
-        Permission.delete(Role.user(ownerUid)),
-      ]
-    );
-  } catch {
-    // Silent — doc may not exist
-  }
+  if (error) throw new Error(error.message);
+  // Note: RLS handles data access — no need to manually update permissions
 }

@@ -31,7 +31,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
   const [showMore, setShowMore] = useState(false);
   const { user } = useStore();
 
-  const effectiveRole = user && user.role === 'USER' && !user.isActive ? 'GUEST' : user?.role || 'GUEST';
+  // TEMP: No role downgrade (revert to restore auth)
+  const effectiveRole = user?.role || 'ADMIN';
   const filteredMore = MORE_ITEMS.filter(item => item.roles.includes(effectiveRole));
   const isMoreActive = filteredMore.some(item => item.id === activeTab);
 

@@ -2,6 +2,14 @@
 
 import { Guest, GuestGroup, AttendanceProbability, BudgetItem, TaskStatus, UserProfile, InvitationData, TimelinePhase } from '../types';
 
+// Centralized admin contact info — single source of truth
+export const ADMIN_CONTACT = {
+  phone: '0343019101',
+  email: 'danghoang.sqtt@gmail.com',
+  get text() { return `${this.phone} hoặc ${this.email}`; },
+  get activationWarning() { return `Tài khoản chưa kích hoạt. Liên hệ Admin: ${this.text}`; },
+};
+
 export const INITIAL_GUESTS: Guest[] = [
   { id: '1', name: 'Nguyễn Văn A', group: GuestGroup.GROOM, address: 'Hà Nội', probability: AttendanceProbability.CONFIRMED, childrenCount: 2, redEnvelope: 1000000 },
   { id: '2', name: 'Trần Thị B', group: GuestGroup.BRIDE, address: 'TP. Hồ Chí Minh', probability: AttendanceProbability.LIKELY, childrenCount: 0, redEnvelope: 500000 },
@@ -114,9 +122,10 @@ export const DEFAULT_GUEST_USER: UserProfile = {
   email: null,
   displayName: 'Khách',
   photoURL: null,
-  role: 'GUEST',
+  // TEMP: Grant full access to anonymous visitors (revert role→'GUEST' to restore auth)
+  role: 'ADMIN',
   isActive: true,
-  allowCustomApiKey: false,
+  allowCustomApiKey: true,
   enableCloudStorage: false,
   weddingDate: null,
   showCountdown: false

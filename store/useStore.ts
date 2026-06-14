@@ -7,7 +7,7 @@ import { fetchAllProfiles, fetchAnalyticsData, AdminAnalytics } from '../service
 import { getMySharedPlan, createShareInvite, joinPlanByCode, revokeShare, leavePlan } from '../services/sharingService';
 import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS } from '../data/initialData';
 import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
-import { account, databases, DB_ID, COLLECTIONS } from '../lib/appwrite';
+import { supabase, TABLES } from '../lib/supabase';
 
 export interface GuestUsage {
   fengShuiCount: number;
@@ -175,7 +175,7 @@ const triggerCloudSync = (get: () => AppState) => {
     // Re-read state at save time to capture all mutations within the debounce window
     const state = get();
     const effectiveUid = getEffectiveUidFromState(state);
-    if (state.user?.enableCloudStorage && effectiveUid) {
+    if (state.user?.enableCloudStorage && effectiveUid && effectiveUid !== 'guest-default') {
       saveUserDataToCloud(effectiveUid, {
         guests: state.guests,
         budgetItems: state.budgetItems,
@@ -272,7 +272,7 @@ export const useStore = create<AppState>()(
         clearTimeout(syncTimeout);
         const preState = get();
         const effectiveUid = getEffectiveUidFromState(preState);
-        if (preState.user?.enableCloudStorage && effectiveUid && preState.user.role !== 'GUEST') {
+        if (preState.user?.enableCloudStorage && effectiveUid && effectiveUid !== 'guest-default' && preState.user.role !== 'GUEST') {
           try {
             await saveUserDataToCloud(effectiveUid, {
               guests: preState.guests,
@@ -288,7 +288,7 @@ export const useStore = create<AppState>()(
           }
         }
 
-        account.deleteSession('current').catch(() => {});
+        supabase.auth.signOut().catch(() => {});
 
         // Only reset auth state — preserve data in localStorage as fallback for next login
         set({
@@ -321,21 +321,23 @@ export const useStore = create<AppState>()(
       },
 
       updateUser: async (uid, data) => {
-        // Only send fields that exist in Appwrite public_profiles schema
-        const APPWRITE_PROFILE_FIELDS = new Set([
-          'uid', 'email', 'displayName', 'photoURL', 'role',
-          'isActive', 'joinedAt', 'lastSeen', 'enableCloudStorage', 'allowCustomApiKey'
-        ]);
+        // Map frontend camelCase fields to Supabase snake_case columns
+        const FIELD_MAP: Record<string, string> = {
+          uid: 'id', email: 'email', displayName: 'display_name', photoURL: 'photo_url',
+          role: 'role', isActive: 'is_active', joinedAt: 'joined_at',
+          enableCloudStorage: 'enable_cloud_storage', allowCustomApiKey: 'allow_custom_api_key',
+        };
+        const SUPABASE_FIELDS = new Set(Object.keys(FIELD_MAP));
         const cloudData: Record<string, any> = {};
         for (const [key, value] of Object.entries(data)) {
-          if (APPWRITE_PROFILE_FIELDS.has(key)) {
-            cloudData[key] = value;
+          if (SUPABASE_FIELDS.has(key)) {
+            cloudData[FIELD_MAP[key]] = value;
           }
         }
-        // Only call Appwrite if there are cloud-compatible fields
+        // Only call Supabase if there are cloud-compatible fields
         if (Object.keys(cloudData).length > 0) {
           try {
-            await databases.updateDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid, cloudData);
+            await supabase.from(TABLES.PROFILES).update(cloudData).eq('id', uid);
           } catch (e: any) {
             console.error('Update User Error:', e);
           }
@@ -352,8 +354,8 @@ export const useStore = create<AppState>()(
 
       deleteUser: async (uid) => {
         try {
-          await databases.deleteDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid);
-          await databases.deleteDocument(DB_ID, COLLECTIONS.USER_DATA, uid).catch(() => {});
+          await supabase.from(TABLES.PROFILES).delete().eq('id', uid);
+          await supabase.from(TABLES.USER_DATA).delete().eq('id', uid);
         } catch (e) { console.error(e); }
         set((state) => ({
           adminUsers: state.adminUsers.filter(u => u.uid !== uid),

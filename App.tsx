@@ -13,8 +13,9 @@ import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { logAppVisit, getUserPublicProfile, syncUserProfile } from './services/cloudService';
-import { account } from './lib/appwrite';
+import { supabase } from './lib/supabase';
 import { UserProfile } from './types';
+import { ADMIN_CONTACT } from './data/initialData';
 
 // --- Helper to handle lazy loading chunk errors (Vite cached index.html issue) ---
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -57,11 +58,15 @@ const PageLoader = () => (
 );
 
 // --- Error Boundary ---
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback?: React.ReactNode },
-  { hasError: boolean; error?: Error }
-> {
-  constructor(props: any) {
+type EBProps = { children: React.ReactNode; fallback?: React.ReactNode };
+type EBState = { hasError: boolean; error?: Error };
+
+class ErrorBoundary extends React.Component<EBProps, EBState> {
+  declare props: Readonly<EBProps>;
+  declare state: EBState;
+  declare setState: React.Component<EBProps, EBState>['setState'];
+
+  constructor(props: EBProps) {
     super(props);
     this.state = { hasError: false };
   }
@@ -115,57 +120,66 @@ function App() {
   // Public View State
   const [isPublicView, setIsPublicView] = useState(false);
 
-  // --- Appwrite Session Check (runs on mount + after OAuth redirect) ---
+  // --- Supabase Session Check (runs on mount + after OAuth redirect) ---
   useEffect(() => {
     const initSession = async () => {
       try {
-        const appwriteUser = await account.get();
-        if (user?.role === 'GUEST') {
-          // New session detected (e.g. just came back from Google OAuth redirect)
-          const isAdminEmail = appwriteUser.email === 'danghoang.sqtt@gmail.com';
-          let profile = await getUserPublicProfile(appwriteUser.$id);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && user?.uid === 'guest-default') {
+          const supaUser = session.user;
+          const meta = supaUser.user_metadata || {};
+          let profile = await getUserPublicProfile(supaUser.id);
           if (profile) {
             // Existing user: merge latest Google display info
             profile = {
               ...profile,
-              email: appwriteUser.email,
-              displayName: appwriteUser.name || profile.displayName,
-              role: isAdminEmail ? 'ADMIN' : profile.role,
-              isActive: isAdminEmail ? true : profile.isActive,
-              allowCustomApiKey: isAdminEmail ? true : profile.allowCustomApiKey,
+              email: supaUser.email || profile.email,
+              displayName: meta.full_name || meta.name || profile.displayName,
+              photoURL: meta.avatar_url || profile.photoURL,
             };
             await syncUserProfile(profile);
           } else {
-            // Brand new user
+            // Brand new user — role defaults to USER, admin set in DB
             profile = {
-              uid: appwriteUser.$id,
-              email: appwriteUser.email,
-              displayName: appwriteUser.name || appwriteUser.email?.split('@')[0] || 'Người dùng',
-              photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(appwriteUser.name || '')}&background=e11d48&color=fff&size=128`,
-              role: isAdminEmail ? 'ADMIN' : 'USER',
-              isActive: isAdminEmail,
+              uid: supaUser.id,
+              email: supaUser.email || null,
+              displayName: meta.full_name || meta.name || supaUser.email?.split('@')[0] || 'Người dùng',
+              photoURL: meta.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(meta.full_name || '')}&background=e11d48&color=fff&size=128`,
+              role: 'USER',
+              isActive: false,
               enableCloudStorage: true,
-              allowCustomApiKey: isAdminEmail,
+              allowCustomApiKey: false,
               joinedAt: new Date().toISOString(),
             } as UserProfile;
           }
           await login(profile);
-          if (isAdminEmail) {
+          if (profile.role === 'ADMIN') {
             addNotification('SUCCESS', `Chào mừng Admin ${profile.displayName} quay trở lại!`);
           } else if (!profile.isActive) {
-            addNotification('WARNING', 'Tài khoản chưa kích hoạt. Liên hệ Admin: 0343019101 hoặc danghoang.sqtt@gmail.com', 10000);
+            addNotification('WARNING', ADMIN_CONTACT.activationWarning, 10000);
           } else {
             addNotification('SUCCESS', `Đăng nhập thành công! Xin chào ${profile.displayName}`);
           }
+        } else if (!session && user && user.uid !== 'guest-default') {
+          // No valid session — clear stale user
+          // TEMP: Disabled logout for anonymous access mode
+          // logout();
         }
       } catch {
-        // No valid Appwrite session — if store still shows a real user, clear it
-        if (user && user.role !== 'GUEST') {
-          logout();
-        }
+        // TEMP: Don't logout on error in anonymous mode
       }
     };
     initSession();
+
+    // Listen for auth state changes (sign in/out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // TEMP: Disabled auto-logout in anonymous access mode
+      // if (!session && user && user.uid !== 'guest-default') {
+      //   logout();
+      // }
+    });
+
+    return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Check for Public URL Params ---
@@ -195,7 +209,7 @@ function App() {
       logAppVisit(user?.uid);
 
       // 2. Refresh user profile (check activation status) from Cloud
-      if (user && user.role !== 'GUEST') {
+      if (user && user.uid !== 'guest-default') {
         refreshUserProfile();
       }
     }
@@ -249,7 +263,9 @@ function App() {
     return <div className="h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  const isRestricted = user.role === 'GUEST' || (user.role === 'USER' && !user.isActive);
+  // TEMP: Bypass all feature restrictions (revert to original line to restore auth)
+  // const isRestricted = user.role === 'GUEST' || (user.role === 'USER' && !user.isActive);
+  const isRestricted = false;
 
   return (
     <div className="flex h-screen bg-[#FDF2F8] overflow-hidden transition-colors dark:bg-gray-900 font-sans">
@@ -285,12 +301,7 @@ function App() {
         />
 
         {/* Inactive user warning banner */}
-        {user.role === 'USER' && !user.isActive && (
-          <div className="bg-amber-100 border-b border-amber-200 px-4 py-2 flex items-center justify-center text-xs font-bold text-amber-800 gap-2 flex-shrink-0 text-center z-10">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>Tài khoản chưa kích hoạt. Liên hệ Admin: 0343019101 hoặc danghoang.sqtt@gmail.com</span>
-          </div>
-        )}
+        {/* TEMP: Hidden inactive warning for anonymous access mode */}
 
         {/* Scrollable page content */}
         <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeTab === 'invitation' ? 'p-0' : 'p-3 md:p-5 lg:p-6'} pb-20 lg:pb-6 bg-[#FDF2F8]`}>

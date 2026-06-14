@@ -1,6 +1,6 @@
 
 import { generateAIContent } from "./aiService";
-import { DashboardStats } from "../types";
+import { DashboardStats, GuestGroup } from "../types";
 import { useStore } from "../store/useStore";
 
 // ============================================================
@@ -77,10 +77,10 @@ export const getFinancialAdvice = async (
 
   // --- Build rich context from real data ---
   const guestByGroup = {
-    nhaTrai: guests.filter(g => g.group === 'NHA_TRAI').length,
-    nhaGai: guests.filter(g => g.group === 'NHA_GAI').length,
-    banBe: guests.filter(g => g.group === 'BAN_BE').length,
-    dongNghiep: guests.filter(g => g.group === 'DONG_NGHIEP').length,
+    nhaTrai: guests.filter(g => g.group === GuestGroup.GROOM).length,
+    nhaGai: guests.filter(g => g.group === GuestGroup.BRIDE).length,
+    banBe: guests.filter(g => g.group === GuestGroup.FRIEND).length,
+    dongNghiep: guests.filter(g => g.group === GuestGroup.WORK).length,
     confirmed: guests.filter(g => g.probability === 100).length,
     totalChildren: guests.reduce((acc, g) => acc + g.childrenCount, 0),
   };
@@ -93,12 +93,12 @@ export const getFinancialAdvice = async (
   const topExpenses = [...budgetItems]
     .sort((a, b) => b.estimatedCost - a.estimatedCost)
     .slice(0, 5)
-    .map(i => `${i.name}: ${i.estimatedCost.toLocaleString('vi-VN')} VNĐ (${i.status})`)
+    .map(i => `${i.itemName}: ${i.estimatedCost.toLocaleString('vi-VN')} VNĐ (${i.status})`)
     .join('\n    ');
 
   const overBudgetItems = budgetItems.filter(i => i.actualCost > i.estimatedCost && i.actualCost > 0);
   const overBudgetWarning = overBudgetItems.length > 0
-    ? `\n    ⚠️ VƯỢT NGÂN SÁCH: ${overBudgetItems.map(i => `${i.name} (dự kiến ${i.estimatedCost.toLocaleString('vi-VN')} → thực tế ${i.actualCost.toLocaleString('vi-VN')})`).join(', ')}`
+    ? `\n    ⚠️ VƯỢT NGÂN SÁCH: ${overBudgetItems.map(i => `${i.itemName} (dự kiến ${i.estimatedCost.toLocaleString('vi-VN')} → thực tế ${i.actualCost.toLocaleString('vi-VN')})`).join(', ')}`
     : '';
 
   const contextData = `

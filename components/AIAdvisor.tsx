@@ -5,6 +5,7 @@ import { DashboardStats } from '../types';
 import { getFinancialAdvice } from '../services/geminiService';
 import { useStore } from '../store/useStore';
 import { checkGuestIPLimit, incrementGuestIPUsage } from '../services/cloudService';
+import { ADMIN_CONTACT } from '../data/initialData';
 
 interface AIAdvisorProps {
   stats: DashboardStats;
@@ -61,7 +62,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ stats, isRestricted = false, hide
           { role: 'user', content: textToSend }, // Vẫn hiện tin nhắn user chat để tự nhiên
           {
             role: 'model',
-            content: "💎 Hết lượt dùng thử!\nTôi đã giúp bạn 5 câu hỏi rồi. Để tôi tiếp tục làm cố vấn riêng cho đám cưới của bạn trọn đời, hãy kích hoạt tài khoản ngay nhé! \n👉 Liên hệ Admin: 0343019101 hoặc danghoang.sqtt@gmail.com"
+            content: `💎 Hết lượt dùng thử!\nTôi đã giúp bạn 5 câu hỏi rồi. Để tôi tiếp tục làm cố vấn riêng cho đám cưới của bạn trọn đời, hãy kích hoạt tài khoản ngay nhé! \n👉 Liên hệ Admin: ${ADMIN_CONTACT.text}`
           }
         ]);
         setInput('');

@@ -1,4 +1,4 @@
-import { databases, DB_ID, COLLECTIONS, Query } from '../lib/appwrite';
+import { supabase, TABLES } from '../lib/supabase';
 import { UserProfile } from '../types';
 
 export interface AdminAnalytics {
@@ -11,22 +11,26 @@ export interface AdminAnalytics {
 
 export const fetchAllProfiles = async (): Promise<UserProfile[]> => {
   try {
-    const response = await databases.listDocuments(DB_ID, COLLECTIONS.PUBLIC_PROFILES, [
-      Query.limit(100),
-      Query.orderDesc('lastSeen'),
-    ]);
-    const users = response.documents.map(doc => ({
-      uid: doc.uid,
+    const { data: rows, error } = await supabase
+      .from(TABLES.PROFILES)
+      .select('*')
+      .order('last_seen', { ascending: false });
+
+    if (error) throw error;
+
+    const users = (rows || []).map(doc => ({
+      uid: doc.id,
       email: doc.email,
-      displayName: doc.displayName,
-      photoURL: doc.photoURL,
+      displayName: doc.display_name,
+      photoURL: doc.photo_url,
       role: doc.role,
-      isActive: doc.isActive,
-      joinedAt: doc.joinedAt,
-      lastSeen: doc.lastSeen,
-      enableCloudStorage: doc.enableCloudStorage,
-      allowCustomApiKey: doc.allowCustomApiKey,
+      isActive: doc.is_active,
+      joinedAt: doc.joined_at,
+      lastSeen: doc.last_seen ? new Date(doc.last_seen).getTime() : undefined,
+      enableCloudStorage: doc.enable_cloud_storage,
+      allowCustomApiKey: doc.allow_custom_api_key,
     } as UserProfile));
+
     return users.sort((a, b) => {
       const dateA = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
       const dateB = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
@@ -49,10 +53,15 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
 
   try {
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const logsResponse = await databases.listDocuments(DB_ID, COLLECTIONS.ANALYTICS_LOGS, [
-      Query.greaterThan('timestamp', sevenDaysAgo),
-      Query.limit(500),
-    ]);
+
+    const { data: logRows, error: logErr } = await supabase
+      .from(TABLES.ANALYTICS_LOGS)
+      .select('*')
+      .gt('timestamp', sevenDaysAgo)
+      .order('timestamp', { ascending: false })
+      .limit(500);
+
+    if (logErr) throw logErr;
 
     const daysMap: Record<string, number> = {};
     const sourceMap: Record<string, number> = {};
@@ -65,7 +74,7 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
       if (!daysMap[key]) daysMap[key] = 0;
     }
 
-    logsResponse.documents.forEach(doc => {
+    (logRows || []).forEach(doc => {
       const dayName = weekDays[new Date(doc.timestamp).getDay()];
       if (daysMap[dayName] !== undefined) daysMap[dayName]++;
 
@@ -95,28 +104,31 @@ export const fetchAnalyticsData = async (): Promise<AdminAnalytics> => {
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
 
-    const tenMinsAgo = Date.now() - 10 * 60 * 1000;
-    const profilesResponse = await databases.listDocuments(DB_ID, COLLECTIONS.PUBLIC_PROFILES, [
-      Query.limit(500),
-    ]);
+    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+    const { data: profileRows, error: profErr } = await supabase
+      .from(TABLES.PROFILES)
+      .select('*');
+
+    if (profErr) throw profErr;
 
     let onlineCount = 0;
     const roleCounts = { admin: 0, user: 0, guest: 0, inactive: 0 };
 
-    profilesResponse.documents.forEach(doc => {
+    (profileRows || []).forEach(doc => {
       if (doc.role === 'ADMIN') roleCounts.admin++;
       else if (doc.role === 'GUEST') roleCounts.guest++;
       else if (doc.role === 'USER') {
-        if (doc.isActive) roleCounts.user++;
+        if (doc.is_active) roleCounts.user++;
         else roleCounts.inactive++;
       }
-      if (doc.lastSeen && doc.lastSeen > tenMinsAgo) onlineCount++;
+      if (doc.last_seen && doc.last_seen > tenMinsAgo) onlineCount++;
     });
 
     return {
       dailyVisits,
       onlineNow: onlineCount,
-      totalUsers: profilesResponse.total,
+      totalUsers: (profileRows || []).length,
       userRoles: roleCounts,
       trafficSources,
     };

@@ -71,7 +71,7 @@ const AdminDashboard: React.FC = () => {
             });
             addNotification('SUCCESS', 'Kích hoạt thành công!');
          } catch (error: any) {
-            alert("LỖI: Không thể lưu thay đổi xuống Server.\nNguyên nhân: Thiếu quyền Admin trong Firebase Rules.\nVui lòng cập nhật Rules trong Firebase Console.");
+            alert("LỖI: Không thể lưu thay đổi xuống Server.\nNguyên nhân: Thiếu quyền Admin trong Supabase RLS.\nVui lòng kiểm tra Row Level Security policies trong Supabase Dashboard.");
             console.error("Activate User Error:", error);
          }
       }
@@ -284,7 +284,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="p-1.5 md:p-2 bg-amber-50 text-amber-600 rounded-lg">
                      <Server className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
-                  <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">Firestore Load</span>
+                  <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">Supabase Load</span>
                </div>
                <div className="space-y-1">
                   <div className="flex justify-between text-xs md:text-sm">

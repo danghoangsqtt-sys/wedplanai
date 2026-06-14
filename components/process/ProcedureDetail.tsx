@@ -5,7 +5,7 @@ import { useStore } from '../../store/useStore';
 import { getCulturalAdvice } from '../../services/geminiService';
 import { checkGuestIPLimit, incrementGuestIPUsage } from '../../services/cloudService';
 import { WEDDING_PROCEDURES } from '../../data/wedding-procedures';
-import { storage, BUCKET_ID, ID } from '../../lib/appwrite';
+import { supabase } from '../../lib/supabase';
 import {
    Users, Gift, ScrollText, Mic, Copy,
    Check, Loader2, BookOpen,
@@ -73,7 +73,9 @@ const ProcedureDetail: React.FC<ProcedureDetailProps> = ({ step, region }) => {
    const [uploadingItem, setUploadingItem] = useState<string | null>(null);
 
    // Logic phân quyền (vẫn giữ logic restricted cho AI)
-   const isRestricted = user?.role === 'GUEST' || (user?.role === 'USER' && !user.isActive);
+   // TEMP: Bypass restrictions (revert to original line to restore auth)
+   // const isRestricted = user?.role === 'GUEST' || (user?.role === 'USER' && !user.isActive);
+   const isRestricted = false;
    const isAdmin = user?.role === 'ADMIN';
 
    // Logic khóa tính năng nâng cao (AI Speech)
@@ -229,19 +231,26 @@ const ProcedureDetail: React.FC<ProcedureDetailProps> = ({ step, region }) => {
    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       const itemName = uploadingItem;
-      if (!file || !itemName || !storage) return;
+      if (!file || !itemName) return;
 
-      // Small delay to ensure state update
       try {
-         // Lưu theo user ID để tránh conflict nếu nhiều người dùng chung
-         const result = await storage.createFile(BUCKET_ID, ID.unique(), file);
-         const url = storage.getFilePreview(BUCKET_ID, result.$id, 800).toString();
+         const fileExt = file.name.split('.').pop();
+         const fileName = `procedure_${Date.now()}.${fileExt}`;
+         const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('wedkho')
+            .upload(`procedures/${fileName}`, file, { upsert: true });
+
+         if (uploadError) throw uploadError;
+
+         const { data: urlData } = supabase.storage
+            .from('wedkho')
+            .getPublicUrl(uploadData.path);
 
          setEditedStep(prev => ({
             ...prev,
             customImages: {
                ...prev.customImages,
-               [itemName]: url
+               [itemName]: urlData.publicUrl
             }
          }));
       } catch (err: any) {

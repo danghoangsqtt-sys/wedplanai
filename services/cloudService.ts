@@ -1,4 +1,4 @@
-import { databases, DB_ID, COLLECTIONS, ID, Permission, Role } from '../lib/appwrite';
+import { supabase, TABLES } from '../lib/supabase';
 import { Guest, BudgetItem, UserProfile, ProcedureStep, WeddingRegion, InvitationData } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 
@@ -12,7 +12,7 @@ export interface UserCloudData {
     dates: AuspiciousDate[];
   };
   invitation?: InvitationData;
-  weddingDate?: string | null; // Owner's wedding date for shared plan partners
+  weddingDate?: string | null;
   lastUpdated: number;
 }
 
@@ -23,28 +23,11 @@ export const getPublicIP = async (): Promise<string | null> => {
     const res = await fetch('https://api.ipify.org?format=json');
     const data = await res.json();
     return data.ip;
-  } catch {
+  } catch (err) {
+    console.warn('getPublicIP failed:', err);
     return null;
   }
 };
-
-// Upsert: try update first, create on 404
-async function upsert(
-  collectionId: string,
-  docId: string,
-  data: Record<string, any>,
-  permissions?: string[]
-) {
-  try {
-    await databases.updateDocument(DB_ID, collectionId, docId, data);
-  } catch (e: any) {
-    if (e.code === 404) {
-      await databases.createDocument(DB_ID, collectionId, docId, data, permissions);
-    } else {
-      throw e;
-    }
-  }
-}
 
 // --- CORE DATA SYNC ---
 
@@ -53,39 +36,43 @@ export const saveUserDataToCloud = async (
   data: Omit<UserCloudData, 'lastUpdated'>
 ) => {
   try {
-    await upsert(
-      COLLECTIONS.USER_DATA,
-      uid,
-      {
-        userId: uid,
-        guests_json: JSON.stringify(data.guests),
-        budget_json: JSON.stringify(data.budgetItems),
-        procedures_json: JSON.stringify(data.procedures ?? {}),
-        fengshui_json: JSON.stringify(data.fengShuiProfile ?? null),
-        results_json: JSON.stringify(data.fengShuiResults ?? { harmony: null, dates: [] }),
-        // Embed weddingDate inside invitation_json — the user_data collection
-        // has no separate weddingDate attribute in its Appwrite schema.
-        invitation_json: JSON.stringify({ ...(data.invitation ?? {}), _weddingDate: data.weddingDate ?? null }),
-        lastUpdated: Date.now(),
-      },
-      [
-        Permission.read(Role.user(uid)),
-        Permission.update(Role.user(uid)),
-        Permission.delete(Role.user(uid)),
-      ]
-    );
-
-    if (data.invitation) {
-      await upsert(
-        COLLECTIONS.PUBLIC_INVITATIONS,
-        uid,
-        { uid, invitation_json: JSON.stringify(data.invitation) },
-        [
-          Permission.read(Role.any()),
-          Permission.update(Role.user(uid)),
-          Permission.delete(Role.user(uid)),
-        ]
+    // Ensure profile row exists (FK: user_data.id → profiles.id)
+    await supabase
+      .from(TABLES.PROFILES)
+      .upsert(
+        { id: uid, last_seen: new Date().toISOString() },
+        { onConflict: 'id', ignoreDuplicates: true }
       );
+
+    const payload = {
+      id: uid,
+      guests: data.guests,
+      budget_items: data.budgetItems,
+      procedures: data.procedures ?? {},
+      fengshui_profile: data.fengShuiProfile ?? null,
+      fengshui_results: data.fengShuiResults ?? { harmony: null, dates: [] },
+      invitation: data.invitation ?? null,
+      wedding_date: data.weddingDate ?? null,
+      last_updated: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from(TABLES.USER_DATA)
+      .upsert(payload, { onConflict: 'id' });
+
+    if (error) throw error;
+
+    // Also sync public invitation if present
+    if (data.invitation) {
+      const { error: invError } = await supabase
+        .from(TABLES.PUBLIC_INVITATIONS)
+        .upsert({
+          uid,
+          invitation_json: data.invitation,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'uid' });
+
+      if (invError) console.warn('Error syncing public invitation:', invError);
     }
 
     updateLastActive(uid);
@@ -94,47 +81,81 @@ export const saveUserDataToCloud = async (
   }
 };
 
-function safeJsonParse<T>(json: string | undefined | null, fallback: T): T {
-  if (!json) return fallback;
-  try {
-    return JSON.parse(json) ?? fallback;
-  } catch {
-    console.warn('Failed to parse JSON from cloud, using fallback:', json?.slice(0, 80));
-    return fallback;
-  }
-}
-
 export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData | null> => {
   try {
-    const doc = await databases.getDocument(DB_ID, COLLECTIONS.USER_DATA, uid);
-    // Extract _weddingDate embedded in invitation_json, then strip it from the invitation object
-    const rawInvitation = safeJsonParse<Record<string, any>>(doc.invitation_json, {});
-    const { _weddingDate, ...cleanInvitation } = rawInvitation;
+    const { data: doc, error } = await supabase
+      .from(TABLES.USER_DATA)
+      .select('*')
+      .eq('id', uid)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error loading from cloud:', error);
+      return null;
+    }
+    if (!doc) return null;
+
     return {
-      guests: safeJsonParse(doc.guests_json, []),
-      budgetItems: safeJsonParse(doc.budget_json, []),
-      procedures: safeJsonParse(doc.procedures_json, undefined),
-      fengShuiProfile: safeJsonParse(doc.fengshui_json, undefined),
-      fengShuiResults: safeJsonParse(doc.results_json, undefined),
-      invitation: Object.keys(cleanInvitation).length > 0 ? cleanInvitation as any : undefined,
-      weddingDate: (_weddingDate as string | null) || null,
-      lastUpdated: doc.lastUpdated,
+      guests: doc.guests ?? [],
+      budgetItems: doc.budget_items ?? [],
+      procedures: doc.procedures ?? undefined,
+      fengShuiProfile: doc.fengshui_profile ?? undefined,
+      fengShuiResults: doc.fengshui_results ?? undefined,
+      invitation: doc.invitation ?? undefined,
+      weddingDate: doc.wedding_date ?? null,
+      lastUpdated: new Date(doc.last_updated).getTime(),
     };
-  } catch (e: any) {
-    if (e.code !== 404) console.error('Error loading from cloud:', e);
+  } catch (e) {
+    console.error('Error loading from cloud:', e);
     return null;
   }
 };
 
 export const loadPublicInvitation = async (uid: string): Promise<InvitationData | null> => {
   try {
-    const doc = await databases.getDocument(DB_ID, COLLECTIONS.PUBLIC_INVITATIONS, uid);
-    const raw = safeJsonParse<Record<string, any>>(doc.invitation_json, null);
-    if (!raw) return null;
-    const { _weddingDate: _wd, ...clean } = raw;
-    return clean as InvitationData;
-  } catch (e: any) {
-    if (e.code !== 404) console.error('Error loading public invitation:', e);
+    const { data: doc, error } = await supabase
+      .from(TABLES.PUBLIC_INVITATIONS)
+      .select('invitation_json')
+      .eq('uid', uid)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error loading public invitation:', error);
+      return null;
+    }
+    if (!doc) return null;
+
+    return (doc.invitation_json as InvitationData) ?? null;
+  } catch (e) {
+    console.error('Error loading public invitation:', e);
+    return null;
+  }
+};
+
+// --- STORAGE SYNC ---
+export const uploadInvitationImage = async (file: File, uid: string): Promise<string | null> => {
+  try {
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    // Validate extension
+    if (!['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExt || '')) {
+        throw new Error('Định dạng ảnh không hợp lệ (chỉ hỗ trợ jpg, png, webp, gif)');
+    }
+    const fileName = `${uid}_${Date.now()}.${fileExt}`;
+    const filePath = `${uid}/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from('invitation_assets')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage
+      .from('invitation_assets')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error uploading image:', error);
     return null;
   }
 };
@@ -143,27 +164,22 @@ export const loadPublicInvitation = async (uid: string): Promise<InvitationData 
 
 export const syncUserProfile = async (user: UserProfile) => {
   try {
-    await upsert(
-      COLLECTIONS.PUBLIC_PROFILES,
-      user.uid,
-      {
-        uid: user.uid,
+    const { error } = await supabase
+      .from(TABLES.PROFILES)
+      .upsert({
+        id: user.uid,
         email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL || '',
+        display_name: user.displayName,
+        photo_url: user.photoURL || '',
         role: user.role,
-        isActive: user.isActive,
-        ...(user.joinedAt ? { joinedAt: user.joinedAt } : {}),
-        lastSeen: Date.now(),
-        enableCloudStorage: user.enableCloudStorage,
-        allowCustomApiKey: user.allowCustomApiKey,
-      },
-      [
-        Permission.read(Role.any()),
-        Permission.update(Role.users()),
-        Permission.delete(Role.users()),
-      ]
-    );
+        is_active: user.isActive,
+        ...(user.joinedAt ? { joined_at: user.joinedAt } : {}),
+        last_seen: new Date().toISOString(),
+        enable_cloud_storage: user.enableCloudStorage,
+        allow_custom_api_key: user.allowCustomApiKey,
+      }, { onConflict: 'id' });
+
+    if (error) throw error;
   } catch (error) {
     console.error('Error syncing profile:', error);
   }
@@ -171,30 +187,42 @@ export const syncUserProfile = async (user: UserProfile) => {
 
 export const getUserPublicProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
-    const doc = await databases.getDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid);
+    const { data: doc, error } = await supabase
+      .from(TABLES.PROFILES)
+      .select('*')
+      .eq('id', uid)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching public profile:', error);
+      return null;
+    }
+    if (!doc) return null;
+
     return {
-      uid: doc.uid,
+      uid: doc.id,
       email: doc.email,
-      displayName: doc.displayName,
-      photoURL: doc.photoURL,
+      displayName: doc.display_name,
+      photoURL: doc.photo_url,
       role: doc.role,
-      isActive: doc.isActive,
-      joinedAt: doc.joinedAt,
-      enableCloudStorage: doc.enableCloudStorage,
-      allowCustomApiKey: doc.allowCustomApiKey,
+      isActive: doc.is_active,
+      joinedAt: doc.joined_at,
+      enableCloudStorage: doc.enable_cloud_storage,
+      allowCustomApiKey: doc.allow_custom_api_key,
     } as UserProfile;
-  } catch (e: any) {
-    if (e.code !== 404) console.error('Error fetching public profile:', e);
+  } catch (e) {
+    console.error('Error fetching public profile:', e);
     return null;
   }
 };
 
 const updateLastActive = async (uid: string) => {
   try {
-    await databases.updateDocument(DB_ID, COLLECTIONS.PUBLIC_PROFILES, uid, {
-      lastSeen: Date.now(),
-    });
-  } catch { /* silent */ }
+    await supabase
+      .from(TABLES.PROFILES)
+      .update({ last_seen: new Date().toISOString() })
+      .eq('id', uid);
+  } catch (err) { console.warn('updateLastSeen silent fail:', err); }
 };
 
 // --- ANALYTICS ---
@@ -205,20 +233,18 @@ export const logAppVisit = async (uid?: string) => {
     if (sessionStorage.getItem(sessionKey)) return;
 
     const ip = await getPublicIP();
-    await databases.createDocument(
-      DB_ID,
-      COLLECTIONS.ANALYTICS_LOGS,
-      ID.unique(),
-      {
+    const { error } = await supabase
+      .from(TABLES.ANALYTICS_LOGS)
+      .insert({
         timestamp: Date.now(),
         uid: uid || 'guest',
         page: window.location.pathname,
-        userAgent: navigator.userAgent.slice(0, 500),
+        user_agent: navigator.userAgent.slice(0, 500),
         ip: ip || 'unknown',
         referrer: (document.referrer || 'direct').slice(0, 500),
-      },
-      [Permission.read(Role.users()), Permission.delete(Role.users())]
-    );
+      });
+
+    if (error) throw error;
     sessionStorage.setItem(sessionKey, 'true');
   } catch (error) {
     console.warn('Analytics error:', error);
@@ -227,53 +253,89 @@ export const logAppVisit = async (uid?: string) => {
 
 // --- GUEST IP LIMITS ---
 
+type FeatureKey = 'feng_shui_count' | 'ai_chat_count' | 'speech_count'
+  | 'fengShuiCount' | 'aiChatCount' | 'speechCount';
+
+const normalizeFeature = (f: FeatureKey): 'feng_shui_count' | 'ai_chat_count' | 'speech_count' => {
+  const map: Record<string, 'feng_shui_count' | 'ai_chat_count' | 'speech_count'> = {
+    fengShuiCount: 'feng_shui_count',
+    aiChatCount: 'ai_chat_count',
+    speechCount: 'speech_count',
+    feng_shui_count: 'feng_shui_count',
+    ai_chat_count: 'ai_chat_count',
+    speech_count: 'speech_count',
+  };
+  return map[f] || 'ai_chat_count';
+};
+
 export const checkGuestIPLimit = async (
-  feature: 'fengShuiCount' | 'aiChatCount' | 'speechCount',
+  feature: FeatureKey,
   maxLimit: number
 ): Promise<boolean> => {
   try {
+    const col = normalizeFeature(feature);
     const ip = await getPublicIP();
     if (!ip) return false;
     const ipId = ip.replace(/\./g, '_');
-    const doc = await databases.getDocument(DB_ID, COLLECTIONS.GUEST_USAGE, ipId);
-    return (doc[feature] || 0) >= maxLimit;
-  } catch (e: any) {
-    if (e.code === 404) return false;
+
+    const { data: doc, error } = await supabase
+      .from(TABLES.GUEST_USAGE)
+      .select(col)
+      .eq('ip_id', ipId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return false; // Not found
+      return false;
+    }
+
+    return (doc[col] || 0) >= maxLimit;
+  } catch (err) {
+    console.warn('checkGuestIPUsage error:', err);
     return false;
   }
 };
 
 export const incrementGuestIPUsage = async (
-  feature: 'fengShuiCount' | 'aiChatCount' | 'speechCount'
+  feature: FeatureKey
 ): Promise<void> => {
   try {
+    const col = normalizeFeature(feature);
     const ip = await getPublicIP();
     if (!ip) return;
     const ipId = ip.replace(/\./g, '_');
-    try {
-      const doc = await databases.getDocument(DB_ID, COLLECTIONS.GUEST_USAGE, ipId);
-      await databases.updateDocument(DB_ID, COLLECTIONS.GUEST_USAGE, ipId, {
-        [feature]: (doc[feature] || 0) + 1,
-        lastUpdated: Date.now(),
-      });
-    } catch (e: any) {
-      if (e.code === 404) {
-        await databases.createDocument(
-          DB_ID,
-          COLLECTIONS.GUEST_USAGE,
-          ipId,
-          {
-            ip,
-            fengShuiCount: feature === 'fengShuiCount' ? 1 : 0,
-            aiChatCount: feature === 'aiChatCount' ? 1 : 0,
-            speechCount: feature === 'speechCount' ? 1 : 0,
-            lastUpdated: Date.now(),
-          },
-          [Permission.read(Role.any()), Permission.update(Role.any()), Permission.delete(Role.any())]
-        );
-      }
+
+    // Try to fetch existing
+    const { data: doc, error: fetchErr } = await supabase
+      .from(TABLES.GUEST_USAGE)
+      .select('*')
+      .eq('ip_id', ipId)
+      .single();
+
+    if (fetchErr && fetchErr.code === 'PGRST116') {
+      // Not found — create new
+      await supabase
+        .from(TABLES.GUEST_USAGE)
+        .insert({
+          ip_id: ipId,
+          ip,
+          feng_shui_count: col === 'feng_shui_count' ? 1 : 0,
+          ai_chat_count: col === 'ai_chat_count' ? 1 : 0,
+          speech_count: col === 'speech_count' ? 1 : 0,
+          last_updated: new Date().toISOString(),
+        });
+    } else if (doc) {
+      // Existing — increment
+      await supabase
+        .from(TABLES.GUEST_USAGE)
+        .update({
+          [col]: (doc[col] || 0) + 1,
+          last_updated: new Date().toISOString(),
+        })
+        .eq('ip_id', ipId);
     }
   } catch (error) {
     console.warn('Increment IP Usage failed:', error);
   }
 };
+
