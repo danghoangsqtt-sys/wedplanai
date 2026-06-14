@@ -284,7 +284,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                     <div className="iv-hero-gradient" />
                     <div className="iv-hero-body rv">
                         {isRomantic ? (
-                            <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px' }}>Happy Wedding</p>
+                            <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Happy Wedding</p>
                         ) : isModern ? (
                             <p className="iv-hero-pre">WE ARE GETTING MARRIED</p>
                         ) : (
@@ -292,11 +292,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                         )}
 
                         <h1 className="iv-couple">
-                            {isRomantic ? (
-                                <>{groomName}<br /><span className="iv-amp">&</span><br />{brideName}</>
-                            ) : (
-                                <>{groomName} <span className="iv-amp">&</span> {brideName}</>
-                            )}
+                            <span className="iv-name">{groomName}</span>
+                            <span className="iv-amp">&</span>
+                            <span className="iv-name">{brideName}</span>
                         </h1>
 
                         {/* Date badge */}
@@ -536,11 +534,17 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
-    padding-bottom: 2.5rem;
+    padding: 4rem 0 2.5rem;
     overflow: hidden;
     border-radius: var(--t-hero-rounded);
+}
+/* When no cover photo, reduce hero height */
+.iv-hero:not(:has(.iv-hero-photo)) {
+    min-height: auto;
+    padding: 5rem 0 3rem;
+    background: linear-gradient(180deg, var(--t-surface-dim) 0%, var(--t-surface) 100%);
 }
 .iv-hero-photo {
     position: absolute; inset: 0;
@@ -568,16 +572,25 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
 }
 .iv-couple {
     font-family: var(--t-font-display);
-    font-size: clamp(2rem, 10vw, 2.8rem);
+    font-size: clamp(1.5rem, 7vw, 2.2rem);
     font-weight: 400;
     color: var(--t-primary);
-    line-height: 1.2;
-    margin-bottom: 0.75rem;
+    line-height: 1.3;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+.iv-name {
+    display: block;
 }
 .iv-amp {
     font-style: italic;
     color: var(--t-accent);
-    margin: 0 0.3em;
+    font-size: 0.6em;
+    margin: 0.15em 0;
+    display: block;
 }
 
 /* Date variants */
