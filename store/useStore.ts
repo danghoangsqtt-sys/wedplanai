@@ -590,7 +590,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'wedplan-storage-v13',
+      name: 'wedplan-storage-v14',
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,
