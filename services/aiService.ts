@@ -56,8 +56,7 @@ const callGeminiDirect = async (
   customApiKey?: string,
   maxRetries: number = 3 // Always default to 3 retries (to handle 503 Service Unavailable properly)
 ) => {
-  // @ts-ignore
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const envKey = import.meta.env.VITE_GEMINI_API_KEY;
   const apiKey = customApiKey || envKey;
 
   if (!apiKey) {
@@ -137,8 +136,7 @@ export const generateWeddingSticker = async (
   action: string,
   refImages: { groom?: string, bride?: string } // Base64 strings
 ) => {
-  // @ts-ignore
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey) throw new Error("Thiếu API Key để tạo ảnh.");
 

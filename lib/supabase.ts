@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-// @ts-ignore — Vite injects import.meta.env at build time
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-// @ts-ignore
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Check .env.local for VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');

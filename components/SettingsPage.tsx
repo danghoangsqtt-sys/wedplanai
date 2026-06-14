@@ -4,7 +4,6 @@ import { useStore } from '../store/useStore';
 import { validateGeminiKey } from '../services/aiService';
 import { supabase } from '../lib/supabase';
 import SharedPlanSection from './SharedPlanSection';
-import { ADMIN_CONTACT } from '../data/initialData';
 import {
    User, Calendar, Settings as SettingsIcon, Database,
    Key, Shield, Cloud, Download, Upload, Trash2,
@@ -724,7 +723,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     </div>
                                     <div>
                                        <p className="text-xs font-bold text-gray-400 uppercase">Zalo / Phone</p>
-                                       <p className="font-bold text-gray-800 text-sm">{adminContact.phoneNumber || ADMIN_CONTACT.phone} (Liên hệ trực tiếp)</p>
+                                       <p className="font-bold text-gray-800 text-sm">{adminContact.phoneNumber} (Liên hệ trực tiếp)</p>
                                     </div>
                                  </div>
                               </div>
