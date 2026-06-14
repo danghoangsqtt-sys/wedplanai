@@ -147,7 +147,7 @@ export const INITIAL_INVITATION: InvitationData = {
     accountName: 'NGUYEN VAN HOANG',
     qrTemplate: 'compact2',
   },
-  photoConfig: { scale: 1, x: 0, y: 0 },
+  photoConfig: { scale: 1, x: 50, y: 50 },
   themeColor: '#e11d48',
   templateId: 'modern',
   musicUrl: '/audio/canon-in-d.mp3', // Canon in D - Pachelbel (public domain)

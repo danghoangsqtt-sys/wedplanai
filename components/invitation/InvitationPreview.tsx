@@ -344,7 +344,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     {data.couplePhoto && (
                         <img src={data.couplePhoto} alt="Ảnh cưới" className="iv-hero-photo"
                             style={data.photoConfig ? {
-                                transform: `scale(${data.photoConfig.scale}) translate(${data.photoConfig.x}px, ${data.photoConfig.y}px)`
+                                objectPosition: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
+                                transform: data.photoConfig.scale !== 1 ? `scale(${data.photoConfig.scale})` : undefined,
+                                transformOrigin: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
                             } : undefined}
                         />
                     )}

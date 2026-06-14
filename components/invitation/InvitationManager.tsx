@@ -35,6 +35,128 @@ const PETAL_EFFECTS = [
     { id: 'sparkles', label: 'Sao nhấp nháy', emoji: '✦' },
 ] as const;
 
+// ─── PHOTO POSITION EDITOR ───
+const PhotoPositionEditor: React.FC<{
+    src: string;
+    config: { scale: number; x: number; y: number };
+    onChange: (config: { scale: number; x: number; y: number }) => void;
+    onRemove: () => void;
+}> = ({ src, config, onChange, onRemove }) => {
+    const isDragging = useRef(false);
+    const lastPos = useRef({ x: 0, y: 0 });
+    const configRef = useRef(config);
+    configRef.current = config;
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
+    useEffect(() => {
+        const handleMove = (clientX: number, clientY: number) => {
+            if (!isDragging.current) return;
+            const dx = clientX - lastPos.current.x;
+            const dy = clientY - lastPos.current.y;
+            lastPos.current = { x: clientX, y: clientY };
+            const sensitivity = 0.5;
+            const c = configRef.current;
+            onChangeRef.current({
+                ...c,
+                x: Math.max(0, Math.min(100, c.x - dx * sensitivity)),
+                y: Math.max(0, Math.min(100, c.y - dy * sensitivity)),
+            });
+        };
+        const onMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
+        const onTouchMove = (e: TouchEvent) => {
+            if (isDragging.current) e.preventDefault();
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        };
+        const onEnd = () => { isDragging.current = false; };
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchmove', onTouchMove, { passive: false });
+        window.addEventListener('touchend', onEnd);
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onEnd);
+            window.removeEventListener('touchmove', onTouchMove);
+            window.removeEventListener('touchend', onEnd);
+        };
+    }, []);
+
+    const handleStart = (x: number, y: number) => {
+        isDragging.current = true;
+        lastPos.current = { x, y };
+    };
+
+    return (
+        <div className="mt-2 space-y-2">
+            {/* Draggable photo preview */}
+            <div
+                className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-rose-200 cursor-grab active:cursor-grabbing select-none group"
+                onMouseDown={(e) => { handleStart(e.clientX, e.clientY); e.preventDefault(); }}
+                onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
+            >
+                <img
+                    src={src}
+                    alt="Điều chỉnh vị trí"
+                    className="w-full h-full object-cover pointer-events-none"
+                    style={{
+                        objectPosition: `${config.x}% ${config.y}%`,
+                        transform: config.scale !== 1 ? `scale(${config.scale})` : undefined,
+                        transformOrigin: `${config.x}% ${config.y}%`,
+                    }}
+                    draggable={false}
+                />
+                {/* Crosshair */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-10 h-10 border-2 border-white/50 rounded-full shadow-sm" />
+                    <div className="absolute w-px h-full bg-white/20" />
+                    <div className="absolute w-full h-px bg-white/20" />
+                </div>
+                {/* Drag hint */}
+                <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                    Kéo để di chuyển
+                </div>
+                {/* Remove button */}
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                    title="Xóa ảnh"
+                    aria-label="Xóa ảnh"
+                    className="absolute top-1.5 right-1.5 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            {/* Zoom slider */}
+            <div className="flex items-center gap-2 px-1">
+                <span className="text-xs text-gray-400">🔍</span>
+                <input
+                    type="range" min="1" max="2" step="0.05"
+                    value={config.scale}
+                    onChange={(e) => onChange({ ...config, scale: parseFloat(e.target.value) })}
+                    className="flex-1 h-1 accent-rose-500 cursor-pointer"
+                    title="Thu phóng ảnh"
+                    aria-label="Thu phóng ảnh"
+                />
+                <span className="text-[10px] text-gray-500 font-mono w-8 text-right">{Math.round(config.scale * 100)}%</span>
+            </div>
+
+            {/* Reset */}
+            {(config.x !== 50 || config.y !== 50 || config.scale !== 1) && (
+                <button
+                    type="button"
+                    onClick={() => onChange({ scale: 1, x: 50, y: 50 })}
+                    className="text-[11px] text-gray-400 hover:text-rose-500 transition-colors flex items-center gap-1"
+                >
+                    <RefreshCw className="w-3 h-3" /> Reset vị trí mặc định
+                </button>
+            )}
+        </div>
+    );
+};
+
+
 const InvitationManager: React.FC = () => {
     const { invitation, updateInvitation, user } = useStore();
     const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'STICKERS' | 'LOVE_STORY' | 'RESPONSES' | null>('GENERAL');
@@ -374,18 +496,15 @@ const InvitationManager: React.FC = () => {
                                 <p className="text-[10px] text-gray-400 mt-1 italic">* Mẹo: Sử dụng nút tải lên để đảm bảo ảnh hiển thị tốt khi xuất QR.</p>
 
                                 {invitation.couplePhoto && (
-                                    <div className="mt-2 w-full h-32 rounded-lg overflow-hidden border border-gray-200 relative group">
-                                        <img src={invitation.couplePhoto} className="w-full h-full object-cover" alt="Preview" />
-                                        <button
-                                            type="button"
-                                            onClick={() => handleChange('couplePhoto', '')}
-                                            title="Xóa ảnh"
-                                            aria-label="Xóa ảnh"
-                                            className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                        </button>
-                                    </div>
+                                    <PhotoPositionEditor
+                                        src={invitation.couplePhoto}
+                                        config={invitation.photoConfig || { scale: 1, x: 50, y: 50 }}
+                                        onChange={(cfg) => handleChange('photoConfig', cfg)}
+                                        onRemove={() => {
+                                            handleChange('couplePhoto', '');
+                                            handleChange('photoConfig', { scale: 1, x: 50, y: 50 });
+                                        }}
+                                    />
                                 )}
                             </div>
 
