@@ -2,6 +2,21 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [v1.3.0] — 2026-06-15: Thiệp Cưới Phase 3 — Theme Parity + 2 Theme Mới
+
+> Nâng layout gần mockup `public/theme/*` + cho 2 mockup mồ côi (garden_romance, indochine) một "home" thật. (tsc ✓ / build ✓)
+
+### ✨ Tính Năng Mới
+- **2 phong cách thiệp mới** (4 → 6): **🌿 Garden Romance** (sage green + script) và **🪷 Indochine** (terracotta + jade art-deco frame)
+- **Bento Gallery:** album ảnh chuyển từ lưới đều sang bố cục bento lớn-nhỏ xen kẽ (tile rộng + cao xen kẽ), tự động đều khi <3 ảnh
+
+### 🎨 Thiết Kế
+- **Royal swatch** trong picker đồng bộ navy mới (#1e2c54) thay vì nâu cũ
+- **Flourish riêng** cho Garden (bo tròn mềm, script couple) và Indochine (khung jade art-deco, tiêu đề uppercase)
+
+### 📝 Ghi Chú
+- **Bỏ qua** fixed app-bar/bottom-nav của mockup để tránh đè thanh action RSVP/Guestbook + vinyl nhạc đã có trong public view
+
 ## [v1.2.0] — 2026-06-15: Thiệp Cưới Phase 2 — RSVP & Lời Chúc Lưu Cloud
 
 > Sửa 2 lỗi nghiêm trọng nhất: RSVP của khách trước đây bị **vứt bỏ hoàn toàn**, lời chúc chỉ lưu trên máy khách. Nay lưu cloud thật để cô dâu chú rể nhận được. (tsc ✓ / build ✓)

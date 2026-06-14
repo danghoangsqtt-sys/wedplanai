@@ -92,6 +92,46 @@ const THEME_VARS: Record<string, Record<string, string>> = {
         '--t-card-border': 'rgba(194,161,77,0.45)',
         '--t-section-radius': '0',
     },
+    garden: {
+        '--t-primary': '#3f5e43',
+        '--t-primary-container': '#557a52',
+        '--t-surface': '#f4f6ef',
+        '--t-surface-dim': '#e7ece0',
+        '--t-on-surface': '#1f261d',
+        '--t-on-surface-variant': '#4a5547',
+        '--t-accent': '#c08a5e',
+        '--t-outline': '#cdd6c4',
+        '--t-card-bg': '#ffffff',
+        '--t-hero-overlay': 'linear-gradient(to top, rgba(244,246,239,0.96) 0%, rgba(244,246,239,0.5) 38%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0.22) 100%)',
+        '--t-font-display': "'Playfair Display', serif",
+        '--t-font-body': "'Source Serif 4', serif",
+        '--t-font-label': "'Be Vietnam Pro', sans-serif",
+        '--t-font-script': "'Great Vibes', cursive",
+        '--t-hero-rounded': '0 0 2.5rem 2.5rem',
+        '--t-card-radius': '1.25rem',
+        '--t-card-border': 'rgba(205,214,196,0.6)',
+        '--t-section-radius': '2.5rem',
+    },
+    indochine: {
+        '--t-primary': '#a8442a',
+        '--t-primary-container': '#c25636',
+        '--t-surface': '#f8f1e7',
+        '--t-surface-dim': '#efe4d3',
+        '--t-on-surface': '#2a201a',
+        '--t-on-surface-variant': '#5c4a3c',
+        '--t-accent': '#4e8d6e',
+        '--t-outline': '#dcc9b0',
+        '--t-card-bg': '#fffaf2',
+        '--t-hero-overlay': 'linear-gradient(to top, rgba(248,241,231,0.96) 0%, rgba(248,241,231,0.5) 35%, rgba(0,0,0,0.18) 66%, rgba(0,0,0,0.42) 100%)',
+        '--t-font-display': "'Playfair Display', serif",
+        '--t-font-body': "'Source Serif 4', serif",
+        '--t-font-label': "'Be Vietnam Pro', sans-serif",
+        '--t-font-script': "'Playfair Display', serif",
+        '--t-hero-rounded': '0',
+        '--t-card-radius': '2px',
+        '--t-card-border': 'rgba(78,141,110,0.4)',
+        '--t-section-radius': '0',
+    },
 };
 
 // ─── SCROLL REVEAL HOOK ───
@@ -198,6 +238,16 @@ const QRCodeImage: React.FC<{ bankId: string; accountNumber: string; accountName
     return <img src={url} alt="QR Mừng Cưới" className="iv-qr-img" />;
 };
 
+// ─── BENTO GALLERY TILE PATTERN ───
+// Adaptive: <3 images → uniform grid; ≥3 → varied wide/tall tiles for a bento rhythm.
+const bentoClass = (i: number, total: number): string => {
+    if (total < 3) return '';
+    const p = i % 6;
+    if (p === 0) return 'iv-gal-wide';
+    if (p === 3) return 'iv-gal-tall';
+    return '';
+};
+
 // ════════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
@@ -224,6 +274,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     const tid = data.templateId || 'traditional';
     const isRomantic = tid === 'romantic';
     const isModern = tid === 'modern';
+    const isGarden = tid === 'garden';
 
     // Feature flags
     const hasCountdown = data.countdownEnabled !== false && data.date;
@@ -303,6 +354,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                         {isRomantic ? (
                             <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Happy Wedding</p>
+                        ) : isGarden ? (
+                            <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Save the Date</p>
                         ) : isModern ? (
                             <p className="iv-hero-pre">WE ARE GETTING MARRIED</p>
                         ) : (
@@ -317,7 +370,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                         {/* Date badge */}
                         {data.date && (
-                            isRomantic || isModern ? (
+                            isRomantic || isModern || isGarden ? (
                                 <div className="iv-date-badge">
                                     <span>{shortDate}</span>
                                     {(data.location || data.address) && <><span className="iv-badge-dot" /><span>{data.location || data.address.split(',').pop()?.trim()}</span></>}
@@ -478,7 +531,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         <Divider glyph={dividerSticker} />
                         <div className="iv-gallery">
                             {data.galleryImages!.map((img, i) => (
-                                <div key={i} className={`iv-gal-item ${i === 0 ? 'iv-gal-wide' : ''}`} onClick={() => setLbIndex(i)}>
+                                <div key={i} className={`iv-gal-item ${bentoClass(i, data.galleryImages!.length)}`} onClick={() => setLbIndex(i)}>
                                     <img src={img} alt={`Ảnh ${i + 1}`} loading="lazy" />
                                     <div className="iv-gal-hover"><Camera size={20} /></div>
                                 </div>
@@ -1052,27 +1105,28 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     line-height: 1.6;
 }
 
-/* ── GALLERY ── */
+/* ── GALLERY (BENTO) ── */
 .iv-gallery {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    grid-auto-rows: 120px;
+    grid-auto-flow: dense;
+    gap: 8px;
 }
 .iv-gal-item {
     position: relative;
     overflow: hidden;
-    border-radius: calc(var(--t-card-radius) * 0.7);
+    border-radius: calc(var(--t-card-radius) * 0.6);
     cursor: pointer;
     border: 2px solid color-mix(in srgb, white 80%, transparent);
 }
 .iv-gal-wide { grid-column: span 2; }
+.iv-gal-tall { grid-row: span 2; }
 .iv-gal-item img {
     width: 100%; height: 100%;
     object-fit: cover;
     transition: transform 0.5s cubic-bezier(.23,1,.32,1);
 }
-.iv-gal-item:not(.iv-gal-wide) img { height: 180px; }
-.iv-gal-wide img { height: 220px; }
 .iv-gal-item:hover img { transform: scale(1.06); }
 .iv-gal-hover {
     position: absolute; inset: 0;
@@ -1242,12 +1296,30 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 /* TRADITIONAL — refined serif emphasis */
 .iv-theme-traditional .iv-sec-title { letter-spacing: 0.04em; }
 
+/* GARDEN — soft botanical, rounded, sage */
+.iv-theme-garden .iv-sec-title { font-size: clamp(1.6rem, 7vw, 2rem); font-weight: 400; }
+.iv-theme-garden .iv-event-icon,
+.iv-theme-garden .iv-venue-icon { border-radius: 50%; }
+.iv-theme-garden .iv-invite-couple { font-family: var(--t-font-script); font-size: clamp(1.8rem, 8vw, 2.3rem); }
+
+/* INDOCHINE — jade art-deco frame, crisp uppercase */
+.iv-theme-indochine .iv-event-card,
+.iv-theme-indochine .iv-qr-card,
+.iv-theme-indochine .iv-venue-card {
+    border: 1px solid var(--t-accent);
+    box-shadow: 0 0 0 3px var(--t-card-bg), 0 0 0 4px color-mix(in srgb, var(--t-accent) 35%, transparent), 0 8px 24px rgba(0,0,0,0.07);
+}
+.iv-theme-indochine .iv-sec-title {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: clamp(1.2rem, 5.5vw, 1.5rem);
+}
+
 /* ── MOBILE POLISH ── */
 @media (max-width: 400px) {
     .iv-sec { padding: 2.5rem 1.25rem; }
     .iv-hero-body { padding: 0 1.25rem; }
-    .iv-gal-item:not(.iv-gal-wide) img { height: 140px; }
-    .iv-gal-wide img { height: 180px; }
+    .iv-gallery { grid-auto-rows: 96px; }
     .iv-parents { gap: 0.25rem; }
     .iv-parent-name { font-size: 14px; }
 }

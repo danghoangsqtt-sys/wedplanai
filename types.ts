@@ -182,7 +182,7 @@ export interface GuestWish {
 }
 
 export interface InvitationData {
-  templateId: 'traditional' | 'romantic' | 'modern' | 'royal';
+  templateId: 'traditional' | 'romantic' | 'modern' | 'royal' | 'garden' | 'indochine';
   groomName: string;
   brideName: string;
   groomParents?: { father: string; mother: string };

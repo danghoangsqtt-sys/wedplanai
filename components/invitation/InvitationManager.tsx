@@ -23,7 +23,9 @@ const TEMPLATES = [
     { id: 'traditional', name: 'Truyền Thống',   color: 'bg-[#fdf8f6] border-[#7c1d00] text-[#7c1d00]',  emoji: '🏮' },
     { id: 'romantic',    name: 'Lãng Mạn',       color: 'bg-[#fff0f3] border-[#e11d48] text-[#e11d48]',  emoji: '💕' },
     { id: 'modern',      name: 'Hiện Đại',       color: 'bg-[#faf9fa] border-[#094cb2] text-[#094cb2]',  emoji: '✦' },
-    { id: 'royal',       name: 'Royal Elegance',  color: 'bg-[#f5f0eb] border-[#6b4423] text-[#6b4423]', emoji: '👑' },
+    { id: 'royal',       name: 'Royal Elegance',  color: 'bg-[#f8f5ee] border-[#1e2c54] text-[#1e2c54]', emoji: '👑' },
+    { id: 'garden',      name: 'Garden Romance',  color: 'bg-[#f4f6ef] border-[#3f5e43] text-[#3f5e43]', emoji: '🌿' },
+    { id: 'indochine',   name: 'Indochine',       color: 'bg-[#f8f1e7] border-[#a8442a] text-[#a8442a]', emoji: '🪷' },
 ];
 
 const PETAL_EFFECTS = [
