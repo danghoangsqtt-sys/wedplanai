@@ -142,7 +142,7 @@ export const INITIAL_INVITATION: InvitationData = {
   mapLink: 'https://maps.google.com',
   wishes: 'Sự hiện diện của quý khách là niềm vinh hạnh cho gia đình chúng tôi!',
   bankInfo: {
-    bankId: '970436', // Vietcombank
+    bankId: 'VCB', // Vietcombank
     accountNumber: '123456789',
     accountName: 'NGUYEN VAN HOANG',
     qrTemplate: 'compact2',
@@ -150,7 +150,7 @@ export const INITIAL_INVITATION: InvitationData = {
   photoConfig: { scale: 1, x: 0, y: 0 },
   themeColor: '#e11d48',
   templateId: 'modern',
-  musicUrl: '/wedding-music.mp3', // Romantic wedding piano music
+  musicUrl: '/audio/romantic.mp3', // Nhạc lãng mạn có sẵn
   couplePhoto: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
   galleryImages: [
     'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
