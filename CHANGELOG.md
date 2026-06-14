@@ -2,6 +2,45 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [v1.2.0] — 2026-06-15: Thiệp Cưới Phase 2 — RSVP & Lời Chúc Lưu Cloud
+
+> Sửa 2 lỗi nghiêm trọng nhất: RSVP của khách trước đây bị **vứt bỏ hoàn toàn**, lời chúc chỉ lưu trên máy khách. Nay lưu cloud thật để cô dâu chú rể nhận được. (tsc ✓ / build ✓)
+>
+> ⚠️ **Cần 1 bước thủ công:** chạy migration SQL (bảng `invitation_responses` + RLS) trong Supabase SQL Editor — SQL đầy đủ trong `docs/brainstorm/session-2026-06-15-invitation-upgrade.md`. Code degrade an toàn (không crash) khi bảng chưa tồn tại.
+
+### ✨ Tính Năng Mới
+- **RSVP lưu cloud:** Khách xác nhận tham dự (tên, SĐT, số người, ghi chú) → lưu vào bảng `invitation_responses`
+- **Lời chúc lưu cloud:** Guestbook ghi lên cloud → khách thấy lời chúc của nhau + cô dâu chú rể nhận được (trước chỉ `localStorage` trên máy khách)
+- **Bảng điều khiển Phản Hồi cho chủ thiệp:** Section "Phản Hồi Khách Mời" trong editor — xem danh sách RSVP (ai đến / tổng số khách / SĐT / ghi chú) + toàn bộ lời chúc, nút tải lại
+
+### 🛠️ Kỹ Thuật
+- `cloudService.ts`: thêm `submitRSVP`, `submitWish`, `loadInvitationResponses` (try/catch graceful — trả default khi bảng chưa migrate, không crash trang công khai)
+- `lib/supabase.ts`: thêm `INVITATION_RESPONSES` vào `TABLES`
+- `PublicInvitationView.tsx`: `RSVPModal` nhận prop `onSubmit`; merge cloud + local + legacy wishes, dedupe theo id
+
+## [v1.1.0] — 2026-06-15: Nâng Cấp Thiệp Cưới (Phase 1 — Render Completeness)
+
+> Audit phát hiện editor thu thập nhiều dữ liệu mà thiệp **không hiển thị**. Phase 1 lấp toàn bộ lỗ hổng đó + làm 4 theme thật sự khác biệt. (`InvitationPreview.tsx` rewrite — build ✓ / tsc ✓)
+
+### ✨ Tính Năng Mới
+- **Khối Thư Mời — Cha Mẹ Hai Bên:** Render Nhà Trai / Nhà Gái (Ông/Bà) dạng 2 cột trang trọng — phần lễ nghi cưới VN trước đây bị thiếu hoàn toàn
+- **Khối Địa Điểm Tổ Chức:** Hiển thị địa điểm/địa chỉ/ngày/giờ + nút **Chỉ Đường** (từ `mapLink`) — trước đây mất hút nếu không tạo event con
+- **Sticker hiển thị thật:** `headerSticker` (trên tên), `dividerSticker` (đường phân cách), `footerSticker` (chân thiệp) — trước là 3 toggle dữ liệu chết
+- **Màu Chủ Đạo hoạt động:** `themeColor` (8 màu picker) nay override accent của thiệp
+- **Ảnh Love Story:** Timeline kỷ niệm nay render ảnh đã upload
+
+### 🎨 Thiết Kế
+- **Royal Elegance khác biệt thật sự:** đổi từ nâu (trùng Traditional) sang **navy `#1e2c54` + gold `#c2a14d`** với khung gold double-frame ornamental
+- **Flourish riêng từng theme:** `.iv-theme-{traditional|romantic|modern|royal}` — tiêu đề, icon, frame riêng cho mỗi phong cách
+
+### 🛠️ Sửa Lỗi & Cải Thiện
+- **Nối nút RSVP/Guestbook chết:** `iv-rsvp-btn` + nút "Gửi Lời Chúc" nay gọi `onRSVP()`/`onGuestbook()` đúng cách
+- **Tối ưu scroll-reveal:** `useScrollReveal` dùng `revealKey` thay vì cả object `data` — không re-observe mỗi keystroke
+- **Empty-state an toàn:** ẩn lời chúc/section khi field trống thay vì hiện placeholder thừa
+
+### ⏭️ Phase 2 (đã lên kế hoạch, cần 1 migration SQL)
+- RSVP + lời chúc lưu cloud thật (bảng `invitation_responses`) → cô dâu chú rể nhận được phản hồi; khách thấy lời chúc của nhau. Chi tiết: `docs/brainstorm/session-2026-06-15-invitation-upgrade.md`
+
 ## [v1.0.0] — 2026-06-15: Personal Tool Mode
 
 ### ✨ Tính Năng Mới

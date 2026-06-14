@@ -7,7 +7,7 @@
 
   <p>
     <img src="https://img.shields.io/badge/Web_Application-Private-black" alt="Status" />
-    <img src="https://img.shields.io/badge/Version-1.0.0-blue" alt="Version" />
+    <img src="https://img.shields.io/badge/Version-1.2.0-blue" alt="Version" />
   </p>
 </div>
 

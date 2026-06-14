@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { loadPublicInvitation } from '../../services/cloudService';
+import { loadPublicInvitation, submitRSVP, submitWish, loadInvitationResponses } from '../../services/cloudService';
 import { InvitationData, GuestWish } from '../../types';
 import InvitationPreview from './InvitationPreview';
 import { Loader2, AlertCircle, MailOpen, Volume2, VolumeX, Heart, Mail, X, CheckCircle2, Send, Users, MessageCircle, Music } from 'lucide-react';
@@ -10,14 +10,23 @@ interface RSVPModalProps {
     groomName: string;
     brideName: string;
     onClose: () => void;
+    onSubmit: (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string }) => void;
 }
-const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, onClose }) => {
+const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, onClose, onSubmit }) => {
     const [form, setForm] = useState({ name: '', phone: '', guests: '1', attending: 'yes', note: '' });
     const [submitted, setSubmitted] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.name.trim()) return;
+        const guestCount = form.attending === 'yes' ? (parseInt(form.guests, 10) || null) : null;
+        onSubmit({
+            name: form.name.trim(),
+            phone: form.phone.trim() || undefined,
+            attending: form.attending,
+            guestCount,
+            message: form.note.trim() || undefined,
+        });
         setSubmitted(true);
     };
 
@@ -224,6 +233,7 @@ const PublicInvitationView: React.FC = () => {
     const [showRSVP, setShowRSVP] = useState(false);
     const [showGuestbook, setShowGuestbook] = useState(false);
     const [localWishes, setLocalWishes] = useState<GuestWish[]>([]);
+    const [cloudWishes, setCloudWishes] = useState<GuestWish[]>([]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -244,6 +254,11 @@ const PublicInvitationView: React.FC = () => {
                     try {
                         const stored = localStorage.getItem(`wishes_${uid}`);
                         if (stored) setLocalWishes(JSON.parse(stored));
+                    } catch { /* ignore */ }
+                    // Load wishes other guests submitted (from the cloud)
+                    try {
+                        const { wishes } = await loadInvitationResponses(uid);
+                        setCloudWishes(wishes.map(w => ({ id: w.id, name: w.name, message: w.message ?? '', createdAt: w.createdAt })));
                     } catch { /* ignore */ }
                 } else {
                     setError("Không tìm thấy thiệp mời này hoặc thiệp chưa được tạo.");
@@ -288,6 +303,15 @@ const PublicInvitationView: React.FC = () => {
         try {
             localStorage.setItem(`wishes_${uid}`, JSON.stringify(updated));
         } catch { /* storage full */ }
+        // Persist to cloud so the couple (and other guests) actually receive it
+        submitWish(uid, { name: wish.name, message: wish.message });
+    };
+
+    const handleRSVPSubmit = (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string }) => {
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('uid') || 'unknown';
+        // Persist to cloud so the couple receives the RSVP (was previously discarded)
+        submitRSVP(uid, payload);
     };
 
     // --- LOADING ---
@@ -574,8 +598,12 @@ const PublicInvitationView: React.FC = () => {
         );
     }
 
-    // Merge server wishes + local wishes
-    const allWishes = [...localWishes, ...(data.guestWishes || [])];
+    // Merge cloud wishes + this-device wishes + any legacy embedded wishes, deduped by id
+    const wishMap = new Map<string, GuestWish>();
+    [...localWishes, ...cloudWishes, ...(data.guestWishes || [])].forEach(w => {
+        if (w && w.id && !wishMap.has(w.id)) wishMap.set(w.id, w);
+    });
+    const allWishes = Array.from(wishMap.values()).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     const invitationWithWishes: InvitationData = { ...data, guestWishes: allWishes };
 
     const hasActions = data.rsvpEnabled || data.guestbookEnabled;
@@ -678,6 +706,7 @@ const PublicInvitationView: React.FC = () => {
                     groomName={data.groomName}
                     brideName={data.brideName}
                     onClose={() => setShowRSVP(false)}
+                    onSubmit={handleRSVPSubmit}
                 />
             )}
             {showGuestbook && (

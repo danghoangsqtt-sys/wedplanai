@@ -1,18 +1,28 @@
 # WedPlan AI — TRACKER
-Version: 1.0.0
+Version: 1.2.0
 Updated: 2026-06-15
 
-## Current Phase
-**Phase 1** — Password Gate + Cloud Auto-Save + Auth Removal
-**Status:** ✅ COMPLETE
+## Current Milestone
+**Wedding Invitation Upgrade** — làm thiệp cưới chuyên nghiệp & hiện đại
 
-## Progress
-- [x] Brainstorm session (`docs/brainstorm/session-2026-06-15.md`)
-- [x] Evolve plan (ROADMAP.md + SPEC.md)
-- [x] Phase 1 implementation — 0 TypeScript errors, build pass
-- [x] Auth system removed completely
-- [x] Admin dead code cleaned up
-- [x] Phase 1 committed to git — ready for next milestone
+### Phase 1 — Render Completeness + Theme Polish
+**Status:** ✅ COMPLETE (v1.1.0)
+- [x] Khối Cha Mẹ (Nhà Trai/Nhà Gái), khối Địa Điểm + Chỉ Đường
+- [x] Render sticker (header/divider/footer), wire `themeColor`→accent, ảnh love story
+- [x] Royal navy+gold khác biệt + flourish từng theme; nối nút RSVP/Guestbook
+- [x] 0 TS errors, build pass
 
-## Next Milestone
-Chờ input từ user — `/vp-brainstorm` để lên kế hoạch giai đoạn tiếp theo.
+### Phase 2 — RSVP & Guestbook Cloud Collection
+**Status:** ✅ CODE COMPLETE (v1.2.0) — ⚠️ pending SQL migration để go-live
+- [x] `submitRSVP` / `submitWish` / `loadInvitationResponses` (graceful)
+- [x] Public view wire RSVP + wishes lên cloud; owner panel "Phản Hồi Khách Mời"
+- [x] 0 TS errors, build pass
+- [ ] **User action:** chạy SQL `invitation_responses` trong Supabase (session doc)
+
+## Previous Milestone
+**Personal Tool Mode** (PIN gate + cloud auto-save + auth removal) — ✅ COMPLETE (v1.0.0)
+
+## Next
+- User chạy SQL migration → RSVP/lời chúc thật chảy về
+- (Optional) Phase 3 — theme parity với mockups `public/theme/*`
+- Git: Phase 1+2 chưa commit (chờ user duyệt)

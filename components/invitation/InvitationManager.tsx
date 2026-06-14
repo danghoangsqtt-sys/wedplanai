@@ -1,13 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent } from '../../types';
 import InvitationPreview from './InvitationPreview';
-import { uploadInvitationImage } from '../../services/cloudService';
+import { uploadInvitationImage, loadInvitationResponses, InvitationResponse } from '../../services/cloudService';
 import {
     Palette, MapPin, Calendar, Heart, QrCode, Download, X,
     Save, Type, Image as ImageIcon, ExternalLink,
     ChevronDown, ChevronUp, Check, Music, Layers, Smartphone, Eye, Layout, Sparkles, Upload, Users, List, Plus, Trash2, Clock,
-    Star, ToggleLeft, ToggleRight, BookOpen, Flower2, Feather, Timer
+    Star, ToggleLeft, ToggleRight, BookOpen, Flower2, Feather, Timer, Inbox, RefreshCw, Phone, MessageCircle
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -35,13 +35,30 @@ const PETAL_EFFECTS = [
 
 const InvitationManager: React.FC = () => {
     const { invitation, updateInvitation, user } = useStore();
-    const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'STICKERS' | 'LOVE_STORY' | null>('GENERAL');
+    const [activeSection, setActiveSection] = useState<'GENERAL' | 'FAMILY' | 'BANK' | 'STYLE' | 'GALLERY' | 'EVENTS' | 'FEATURES' | 'STICKERS' | 'LOVE_STORY' | 'RESPONSES' | null>('GENERAL');
     const [isExporting, setIsExporting] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [showQRPanel, setShowQRPanel] = useState(false);
+    const [responses, setResponses] = useState<{ rsvps: InvitationResponse[]; wishes: InvitationResponse[] }>({ rsvps: [], wishes: [] });
+    const [responsesLoading, setResponsesLoading] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
+
+    const loadResponses = async () => {
+        if (!user?.uid) return;
+        setResponsesLoading(true);
+        try {
+            setResponses(await loadInvitationResponses(user.uid));
+        } finally {
+            setResponsesLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeSection === 'RESPONSES') loadResponses();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeSection, user?.uid]);
 
     const handleChange = (field: keyof InvitationData, value: any) => {
         updateInvitation({ [field]: value });
@@ -879,6 +896,81 @@ const InvitationManager: React.FC = () => {
                                     <Plus className="w-3 h-3" /> Thêm kỷ niệm
                                 </button>
                             </div>
+                        </div>
+                    )}
+
+                    {/* SECTION 9: GUEST RESPONSES (RSVP + WISHES) */}
+                    <SectionToggle id="RESPONSES" label="Phản Hồi Khách Mời" icon={Inbox} />
+                    {activeSection === 'RESPONSES' && (
+                        <div className="p-5 space-y-4 bg-gray-50 animate-fadeIn">
+                            <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg text-xs text-emerald-800 flex gap-2">
+                                <Inbox className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <p>RSVP và lời chúc từ khách mời hiển thị tại đây. Cần chạy migration Supabase (bảng <code className="font-mono">invitation_responses</code>) để bắt đầu nhận dữ liệu thật.</p>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex gap-2 text-xs">
+                                    <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold">{responses.rsvps.length} RSVP</span>
+                                    <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">{responses.wishes.length} Lời chúc</span>
+                                </div>
+                                <button type="button" onClick={loadResponses} disabled={responsesLoading}
+                                    className="flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-rose-600 px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-rose-300 transition-colors disabled:opacity-50">
+                                    <RefreshCw className={`w-3.5 h-3.5 ${responsesLoading ? 'animate-spin' : ''}`} /> Tải lại
+                                </button>
+                            </div>
+
+                            {responsesLoading ? (
+                                <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" /></div>
+                            ) : (
+                                <>
+                                    {responses.rsvps.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="text-xs font-bold text-gray-500 uppercase">Xác nhận tham dự</h4>
+                                                <span className="text-[10px] text-emerald-600 font-bold">
+                                                    {responses.rsvps.filter(r => r.attending === 'yes').length} đến · {responses.rsvps.reduce((s, r) => s + (r.attending === 'yes' ? (r.guestCount || 0) : 0), 0)} khách
+                                                </span>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {responses.rsvps.map(r => (
+                                                    <div key={r.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className="font-bold text-sm text-gray-800">{r.name}</span>
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${r.attending === 'yes' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                                {r.attending === 'yes' ? `Tham dự${r.guestCount ? ` · ${r.guestCount}` : ''}` : 'Không thể'}
+                                                            </span>
+                                                        </div>
+                                                        {r.phone && <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1"><Phone className="w-3 h-3" /> {r.phone}</p>}
+                                                        {r.message && <p className="text-xs text-gray-600 mt-1 italic">"{r.message}"</p>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {responses.wishes.length > 0 && (
+                                        <div>
+                                            <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Lời chúc</h4>
+                                            <div className="space-y-2">
+                                                {responses.wishes.map(w => (
+                                                    <div key={w.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                                        <p className="text-xs text-gray-700 italic">"{w.message}"</p>
+                                                        <span className="text-[11px] text-rose-500 font-bold mt-1 block">— {w.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {responses.rsvps.length === 0 && responses.wishes.length === 0 && (
+                                        <div className="text-center py-8 text-gray-400">
+                                            <MessageCircle className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                                            <p className="text-xs">Chưa có phản hồi nào.</p>
+                                            <p className="text-[10px] mt-1">Chia sẻ link thiệp để khách gửi RSVP &amp; lời chúc.</p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

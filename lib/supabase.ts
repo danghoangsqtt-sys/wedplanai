@@ -17,4 +17,5 @@ export const TABLES = {
   ANALYTICS_LOGS: 'analytics_logs',
   GUEST_USAGE: 'guest_usage',
   PLAN_SHARES: 'plan_shares',
+  INVITATION_RESPONSES: 'invitation_responses',
 } as const;

@@ -111,6 +111,97 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
   }
 };
 
+// --- INVITATION RESPONSES (RSVP + GUESTBOOK) ---
+// Requires Supabase table `invitation_responses` (see docs/brainstorm/session-2026-06-15-invitation-upgrade.md).
+// All functions degrade gracefully: if the table/RLS is not set up yet, they catch and return safe defaults
+// (never crash the public invitation page).
+
+export interface InvitationResponse {
+  id: string;
+  uid: string;
+  kind: 'rsvp' | 'wish';
+  name: string;
+  phone?: string | null;
+  attending?: string | null;   // 'yes' | 'no' (rsvp only)
+  guestCount?: number | null;  // rsvp only
+  message?: string | null;     // rsvp note / wish content
+  createdAt: string;
+}
+
+const mapResponseRow = (row: any): InvitationResponse => ({
+  id: row.id,
+  uid: row.uid,
+  kind: row.kind,
+  name: row.name,
+  phone: row.phone ?? null,
+  attending: row.attending ?? null,
+  guestCount: row.guest_count ?? null,
+  message: row.message ?? null,
+  createdAt: row.created_at,
+});
+
+export const submitRSVP = async (
+  uid: string,
+  payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string }
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from(TABLES.INVITATION_RESPONSES).insert({
+      uid,
+      kind: 'rsvp',
+      name: payload.name,
+      phone: payload.phone ?? null,
+      attending: payload.attending ?? null,
+      guest_count: payload.guestCount ?? null,
+      message: payload.message ?? null,
+    });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.warn('submitRSVP failed (table may not be migrated yet):', e);
+    return false;
+  }
+};
+
+export const submitWish = async (
+  uid: string,
+  wish: { name: string; message: string }
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from(TABLES.INVITATION_RESPONSES).insert({
+      uid,
+      kind: 'wish',
+      name: wish.name,
+      message: wish.message,
+    });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.warn('submitWish failed (table may not be migrated yet):', e);
+    return false;
+  }
+};
+
+export const loadInvitationResponses = async (
+  uid: string
+): Promise<{ rsvps: InvitationResponse[]; wishes: InvitationResponse[] }> => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.INVITATION_RESPONSES)
+      .select('*')
+      .eq('uid', uid)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    const rows = (data ?? []).map(mapResponseRow);
+    return {
+      rsvps: rows.filter(r => r.kind === 'rsvp'),
+      wishes: rows.filter(r => r.kind === 'wish'),
+    };
+  } catch (e) {
+    console.warn('loadInvitationResponses failed (table may not be migrated yet):', e);
+    return { rsvps: [], wishes: [] };
+  }
+};
+
 export const loadPublicInvitation = async (uid: string): Promise<InvitationData | null> => {
   try {
     const { data: doc, error } = await supabase

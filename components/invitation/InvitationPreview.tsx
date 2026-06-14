@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent } from '../../types';
-import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, X, Volume2, VolumeX } from 'lucide-react';
+import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, X, Volume2, VolumeX, Navigation } from 'lucide-react';
 
 interface InvitationPreviewProps {
     data: InvitationData;
@@ -19,17 +19,17 @@ const THEME_VARS: Record<string, Record<string, string>> = {
         '--t-surface-dim': '#f1edeb',
         '--t-on-surface': '#1c1b1b',
         '--t-on-surface-variant': '#58413b',
-        '--t-accent': '#EFCB84',
+        '--t-accent': '#c79a4b',
         '--t-outline': '#e0bfb7',
         '--t-card-bg': '#ffffff',
-        '--t-hero-overlay': 'linear-gradient(to top, rgba(253,248,246,0.95) 0%, rgba(253,248,246,0.6) 35%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.25) 100%)',
+        '--t-hero-overlay': 'linear-gradient(to top, rgba(253,248,246,0.96) 0%, rgba(253,248,246,0.62) 35%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.28) 100%)',
         '--t-font-display': "'Playfair Display', serif",
         '--t-font-body': "'Source Serif 4', serif",
         '--t-font-label': "'Be Vietnam Pro', sans-serif",
         '--t-font-script': "'Playfair Display', serif",
         '--t-hero-rounded': '0',
         '--t-card-radius': '12px',
-        '--t-card-border': 'rgba(224,191,183,0.3)',
+        '--t-card-border': 'rgba(224,191,183,0.4)',
         '--t-section-radius': '0',
     },
     romantic: {
@@ -39,71 +39,73 @@ const THEME_VARS: Record<string, Record<string, string>> = {
         '--t-surface-dim': '#fce4e8',
         '--t-on-surface': '#2a1f21',
         '--t-on-surface-variant': '#6d4c55',
-        '--t-accent': '#EFCB84',
+        '--t-accent': '#e0a96d',
         '--t-outline': '#e8b4c0',
-        '--t-card-bg': 'rgba(255,255,255,0.7)',
-        '--t-hero-overlay': 'linear-gradient(to top, rgba(255,240,243,0.95) 0%, rgba(255,240,243,0.5) 35%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0.2) 100%)',
+        '--t-card-bg': 'rgba(255,255,255,0.72)',
+        '--t-hero-overlay': 'linear-gradient(to top, rgba(255,240,243,0.96) 0%, rgba(255,240,243,0.5) 35%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0.22) 100%)',
         '--t-font-display': "'Great Vibes', cursive",
         '--t-font-body': "'Source Serif 4', serif",
         '--t-font-label': "'Be Vietnam Pro', sans-serif",
         '--t-font-script': "'Great Vibes', cursive",
         '--t-hero-rounded': '0 0 3rem 3rem',
         '--t-card-radius': '2rem',
-        '--t-card-border': 'rgba(255,255,255,0.6)',
+        '--t-card-border': 'rgba(255,255,255,0.7)',
         '--t-section-radius': '3rem',
     },
     modern: {
         '--t-primary': '#094cb2',
         '--t-primary-container': '#3366cc',
         '--t-surface': '#faf9fa',
-        '--t-surface-dim': '#efedee',
+        '--t-surface-dim': '#eef1f6',
         '--t-on-surface': '#1b1c1d',
         '--t-on-surface-variant': '#434653',
-        '--t-accent': '#b1c5ff',
+        '--t-accent': '#7c8aa5',
         '--t-outline': '#c3c6d5',
         '--t-card-bg': '#ffffff',
-        '--t-hero-overlay': 'linear-gradient(to top, rgba(250,249,250,0.95) 0%, rgba(250,249,250,0.5) 40%, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.15) 100%)',
+        '--t-hero-overlay': 'linear-gradient(to top, rgba(250,249,250,0.96) 0%, rgba(250,249,250,0.5) 40%, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.16) 100%)',
         '--t-font-display': "'Noto Serif', serif",
         '--t-font-body': "'Inter', sans-serif",
         '--t-font-label': "'Public Sans', sans-serif",
         '--t-font-script': "'Noto Serif', serif",
         '--t-hero-rounded': '0 0 1.5rem 1.5rem',
         '--t-card-radius': '16px',
-        '--t-card-border': 'rgba(195,198,213,0.2)',
+        '--t-card-border': 'rgba(195,198,213,0.35)',
         '--t-section-radius': '0',
     },
     royal: {
-        '--t-primary': '#6b4423',
-        '--t-primary-container': '#8a5a30',
-        '--t-surface': '#f5f0eb',
-        '--t-surface-dim': '#ece5dd',
-        '--t-on-surface': '#1e1b18',
-        '--t-on-surface-variant': '#4d4237',
-        '--t-accent': '#c9a96e',
-        '--t-outline': '#d4c4b0',
-        '--t-card-bg': '#ffffff',
-        '--t-hero-overlay': 'linear-gradient(to top, rgba(245,240,235,0.95) 0%, rgba(245,240,235,0.5) 35%, rgba(0,0,0,0.15) 65%, rgba(0,0,0,0.35) 100%)',
+        '--t-primary': '#1e2c54',
+        '--t-primary-container': '#2e4078',
+        '--t-surface': '#f8f5ee',
+        '--t-surface-dim': '#efe9da',
+        '--t-on-surface': '#1a1f2e',
+        '--t-on-surface-variant': '#4a4538',
+        '--t-accent': '#c2a14d',
+        '--t-outline': '#d8c9a3',
+        '--t-card-bg': '#fffdf8',
+        '--t-hero-overlay': 'linear-gradient(to top, rgba(248,245,238,0.96) 0%, rgba(248,245,238,0.5) 35%, rgba(0,0,0,0.22) 65%, rgba(0,0,0,0.5) 100%)',
         '--t-font-display': "'Playfair Display', serif",
         '--t-font-body': "'Source Serif 4', serif",
         '--t-font-label': "'Be Vietnam Pro', sans-serif",
         '--t-font-script': "'Playfair Display', serif",
         '--t-hero-rounded': '0',
-        '--t-card-radius': '8px',
-        '--t-card-border': 'rgba(212,196,176,0.4)',
+        '--t-card-radius': '4px',
+        '--t-card-border': 'rgba(194,161,77,0.45)',
         '--t-section-radius': '0',
     },
 };
 
 // ─── SCROLL REVEAL HOOK ───
-const useScrollReveal = (deps: any) => {
+// Re-observes only when the SET of sections changes (lightweight key),
+// not on every keystroke into the invitation data.
+const useScrollReveal = (revealKey: string) => {
     useEffect(() => {
         const obs = new IntersectionObserver(
             entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('rv-on'); }),
             { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
         );
-        const t = setTimeout(() => document.querySelectorAll('.rv').forEach(el => obs.observe(el)), 80);
+        const t = setTimeout(() => document.querySelectorAll('.rv:not(.rv-on)').forEach(el => obs.observe(el)), 80);
         return () => { clearTimeout(t); obs.disconnect(); };
-    }, [deps]);
+    }, [revealKey]);
 };
 
 // ─── FLOATING PETALS / HEARTS ───
@@ -131,10 +133,10 @@ const FloatingEffect: React.FC<{ type: 'petals' | 'hearts' | 'sparkles' }> = ({ 
 };
 
 // ─── ORNAMENTAL DIVIDER ───
-const Divider: React.FC<{ className?: string }> = ({ className = '' }) => (
+const Divider: React.FC<{ className?: string; glyph?: string }> = ({ className = '', glyph }) => (
     <div className={`flex items-center justify-center gap-3 py-5 ${className}`}>
         <div className="w-16 h-px" style={{ background: 'linear-gradient(90deg, transparent, var(--t-accent), transparent)' }} />
-        <span className="text-[10px]" style={{ color: 'var(--t-accent)' }}>✦</span>
+        <span className="text-base leading-none" style={{ color: 'var(--t-accent)' }}>{glyph || '✦'}</span>
         <div className="w-16 h-px" style={{ background: 'linear-gradient(90deg, transparent, var(--t-accent), transparent)' }} />
     </div>
 );
@@ -176,12 +178,12 @@ const Lightbox: React.FC<{ images: string[]; index: number; onClose: () => void 
     }, [images.length, onClose]);
     return (
         <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center" onClick={onClose}>
-            <button className="absolute top-4 right-4 text-white/80 hover:text-white z-10" onClick={onClose}><X size={28} /></button>
+            <button className="absolute top-4 right-4 text-white/80 hover:text-white z-10" onClick={onClose} aria-label="Đóng"><X size={28} /></button>
             <img src={images[cur]} alt="" className="max-w-[92vw] max-h-[88vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
             {images.length > 1 && (
                 <div className="absolute bottom-6 flex gap-2">
                     {images.map((_, i) => (
-                        <button key={i} className={`w-2 h-2 rounded-full transition-all ${i === cur ? 'bg-white scale-125' : 'bg-white/40'}`}
+                        <button key={i} aria-label={`Ảnh ${i + 1}`} className={`w-2 h-2 rounded-full transition-all ${i === cur ? 'bg-white scale-125' : 'bg-white/40'}`}
                             onClick={e => { e.stopPropagation(); setCur(i); }} />
                     ))}
                 </div>
@@ -199,8 +201,7 @@ const QRCodeImage: React.FC<{ bankId: string; accountNumber: string; accountName
 // ════════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
-const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
-    useScrollReveal(data);
+const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook }) => {
     const countdown = useCountdown(data.date);
     const [lbIndex, setLbIndex] = useState<number | null>(null);
     const [audioPlaying, setAudioPlaying] = useState(false);
@@ -218,6 +219,12 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
         }
     }, [audioPlaying, data.musicUrl]);
 
+    const groomName = data.groomName || 'Chú Rể';
+    const brideName = data.brideName || 'Cô Dâu';
+    const tid = data.templateId || 'traditional';
+    const isRomantic = tid === 'romantic';
+    const isModern = tid === 'modern';
+
     // Feature flags
     const hasCountdown = data.countdownEnabled !== false && data.date;
     const hasEvents = data.events && data.events.length > 0;
@@ -225,18 +232,27 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     const hasBank = data.bankInfo?.bankId && data.bankInfo?.accountNumber;
     const hasLoveStory = data.loveStory && data.loveStory.length > 0;
     const hasRSVP = data.rsvpEnabled;
+    const gp = data.groomParents;
+    const bp = data.brideParents;
+    const hasParents = !!(gp?.father || gp?.mother || bp?.father || bp?.mother);
+    const hasVenue = !!(data.location || data.address);
     const effectType = data.petalEffect && data.petalEffect !== 'none' ? data.petalEffect : null;
-    const groomName = data.groomName || 'Chú Rể';
-    const brideName = data.brideName || 'Cô Dâu';
-    const tid = data.templateId || 'traditional';
-    const isRomantic = tid === 'romantic';
-    const isModern = tid === 'modern';
 
-    // Merge theme CSS vars
+    // Stickers
+    const headerSticker = data.headerSticker?.trim();
+    const dividerSticker = data.dividerSticker?.trim();
+    const footerSticker = data.footerSticker?.trim();
+
+    // Merge theme CSS vars; let the user's accent color override the template default.
     const themeStyle = useMemo(() => {
-        const vars = THEME_VARS[tid] || THEME_VARS.traditional;
+        const vars = { ...(THEME_VARS[tid] || THEME_VARS.traditional) };
+        if (data.themeColor) vars['--t-accent'] = data.themeColor;
         return vars as React.CSSProperties;
-    }, [tid]);
+    }, [tid, data.themeColor]);
+
+    // Lightweight reveal key — re-observe only when the set of sections changes.
+    const revealKey = [tid, hasParents, hasVenue, hasEvents, hasLoveStory, hasGallery, hasBank, hasRSVP, !!data.guestbookEnabled, (data.guestWishes || []).length].join('|');
+    useScrollReveal(revealKey);
 
     // Format date
     const fmtDate = useMemo(() => {
@@ -262,11 +278,11 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                 <Lightbox images={data.galleryImages} index={lbIndex} onClose={() => setLbIndex(null)} />
             )}
 
-            <div className="iv-root" style={themeStyle}>
+            <div className={`iv-root iv-theme-${tid}`} style={themeStyle}>
 
                 {/* ── FLOATING MUSIC BUTTON ── */}
                 {data.musicUrl && (
-                    <button onClick={toggleAudio} className="iv-music-btn" title={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'}>
+                    <button onClick={toggleAudio} className="iv-music-btn" title={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'} aria-label={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'}>
                         {audioPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
                     </button>
                 )}
@@ -283,6 +299,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                     )}
                     <div className="iv-hero-gradient" />
                     <div className="iv-hero-body rv">
+                        {headerSticker && <div className="iv-hero-sticker" aria-hidden>{headerSticker}</div>}
+
                         {isRomantic ? (
                             <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Happy Wedding</p>
                         ) : isModern ? (
@@ -302,7 +320,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                             isRomantic || isModern ? (
                                 <div className="iv-date-badge">
                                     <span>{shortDate}</span>
-                                    {data.address && <><span className="iv-badge-dot" /><span>{data.location || data.address.split(',').pop()?.trim()}</span></>}
+                                    {(data.location || data.address) && <><span className="iv-badge-dot" /><span>{data.location || data.address.split(',').pop()?.trim()}</span></>}
                                 </div>
                             ) : (
                                 <div className="iv-date-line">
@@ -313,7 +331,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                         )}
 
                         {data.lunarDate && <p className="iv-lunar">(Âm lịch: {data.lunarDate})</p>}
-                        <p className="iv-wishes-text">{data.wishes}</p>
+                        {data.wishes && <p className="iv-wishes-text">{data.wishes}</p>}
 
                         {/* Countdown */}
                         {hasCountdown && (
@@ -338,14 +356,64 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                     </div>
                 </section>
 
+                {/* ══════ THƯ MỜI — CHA MẸ HAI BÊN ══════ */}
+                {hasParents && (
+                    <section className="iv-sec iv-invite rv">
+                        <p className="iv-invite-pre">Trân Trọng Kính Mời</p>
+                        <Divider glyph={dividerSticker} />
+                        <div className="iv-parents">
+                            <div className="iv-parent-col">
+                                <span className="iv-parent-side">Nhà Trai</span>
+                                {gp?.father && <span className="iv-parent-name">{gp.father}</span>}
+                                {gp?.mother && <span className="iv-parent-name">{gp.mother}</span>}
+                            </div>
+                            <div className="iv-parent-divider" aria-hidden>
+                                <Heart size={16} />
+                            </div>
+                            <div className="iv-parent-col">
+                                <span className="iv-parent-side">Nhà Gái</span>
+                                {bp?.father && <span className="iv-parent-name">{bp.father}</span>}
+                                {bp?.mother && <span className="iv-parent-name">{bp.mother}</span>}
+                            </div>
+                        </div>
+                        <p className="iv-invite-line">
+                            Trân trọng kính mời quý khách tới dự buổi tiệc chung vui cùng gia đình chúng tôi,
+                            nhân lễ thành hôn của hai con
+                        </p>
+                        <p className="iv-invite-couple">{groomName} &amp; {brideName}</p>
+                    </section>
+                )}
+
+                {/* ══════ ĐỊA ĐIỂM & THỜI GIAN ══════ */}
+                {hasVenue && (
+                    <section className="iv-sec iv-sec-alt iv-venue rv">
+                        <h2 className="iv-sec-title">{isModern ? 'Venue' : 'Địa Điểm Tổ Chức'}</h2>
+                        <Divider glyph={dividerSticker} />
+                        <div className="iv-venue-card">
+                            <div className="iv-venue-icon"><MapPin size={22} /></div>
+                            {data.location && <p className="iv-venue-name">{data.location}</p>}
+                            {data.address && <p className="iv-venue-addr">{data.address}</p>}
+                            <div className="iv-venue-meta">
+                                {data.date && <span><Calendar size={14} /> {fmtDate}</span>}
+                                {data.time && <span><Clock size={14} /> {data.time}</span>}
+                            </div>
+                            {data.mapLink && (
+                                <a href={data.mapLink} target="_blank" rel="noopener noreferrer" className="iv-venue-map">
+                                    <Navigation size={15} /> {isModern ? 'Get Directions' : 'Chỉ Đường'}
+                                </a>
+                            )}
+                        </div>
+                    </section>
+                )}
+
                 {/* ══════ CHƯƠNG TRÌNH (Events) ══════ */}
                 {hasEvents && (
                     <section className="iv-sec rv">
-                        <h2 className="iv-sec-title">Chương Trình</h2>
-                        <Divider />
+                        <h2 className="iv-sec-title">{isModern ? 'Schedule' : 'Chương Trình'}</h2>
+                        <Divider glyph={dividerSticker} />
                         <div className="iv-events">
                             {data.events!.map((ev, i) => (
-                                <React.Fragment key={i}>
+                                <React.Fragment key={ev.id || i}>
                                     {i > 0 && (
                                         <div className="flex justify-center py-1">
                                             <div className="w-px h-10" style={{ background: 'linear-gradient(to bottom, transparent, var(--t-accent), transparent)' }} />
@@ -381,14 +449,19 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                 {/* ══════ LOVE STORY ══════ */}
                 {hasLoveStory && (
                     <section className="iv-sec iv-sec-alt rv">
-                        <h2 className="iv-sec-title">{isRomantic ? 'Our Story' : 'Chuyện Tình Yêu'}</h2>
-                        <Divider />
+                        <h2 className="iv-sec-title">{isRomantic ? 'Our Story' : isModern ? 'Our Story' : 'Chuyện Tình Yêu'}</h2>
+                        <Divider glyph={dividerSticker} />
                         <div className="iv-timeline">
                             {data.loveStory!.map((ev, i) => (
-                                <div key={i} className="iv-tl-item rv" style={{ animationDelay: `${i * 0.1}s` }}>
+                                <div key={ev.id || i} className="iv-tl-item rv" style={{ animationDelay: `${i * 0.1}s` }}>
                                     <div className="iv-tl-dot" />
                                     <div className="iv-tl-card">
-                                        <span className="iv-tl-year">{ev.year}</span>
+                                        {ev.photo && (
+                                            <div className="iv-tl-photo">
+                                                <img src={ev.photo} alt={ev.title} loading="lazy" />
+                                            </div>
+                                        )}
+                                        <span className="iv-tl-year">{ev.date}</span>
                                         <h4 className="iv-tl-heading">{ev.title}</h4>
                                         <p className="iv-tl-text">{ev.description}</p>
                                     </div>
@@ -401,8 +474,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                 {/* ══════ GALLERY ══════ */}
                 {hasGallery && (
                     <section className="iv-sec rv">
-                        <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" />{isRomantic ? 'Album Ảnh Cưới' : 'Khoảnh Khắc'}</h2>
-                        <Divider />
+                        <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" />{isRomantic ? 'Album Ảnh Cưới' : isModern ? 'Gallery' : 'Khoảnh Khắc'}</h2>
+                        <Divider glyph={dividerSticker} />
                         <div className="iv-gallery">
                             {data.galleryImages!.map((img, i) => (
                                 <div key={i} className={`iv-gal-item ${i === 0 ? 'iv-gal-wide' : ''}`} onClick={() => setLbIndex(i)}>
@@ -418,7 +491,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                 {hasBank && (
                     <section className="iv-sec iv-sec-alt rv">
                         <h2 className="iv-sec-title"><Gift size={20} className="inline -mt-1 mr-2" />Mừng Cưới</h2>
-                        <Divider />
+                        <Divider glyph={dividerSticker} />
                         <p className="iv-gift-desc">
                             Sự hiện diện của quý khách là món quà ý nghĩa nhất. Nếu muốn gửi lời chúc phúc, xin vui lòng quét mã QR dưới đây.
                         </p>
@@ -436,10 +509,11 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                 {/* ══════ RSVP ══════ */}
                 {hasRSVP && (
                     <section className="iv-sec rv">
-                        <h2 className="iv-sec-title">Xác Nhận Tham Dự</h2>
-                        <Divider />
+                        <h2 className="iv-sec-title">{isModern ? 'RSVP' : 'Xác Nhận Tham Dự'}</h2>
+                        <Divider glyph={dividerSticker} />
+                        <p className="iv-gift-desc">Sự góp mặt của bạn là niềm vinh hạnh của chúng tôi. Vui lòng xác nhận để chúng tôi chuẩn bị chu đáo.</p>
                         {data.rsvpDeadline && <p className="iv-rsvp-deadline">Vui lòng phản hồi trước {data.rsvpDeadline}</p>}
-                        <button className="iv-rsvp-btn"><Send size={16} /> Gửi Phản Hồi (RSVP)</button>
+                        <button className="iv-rsvp-btn" onClick={() => onRSVP?.()}><Send size={16} /> Gửi Phản Hồi (RSVP)</button>
                     </section>
                 )}
 
@@ -447,11 +521,11 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                 {data.guestbookEnabled && (
                     <section className="iv-sec iv-sec-alt rv">
                         <h2 className="iv-sec-title"><MessageCircle size={20} className="inline -mt-1 mr-2" />Sổ Lưu Bút</h2>
-                        <Divider />
+                        <Divider glyph={dividerSticker} />
                         {data.guestWishes && data.guestWishes.length > 0 ? (
                             <div className="iv-wish-list">
                                 {data.guestWishes.map((w, i) => (
-                                    <div key={i} className="iv-wish-card rv">
+                                    <div key={w.id || i} className="iv-wish-card rv">
                                         <p className="iv-wish-msg">"{w.message}"</p>
                                         <span className="iv-wish-author">— {w.name}</span>
                                     </div>
@@ -460,13 +534,15 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
                         ) : (
                             <p className="iv-gift-desc">Chưa có lời chúc nào. Hãy là người đầu tiên!</p>
                         )}
+                        <button className="iv-rsvp-btn iv-wish-btn" onClick={() => onGuestbook?.()}><Heart size={16} /> Gửi Lời Chúc</button>
                     </section>
                 )}
 
                 {/* ══════ FOOTER ══════ */}
                 <footer className="iv-footer rv">
+                    {footerSticker && <div className="iv-footer-sticker" aria-hidden>{footerSticker}</div>}
                     <p className="iv-footer-names">{groomName} & {brideName}</p>
-                    <Divider />
+                    <Divider glyph={dividerSticker} />
                     <p className="iv-footer-credit">Built with love · WedPlan AI</p>
                 </footer>
             </div>
@@ -560,6 +636,12 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     text-align: center;
     padding: 0 2rem;
     width: 100%;
+}
+.iv-hero-sticker {
+    font-size: 40px;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
 }
 .iv-hero-pre {
     font-family: var(--t-font-label);
@@ -703,6 +785,149 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     line-height: 1.3;
 }
 
+/* ── THƯ MỜI / PARENTS ── */
+.iv-invite { text-align: center; }
+.iv-invite-pre {
+    font-family: var(--t-font-label);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--t-primary);
+}
+.iv-parents {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0.5rem auto 1.5rem;
+    max-width: 380px;
+}
+.iv-parent-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 0 0.5rem;
+}
+.iv-parent-side {
+    font-family: var(--t-font-label);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--t-accent);
+    margin-bottom: 6px;
+}
+.iv-parent-name {
+    font-family: var(--t-font-body);
+    font-size: 15px;
+    color: var(--t-on-surface);
+    line-height: 1.5;
+}
+.iv-parent-divider {
+    display: flex;
+    align-items: center;
+    color: var(--t-accent);
+    position: relative;
+}
+.iv-parent-divider::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--t-outline), transparent);
+}
+.iv-parent-divider svg {
+    background: var(--t-surface);
+    padding: 2px 0;
+    position: relative;
+    z-index: 1;
+}
+.iv-invite .iv-parent-divider svg { background: var(--t-surface); }
+.iv-invite-line {
+    font-family: var(--t-font-body);
+    font-size: 14px;
+    color: var(--t-on-surface-variant);
+    line-height: 1.7;
+    max-width: 340px;
+    margin: 0 auto 0.75rem;
+    font-style: italic;
+}
+.iv-invite-couple {
+    font-family: var(--t-font-display);
+    font-size: clamp(1.3rem, 6vw, 1.6rem);
+    font-weight: 600;
+    color: var(--t-primary);
+    letter-spacing: 0.02em;
+}
+
+/* ── VENUE ── */
+.iv-venue-card {
+    background: var(--t-card-bg);
+    border-radius: var(--t-card-radius);
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid var(--t-card-border);
+    max-width: 360px;
+    margin: 0 auto;
+}
+.iv-venue-icon {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--t-primary) 8%, transparent);
+    color: var(--t-primary);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 0.85rem;
+}
+.iv-venue-name {
+    font-family: var(--t-font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--t-primary);
+    margin-bottom: 0.35rem;
+    line-height: 1.3;
+}
+.iv-venue-addr {
+    font-size: 14px;
+    color: var(--t-on-surface-variant);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+.iv-venue-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--t-font-label);
+    font-size: 13px;
+    color: var(--t-on-surface);
+    margin-bottom: 1.25rem;
+}
+.iv-venue-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.iv-venue-meta svg { color: var(--t-accent); }
+.iv-venue-map {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--t-font-label);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: white;
+    background: var(--t-primary);
+    padding: 11px 26px;
+    border-radius: 9999px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--t-primary) 22%, transparent);
+}
+.iv-venue-map:hover { background: var(--t-primary-container); transform: translateY(-1px); }
+
 /* ── EVENTS ── */
 .iv-events {
     display: flex;
@@ -796,6 +1021,17 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     border-radius: var(--t-card-radius);
     box-shadow: 0 2px 12px rgba(0,0,0,0.04);
     border: 1px solid var(--t-card-border);
+    overflow: hidden;
+}
+.iv-tl-photo {
+    margin: -1rem -1.25rem 0.85rem;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+}
+.iv-tl-photo img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
 }
 .iv-tl-year {
     font-family: var(--t-font-label);
@@ -923,6 +1159,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     box-shadow: 0 4px 16px color-mix(in srgb, var(--t-primary) 25%, transparent);
 }
 .iv-rsvp-btn:hover { background: var(--t-primary-container); transform: translateY(-1px); }
+.iv-wish-btn { margin-top: 1.5rem; }
 
 /* ── GUESTBOOK WISHES ── */
 .iv-wish-list { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -953,6 +1190,11 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     text-align: center;
     background: var(--t-surface-dim);
 }
+.iv-footer-sticker {
+    font-size: 32px;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
 .iv-footer-names {
     font-family: var(--t-font-display);
     font-size: 20px; font-weight: 600;
@@ -966,12 +1208,48 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data }) => {
     letter-spacing: 0.05em;
 }
 
+/* ════════════════════════
+   PER-THEME FLOURISHES
+   ════════════════════════ */
+/* ROYAL — gold double-frame & ornamental accents */
+.iv-theme-royal .iv-event-card,
+.iv-theme-royal .iv-qr-card,
+.iv-theme-royal .iv-venue-card {
+    border: 1px solid var(--t-accent);
+    box-shadow: 0 0 0 4px var(--t-card-bg), 0 0 0 5px color-mix(in srgb, var(--t-accent) 45%, transparent), 0 10px 30px rgba(0,0,0,0.08);
+}
+.iv-theme-royal .iv-sec-title {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: clamp(1.25rem, 5.5vw, 1.55rem);
+}
+.iv-theme-royal .iv-hero-pre { letter-spacing: 0.3em; }
+
+/* MODERN — clean uppercase section titles, square accents */
+.iv-theme-modern .iv-sec-title {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    font-size: clamp(1.1rem, 5vw, 1.4rem);
+}
+.iv-theme-modern .iv-event-icon,
+.iv-theme-modern .iv-venue-icon { border-radius: 12px; }
+
+/* ROMANTIC — softer, larger script titles */
+.iv-theme-romantic .iv-sec-title { font-size: clamp(2rem, 9vw, 2.6rem); font-weight: 400; }
+.iv-theme-romantic .iv-invite-couple { font-family: var(--t-font-script); font-size: clamp(2rem, 9vw, 2.5rem); }
+
+/* TRADITIONAL — refined serif emphasis */
+.iv-theme-traditional .iv-sec-title { letter-spacing: 0.04em; }
+
 /* ── MOBILE POLISH ── */
 @media (max-width: 400px) {
     .iv-sec { padding: 2.5rem 1.25rem; }
     .iv-hero-body { padding: 0 1.25rem; }
     .iv-gal-item:not(.iv-gal-wide) img { height: 140px; }
     .iv-gal-wide img { height: 180px; }
+    .iv-parents { gap: 0.25rem; }
+    .iv-parent-name { font-size: 14px; }
 }
             `}</style>
         </>
