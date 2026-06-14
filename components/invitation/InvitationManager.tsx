@@ -20,14 +20,10 @@ const BANKS = [
 ];
 
 const TEMPLATES = [
-    { id: 'modern',      name: 'Hiện Đại',      color: 'bg-white border-gray-200',           emoji: '✦' },
-    { id: 'luxury',      name: 'Sang Trọng',     color: 'bg-stone-900 border-yellow-600 text-white', emoji: '♛' },
-    { id: 'traditional', name: 'Truyền Thống',   color: 'bg-red-50 border-red-300',           emoji: '🀄' },
-    { id: 'floral',      name: 'Hoa Nhẹ Nhàng',  color: 'bg-pink-50 border-pink-200',         emoji: '🌸' },
-    { id: 'romantic',    name: 'Lãng Mạn',       color: 'bg-rose-50 border-rose-300',         emoji: '💕' },
-    { id: 'minimalist',  name: 'Tối Giản',        color: 'bg-white border-gray-900',           emoji: '◻' },
-    { id: 'vintage',     name: 'Vintage',         color: 'bg-amber-50 border-amber-400',       emoji: '📜' },
-    { id: 'garden',      name: 'Vườn Xanh',      color: 'bg-emerald-50 border-emerald-300',   emoji: '🌿' },
+    { id: 'traditional', name: 'Truyền Thống',   color: 'bg-[#fdf8f6] border-[#7c1d00] text-[#7c1d00]',  emoji: '🏮' },
+    { id: 'romantic',    name: 'Lãng Mạn',       color: 'bg-[#fff0f3] border-[#e11d48] text-[#e11d48]',  emoji: '💕' },
+    { id: 'modern',      name: 'Hiện Đại',       color: 'bg-[#faf9fa] border-[#094cb2] text-[#094cb2]',  emoji: '✦' },
+    { id: 'royal',       name: 'Royal Elegance',  color: 'bg-[#f5f0eb] border-[#6b4423] text-[#6b4423]', emoji: '👑' },
 ];
 
 const PETAL_EFFECTS = [

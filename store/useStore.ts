@@ -33,7 +33,7 @@ const sanitizeBudgetIds = (items: BudgetItem[]): BudgetItem[] => {
 };
 
 const DEFAULT_INVITATION: InvitationData = {
-  templateId: 'luxury',
+  templateId: 'traditional',
   groomName: '',
   brideName: '',
   groomParents: { father: '', mother: '' },
