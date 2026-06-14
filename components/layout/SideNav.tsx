@@ -22,7 +22,6 @@ const NAV_ITEMS = [
   { id: 'local', label: 'Thị Trường', icon: TrendingUp, roles: ['ADMIN', 'USER', 'GUEST'] },
   { id: 'fengshui', label: 'Phong Thủy', icon: Compass, roles: ['ADMIN', 'USER', 'GUEST'] },
   { id: 'invitation', label: 'Thiệp Cưới', icon: QrCode, roles: ['ADMIN', 'USER', 'GUEST'] },
-  { id: 'admin', label: 'Quản Trị', icon: ShieldCheck, roles: ['ADMIN'] },
   { id: 'settings', label: 'Cài Đặt', icon: Settings, roles: ['ADMIN', 'USER', 'GUEST'] },
 ];
 
@@ -88,29 +87,19 @@ const SideNav: React.FC<SideNavProps> = ({ activeTab, setActiveTab, isCollapsed,
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-gray-800 truncate">{user.displayName}</p>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
-                user.role === 'USER' && !user.isActive ? 'bg-red-100 text-red-600' :
-                user.role === 'USER' ? 'bg-blue-100 text-blue-700' :
-                'bg-gray-100 text-gray-500'
-              }`}>
-                {user.role === 'USER' && !user.isActive ? 'Chưa kích hoạt' : user.role}
-              </span>
             </div>
           </div>
         )}
 
         {/* Logout */}
-        {user?.role !== 'GUEST' && (
-          <button
-            onClick={logout}
-            title={isCollapsed ? 'Đăng xuất' : undefined}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors text-sm ${isCollapsed ? 'justify-center' : ''}`}
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!isCollapsed && <span>Đăng xuất</span>}
-          </button>
-        )}
+        <button
+          onClick={logout}
+          title={isCollapsed ? 'Đăng xuất' : undefined}
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors text-sm ${isCollapsed ? 'justify-center' : ''}`}
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          {!isCollapsed && <span>Đăng xuất</span>}
+        </button>
 
         {/* Collapse toggle */}
         <button

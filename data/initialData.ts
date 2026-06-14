@@ -118,14 +118,14 @@ export const INITIAL_USERS: UserProfile[] = [
 ];
 
 export const DEFAULT_GUEST_USER: UserProfile = {
-  uid: 'local-user',
+  uid: 'e8a57bf1-58c2-45ae-b1ab-65c1e6921ad9',
   email: null,
-  displayName: 'Người dùng',
+  displayName: 'Chủ nhân',
   photoURL: null,
   role: 'ADMIN',
   isActive: true,
   allowCustomApiKey: true,
-  enableCloudStorage: false,
+  enableCloudStorage: true,
   weddingDate: null,
   showCountdown: false
 };

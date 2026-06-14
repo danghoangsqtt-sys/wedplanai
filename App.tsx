@@ -10,6 +10,7 @@ import AIFloatingChat from './components/AIFloatingChat';
 import WelcomeOnboarding from './components/WelcomeOnboarding';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
+import PasswordGate from './components/PasswordGate';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
 // --- Helper to handle lazy loading chunk errors (Vite cached index.html issue) ---
@@ -34,7 +35,6 @@ const lazyWithRetry = (componentImport: () => Promise<any>) =>
 // --- Lazy-loaded components for code splitting ---
 const GuestManager = lazyWithRetry(() => import('./components/GuestManager'));
 const DetailedBudgetPlanner = lazyWithRetry(() => import('./components/DetailedBudgetPlanner'));
-const UserManagement = lazyWithRetry(() => import('./components/admin/UserManagement'));
 const ProcessGuide = lazyWithRetry(() => import('./components/ProcessGuide'));
 const FengShuiConsultant = lazyWithRetry(() => import('./components/fengshui/FengShuiConsultant'));
 const SettingsPage = lazyWithRetry(() => import('./components/SettingsPage').then(mod => ({ default: mod.default })));
@@ -103,8 +103,8 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
 export type SettingsTab = 'ACCOUNT' | 'DATA' | 'SYSTEM' | 'ABOUT';
 
 function App() {
-  const { user, settings, guests, budgetItems } = useStore();
-  const [activeTab, setActiveTab] = useState<'home' | 'plan' | 'budget' | 'guests' | 'local' | 'fengshui' | 'invitation' | 'settings' | 'admin'>('home');
+  const { settings, guests, budgetItems, loadFromCloud } = useStore();
+  const [activeTab, setActiveTab] = useState<'home' | 'plan' | 'budget' | 'guests' | 'local' | 'fengshui' | 'invitation' | 'settings'>('home');
 
   // UI State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -163,15 +163,10 @@ function App() {
   }
 
   // --- RENDER: APP VIEW ---
-  if (!user) {
-    return <div className="h-screen flex items-center justify-center">Loading...</div>;
-  }
-
-  // TEMP: Bypass all feature restrictions (revert to original line to restore auth)
-  // const isRestricted = user.role === 'GUEST' || (user.role === 'USER' && !user.isActive);
   const isRestricted = false;
 
   return (
+    <PasswordGate onUnlock={loadFromCloud}>
     <div className="flex h-screen bg-[#FDF2F8] overflow-hidden transition-colors dark:bg-gray-900 font-sans">
 
       {/* Toast Notifications */}
@@ -240,10 +235,6 @@ function App() {
                   <LocalMarketInsights onNavigateBudget={() => setActiveTab('budget')} />
                 )}
 
-                {activeTab === 'admin' && user.role === 'ADMIN' && (
-                  <UserManagement />
-                )}
-
                 {activeTab === 'settings' && (
                   <SettingsPage defaultTab={settingsDefaultTab} />
                 )}
@@ -276,6 +267,7 @@ function App() {
       {/* Floating AI Chat (all screens, bottom-right) */}
       <AIFloatingChat stats={stats} isRestricted={isRestricted} />
     </div>
+    </PasswordGate>
   );
 }
 

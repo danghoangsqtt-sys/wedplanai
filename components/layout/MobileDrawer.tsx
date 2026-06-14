@@ -22,7 +22,6 @@ const NAV_ITEMS = [
   { id: 'local', label: 'Thị Trường', icon: TrendingUp, emoji: '📈', roles: ['ADMIN', 'USER', 'GUEST'] },
   { id: 'fengshui', label: 'Phong Thủy', icon: Compass, emoji: '🧭', roles: ['ADMIN', 'USER', 'GUEST'] },
   { id: 'invitation', label: 'Thiệp Cưới', icon: QrCode, emoji: '💌', roles: ['ADMIN', 'USER', 'GUEST'] },
-  { id: 'admin', label: 'Quản Trị', icon: ShieldCheck, emoji: '🛡️', roles: ['ADMIN'] },
   { id: 'settings', label: 'Cài Đặt', icon: Settings, emoji: '⚙️', roles: ['ADMIN', 'USER', 'GUEST'] },
 ];
 
@@ -129,7 +128,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose, activeTab,
         {/* Bottom: User info + logout */}
         <div className="flex-shrink-0 border-t border-rose-100 p-3 space-y-2 bg-gray-50/50">
           {/* User info */}
-          {user && user.role !== 'GUEST' && (
+          {user && (
             <div className="flex items-center gap-3 px-2 py-2">
               <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 font-bold text-sm flex-shrink-0 overflow-hidden border-2 border-rose-200 shadow-sm">
                 {user.photoURL
@@ -145,15 +144,13 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose, activeTab,
           )}
 
           {/* Logout */}
-          {user?.role !== 'GUEST' && (
-            <button
-              onClick={() => { logout(); onClose(); }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors text-sm font-medium"
-            >
-              <LogOut className="w-4 h-4 flex-shrink-0" />
-              <span>Đăng xuất</span>
-            </button>
-          )}
+          <button
+            onClick={() => { logout(); onClose(); }}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors text-sm font-medium"
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            <span>Đăng xuất</span>
+          </button>
         </div>
       </aside>
     </>

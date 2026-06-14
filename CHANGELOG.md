@@ -2,6 +2,20 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [v1.0.0] — 2026-06-15: Personal Tool Mode
+
+### ✨ Tính Năng Mới
+- **Màn hình PIN bảo vệ:** Hiển thị màn hình nhập mật khẩu (PIN hash SHA-256) mỗi lần mở app; session tự khoá khi đóng tab
+- **Supabase Auto-Save:** Toàn bộ dữ liệu (khách mời, ngân sách, thiệp cưới, phong thủy) tự động sync lên cloud sau 2 giây debounce
+- **Load từ cloud khi khởi động:** Sau khi nhập PIN đúng, app tự động tải dữ liệu mới nhất từ Supabase
+- **Fixed owner identity:** Dùng UUID cố định (`OWNER_UID`) thay cho auth system
+
+### 🗑️ Loại Bỏ
+- **Auth system:** Xóa hoàn toàn login page, role-based guards, ADMIN/USER/GUEST logic
+- **Admin panel:** Xóa UserManagement component và admin nav tab
+- **Admin dead code:** Loại bỏ `adminUsers`, `adminStats`, `fetchAdminData`, `addUser`, `deleteUser`, `refreshUserProfile` khỏi store
+- **Role badges:** Xóa role badge khỏi SideNav, Sidebar, MobileDrawer, BottomNav
+
 ## [Phiên bản Cập Nhật Mới Nhất] - Tháng 4/2026
 
 ### ✨ Tính Năng Mới (Features)

@@ -24,7 +24,6 @@ const MORE_ITEMS = [
   { id: 'fengshui',   label: 'Phong Thủy', icon: Compass,    roles: ['ADMIN', 'USER', 'GUEST'] },
   { id: 'invitation', label: 'Thiệp Cưới', icon: QrCode,     roles: ['ADMIN', 'USER', 'GUEST'] },
   { id: 'settings',   label: 'Cài Đặt',    icon: Settings,   roles: ['ADMIN', 'USER', 'GUEST'] },
-  { id: 'admin',      label: 'Quản Trị',   icon: ShieldCheck, roles: ['ADMIN'] },
 ];
 
 const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {

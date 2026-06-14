@@ -301,10 +301,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                      <div className="text-center md:text-left">
                         <h3 className="text-xl font-bold text-gray-800">{user.displayName}</h3>
                         <p className="text-gray-500 text-sm">{user.email}</p>
-                        <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
-                           (user.role === 'USER' && !user.isActive) ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                           }`}>
-                           {user.role === 'USER' && !user.isActive ? 'CHƯA KÍCH HOẠT' : `${user.role} Account`}
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">
+                           Owner
                         </span>
                      </div>
                   </div>
@@ -413,34 +411,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                         <div className="flex-1">
                            <div className="flex justify-between items-start mb-1">
                               <h3 className="font-bold text-gray-800 text-lg">Đồng bộ đám mây (Cloud Sync)</h3>
-                              <span className={`px-2 py-0.5 text-xs font-bold rounded-full uppercase tracking-wide ${user.enableCloudStorage ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
-                                 {user.enableCloudStorage ? 'Active' : 'Disabled'}
+                              <span className="px-2 py-0.5 text-xs font-bold rounded-full uppercase tracking-wide bg-green-100 text-green-700">
+                                 Active
                               </span>
                            </div>
                            <p className="text-xs text-blue-600/70 font-semibold mb-2">Powered by Supabase Cloud · PostgreSQL</p>
                            <p className="text-sm text-gray-600 mb-4 max-w-lg leading-relaxed">
-                              {user.enableCloudStorage
-                                 ? "Dữ liệu của bạn được đồng bộ an toàn trên Supabase Cloud theo thời gian thực. Truy cập từ mọi thiết bị, không lo mất dữ liệu."
-                                 : "Dữ liệu chỉ lưu trên trình duyệt này. Nếu xóa cache hoặc đổi máy, bạn sẽ mất toàn bộ kế hoạch cưới."}
+                              Dữ liệu của bạn được đồng bộ an toàn trên Supabase Cloud theo thời gian thực. Truy cập từ mọi thiết bị, không lo mất dữ liệu.
                            </p>
-                           {(user.role === 'GUEST' || (user.role === 'USER' && !user.isActive)) ? (
-                              <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 w-fit">
-                                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                                 {user.role === 'GUEST' ? "Tính năng này yêu cầu tài khoản thành viên đã kích hoạt." : "Tài khoản chưa kích hoạt. Vui lòng liên hệ Admin."}
-                              </div>
-                           ) : (
-                              <label className="flex items-center gap-3 cursor-pointer group w-fit">
-                                 {/* FIX: conditional bg class instead of additive */}
-                                 <div className={`w-14 h-7 flex items-center rounded-full p-1 transition-colors duration-300 ${user.enableCloudStorage ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                                    <div className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300 ${user.enableCloudStorage ? 'translate-x-7' : 'translate-x-0'}`} />
-                                 </div>
-                                 <span className={`text-sm font-bold transition-colors ${user.enableCloudStorage ? 'text-blue-600' : 'text-gray-500 group-hover:text-blue-500'}`}>
-                                    {user.enableCloudStorage ? "Đã bật đồng bộ" : "Bật đồng bộ đám mây"}
-                                 </span>
-                                 <input type="checkbox" className="hidden" checked={user.enableCloudStorage}
-                                    onChange={(e) => updateUser(user.uid, { enableCloudStorage: e.target.checked })} />
-                              </label>
-                           )}
+                           <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-100 w-fit">
+                              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                              Cloud sync đang hoạt động
+                           </div>
                         </div>
                      </div>
                   </section>
@@ -587,156 +569,119 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                      </div>
                   </div>
 
-                  {/* Account Status Warning for Inactive Users */}
-                  {user.role === 'USER' && !user.isActive && (
-                     <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg shadow-sm">
-                        <div className="flex items-start gap-3">
-                           <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-                           <div>
-                              <h4 className="font-bold text-amber-800 text-sm">Tài khoản chưa được kích hoạt</h4>
-                              <p className="text-sm text-amber-700 mt-1">
-                                 Hiện tại bạn không thể nhập API Key hoặc sử dụng các tính năng nâng cao.
-                                 <br />
-                                 <strong>Vui lòng liên hệ Admin: {ADMIN_CONTACT.text} để mở khóa.</strong>
-                              </p>
-                           </div>
-                        </div>
-                     </div>
-                  )}
-
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
 
                      {/* Left Col: Status & API Key */}
                      <div className="space-y-6">
                         <h4 className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2">Trạng thái kết nối</h4>
 
-                        {user.role === 'ADMIN' ? (
-                           <div className="bg-purple-50 p-4 md:p-5 rounded-xl border border-purple-100 flex items-start gap-4">
-                              <div className="bg-purple-100 p-2 rounded-lg text-purple-600">
-                                 <CheckCircle2 className="w-6 h-6" />
+                        <div className="space-y-4">
+                           {/* Activation Status */}
+                           <div className="p-4 rounded-xl border flex items-center gap-3 bg-green-50 border-green-200">
+                              <div className="p-2 rounded-full bg-green-100 text-green-600">
+                                 <Zap className="w-5 h-5" />
                               </div>
                               <div>
-                                 <p className="font-bold text-purple-900 text-lg">Hệ Thống Admin</p>
-                                 <p className="text-sm text-purple-700 mt-1">
-                                    Bạn có quyền truy cập không giới hạn vào System Key (Google Gemini). Không cần cấu hình thêm.
-                                 </p>
+                                 <p className="font-bold text-gray-800 text-sm md:text-base">Chế độ Owner</p>
+                                 <p className="text-xs text-gray-500">Sử dụng System Key từ cấu hình máy chủ.</p>
                               </div>
                            </div>
-                        ) : (
-                           <div className="space-y-4">
-                              {/* Activation Status */}
-                              <div className={`p-4 rounded-xl border flex items-center gap-3 ${user.allowCustomApiKey && user.isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                                 <div className={`p-2 rounded-full ${user.allowCustomApiKey && user.isActive ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'}`}>
-                                    {user.allowCustomApiKey && user.isActive ? <Zap className="w-5 h-5" /> : <Key className="w-5 h-5" />}
-                                 </div>
-                                 <div>
-                                    <p className="font-bold text-gray-800 text-sm md:text-base">
-                                       {user.allowCustomApiKey && user.isActive ? "Tài khoản Pro (Đã kích hoạt)" : "Tài khoản Giới hạn"}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                       {user.allowCustomApiKey && user.isActive ? "Bạn có thể nhập Key cá nhân bên dưới." : "Chưa thể sử dụng tính năng AI."}
-                                    </p>
-                                 </div>
+
+                           {/* API Key Input */}
+                           <div className="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm">
+                              <div className="flex justify-between items-center mb-2">
+                                 <label className="block text-xs md:text-sm font-bold text-gray-700">Google Gemini API Key</label>
+                                 <button
+                                    onClick={() => setShowApiGuide(!showApiGuide)}
+                                    className="text-[10px] md:text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-md transition-colors"
+                                 >
+                                    <BookOpen className="w-3 h-3" /> Hướng dẫn lấy Key (Miễn phí)
+                                 </button>
                               </div>
 
-                              {/* API Key Input (Only if allowed AND active) */}
-                              {user.allowCustomApiKey && user.isActive && (
-                                 <div className="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm">
-                                    <div className="flex justify-between items-center mb-2">
-                                       <label className="block text-xs md:text-sm font-bold text-gray-700">Google Gemini API Key Cá Nhân</label>
-                                       <button
-                                          onClick={() => setShowApiGuide(!showApiGuide)}
-                                          className="text-[10px] md:text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-md transition-colors"
-                                       >
-                                          <BookOpen className="w-3 h-3" /> Hướng dẫn lấy Key (Miễn phí)
-                                       </button>
+                              {/* Guide Box - Toggleable */}
+                              {showApiGuide && (
+                                 <div className="mb-4 bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 md:p-4 text-xs md:text-sm text-gray-700 animate-fadeIn">
+                                    <div className="flex justify-between items-start mb-3">
+                                       <h5 className="font-bold text-indigo-900 flex items-center gap-2">
+                                          <MousePointerClick className="w-4 h-4" /> Cách lấy Key nhanh:
+                                       </h5>
                                     </div>
 
-                                    {/* Guide Box - Toggleable */}
-                                    {showApiGuide && (
-                                       <div className="mb-4 bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 md:p-4 text-xs md:text-sm text-gray-700 animate-fadeIn">
-                                          <div className="flex justify-between items-start mb-3">
-                                             <h5 className="font-bold text-indigo-900 flex items-center gap-2">
-                                                <MousePointerClick className="w-4 h-4" /> Cách lấy Key nhanh:
-                                             </h5>
-                                          </div>
-
-                                          <ol className="space-y-3 pl-2">
-                                             <li className="flex gap-2 items-start">
-                                                <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">1</span>
-                                                <span>
-                                                   Truy cập: <br />
-                                                   <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline font-bold break-all">
-                                                      https://aistudio.google.com/app/apikey
-                                                   </a>
-                                                </span>
-                                             </li>
-                                             <li className="flex gap-2 items-start">
-                                                <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">2</span>
-                                                <span>
-                                                   Đăng nhập Google và nhấn <strong>Create API key</strong>.
-                                                </span>
-                                             </li>
-                                             <li className="flex gap-2 items-start">
-                                                <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">3</span>
-                                                <span>
-                                                   Chọn <strong>Create API key in new project</strong> hoặc dự án có sẵn.
-                                                </span>
-                                             </li>
-                                             <li className="flex gap-2 items-start">
-                                                <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">4</span>
-                                                <span>
-                                                   Copy key và dán vào ô bên dưới.
-                                                </span>
-                                             </li>
-                                          </ol>
-                                       </div>
-                                    )}
-                                    <div className="relative mb-2">
-                                       <input
-                                          type={showApiKey ? "text" : "password"}
-                                          className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none transition-all font-mono text-base md:text-sm ${!tempApiKey ? 'border-gray-300' : 'border-gray-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
-                                             }`}
-                                          placeholder="AIzaSy..."
-                                          value={tempApiKey}
-                                          onChange={(e) => setTempApiKey(e.target.value)}
-                                          disabled={isValidatingKey}
-                                       />
-                                       <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                       <button
-                                          onClick={() => setShowApiKey(!showApiKey)}
-                                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                                          type="button"
-                                       >
-                                          {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                       </button>
-                                    </div>
-
-                                    <div className="flex justify-between items-center mb-4">
-                                       <p className="text-[11px] text-gray-400">
-                                          * Key được lưu cục bộ và chỉ dùng để gọi Google Gemini.
-                                       </p>
-                                    </div>
-
-                                    <button
-                                       onClick={handleSaveApiKey}
-                                       disabled={isValidatingKey || !tempApiKey.trim()}
-                                       className="w-full px-4 py-2.5 bg-gray-900 hover:bg-black text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
-                                    >
-                                       {isValidatingKey ? (
-                                          <>
-                                             <Loader2 className="w-4 h-4 animate-spin" /> Đang kiểm tra...
-                                          </>
-                                       ) : (
-                                          <>
-                                             <Save className="w-4 h-4" /> Lưu & Kiểm tra kết nối
-                                          </>
-                                       )}
-                                    </button>
+                                    <ol className="space-y-3 pl-2">
+                                       <li className="flex gap-2 items-start">
+                                          <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">1</span>
+                                          <span>
+                                             Truy cập: <br />
+                                             <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline font-bold break-all">
+                                                https://aistudio.google.com/app/apikey
+                                             </a>
+                                          </span>
+                                       </li>
+                                       <li className="flex gap-2 items-start">
+                                          <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">2</span>
+                                          <span>
+                                             Đăng nhập Google và nhấn <strong>Create API key</strong>.
+                                          </span>
+                                       </li>
+                                       <li className="flex gap-2 items-start">
+                                          <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">3</span>
+                                          <span>
+                                             Chọn <strong>Create API key in new project</strong> hoặc dự án có sẵn.
+                                          </span>
+                                       </li>
+                                       <li className="flex gap-2 items-start">
+                                          <span className="bg-white text-indigo-600 font-bold w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-sm flex-shrink-0 mt-0.5">4</span>
+                                          <span>
+                                             Copy key và dán vào ô bên dưới.
+                                          </span>
+                                       </li>
+                                    </ol>
                                  </div>
                               )}
+                              <div className="relative mb-2">
+                                 <input
+                                    type={showApiKey ? "text" : "password"}
+                                    className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none transition-all font-mono text-base md:text-sm ${!tempApiKey ? 'border-gray-300' : 'border-gray-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
+                                       }`}
+                                    placeholder="AIzaSy..."
+                                    value={tempApiKey}
+                                    onChange={(e) => setTempApiKey(e.target.value)}
+                                    disabled={isValidatingKey}
+                                 />
+                                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                 <button
+                                    onClick={() => setShowApiKey(!showApiKey)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                                    type="button"
+                                 >
+                                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                 </button>
+                              </div>
+
+                              <div className="flex justify-between items-center mb-4">
+                                 <p className="text-[11px] text-gray-400">
+                                    * Key được lưu cục bộ và chỉ dùng để gọi Google Gemini.
+                                 </p>
+                              </div>
+
+                              <button
+                                 onClick={handleSaveApiKey}
+                                 disabled={isValidatingKey || !tempApiKey.trim()}
+                                 className="w-full px-4 py-2.5 bg-gray-900 hover:bg-black text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+                              >
+                                 {isValidatingKey ? (
+                                    <>
+                                       <Loader2 className="w-4 h-4 animate-spin" /> Đang kiểm tra...
+                                    </>
+                                 ) : (
+                                    <>
+                                       <Save className="w-4 h-4" /> Lưu & Kiểm tra kết nối
+                                    </>
+                                 )}
+                              </button>
                            </div>
-                        )}
+                        </div>
                      </div>
 
                      {/* Right Col: Contact Admin */}

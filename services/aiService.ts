@@ -1,6 +1,5 @@
 
 import { UserProfile } from "../types";
-import { useStore } from "../store/useStore";
 import { GoogleGenAI } from "@google/genai";
 
 // --- ERROR CLASSIFICATION ---
@@ -128,26 +127,7 @@ export const generateAIContent = async (
   userMessage: string,
   isJson: boolean = false
 ) => {
-  if (!user) throw new Error("Vui lòng đăng nhập.");
-
-  if (
-    user.role === 'ADMIN' ||
-    user.role === 'GUEST' ||
-    (user.role === 'USER' && !user.isActive)
-  ) {
-    return await callGeminiDirect(systemPrompt, userMessage, isJson);
-  }
-
-  if (user.role === 'USER' && user.isActive) {
-    if (!user.allowCustomApiKey) throw new Error("Tài khoản chưa được cấp quyền sử dụng AI.");
-
-    const userKey = useStore.getState().settings.geminiApiKey;
-    if (!userKey) throw new Error("Vui lòng nhập Gemini API Key trong phần Cài đặt để sử dụng.");
-
-    return await callGeminiDirect(systemPrompt, userMessage, isJson, userKey);
-  }
-
-  throw new Error("Role không hợp lệ.");
+  return await callGeminiDirect(systemPrompt, userMessage, isJson);
 };
 
 // --- IMAGE GENERATION (NEW) ---
@@ -158,12 +138,7 @@ export const generateWeddingSticker = async (
   refImages: { groom?: string, bride?: string } // Base64 strings
 ) => {
   // @ts-ignore
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  let apiKey = envKey;
-
-  if (user?.role === 'USER' && user.isActive && user.allowCustomApiKey) {
-    apiKey = useStore.getState().settings.geminiApiKey;
-  }
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
   if (!apiKey) throw new Error("Thiếu API Key để tạo ảnh.");
 

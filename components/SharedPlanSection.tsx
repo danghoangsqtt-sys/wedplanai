@@ -23,7 +23,7 @@ const SharedPlanSection: React.FC = () => {
   const [showConfirmRevoke, setShowConfirmRevoke] = useState(false);
   const [showConfirmLeave, setShowConfirmLeave] = useState(false);
 
-  if (!user || user.role === 'GUEST') return null;
+  if (!user) return null;
 
   const handleCreate = async () => {
     setIsCreating(true);

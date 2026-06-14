@@ -52,7 +52,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'budget', label: 'Ngân Sách', icon: ListTodo, roles: ['ADMIN', 'USER', 'GUEST'] },
     { id: 'guests', label: 'Khách Mời', icon: Users, roles: ['ADMIN', 'USER', 'GUEST'] },
     { id: 'ai', label: 'Cố Vấn AI', icon: MessageSquareText, roles: ['ADMIN', 'USER', 'GUEST'] },
-    { id: 'admin', label: 'Quản Trị', icon: ShieldCheck, roles: ['ADMIN'] },
     { id: 'settings', label: 'Cài Đặt', icon: Settings, roles: ['ADMIN', 'USER', 'GUEST'] },
   ];
 
@@ -120,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* User Info (Mini) */}
         {user && (
           <div className={`px-6 py-4 border-b border-rose-50 bg-rose-50/30 flex items-center gap-3 ${isCollapsed ? 'hidden lg:flex lg:justify-center lg:px-2' : ''}`}>
-            <div className={`w-10 h-10 rounded-full border border-rose-100 overflow-hidden flex-shrink-0 flex items-center justify-center font-bold shadow-sm ${user.role === 'GUEST' ? 'bg-gray-100 text-gray-400' : 'bg-white text-rose-500'}`}>
+            <div className="w-10 h-10 rounded-full border border-rose-100 overflow-hidden flex-shrink-0 flex items-center justify-center font-bold shadow-sm bg-white text-rose-500">
               {user.photoURL ? (
                 <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
               ) : (
@@ -131,15 +130,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-gray-500 font-medium">Xin chào,</p>
                 <p className="text-sm font-bold text-gray-800 truncate">{user.displayName}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
-                      user.role === 'USER'
-                        ? (!user.isActive ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-700')
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                    {user.role === 'USER' && !user.isActive ? 'Chưa kích hoạt' : user.role}
-                  </span>
-                </div>
               </div>
             )}
           </div>
@@ -171,18 +161,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Footer Actions */}
-        {user?.role !== 'GUEST' && (
-          <div className="p-4 border-t border-rose-100 bg-rose-50/30 space-y-2 pb-safe-area">
-            <button
-              onClick={logout}
-              className={`flex items-center gap-2 w-full text-gray-500 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-lg transition-colors ${isCollapsed ? 'lg:justify-center' : 'px-4'}`}
-              title="Đăng xuất"
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              {(!isCollapsed || window.innerWidth < 1024) && <span className="text-sm font-medium">Đăng xuất</span>}
-            </button>
-          </div>
-        )}
+        <div className="p-4 border-t border-rose-100 bg-rose-50/30 space-y-2 pb-safe-area">
+          <button
+            onClick={logout}
+            className={`flex items-center gap-2 w-full text-gray-500 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-lg transition-colors ${isCollapsed ? 'lg:justify-center' : 'px-4'}`}
+            title="Đăng xuất"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {(!isCollapsed || window.innerWidth < 1024) && <span className="text-sm font-medium">Đăng xuất</span>}
+          </button>
+        </div>
       </aside>
     </>
   );
