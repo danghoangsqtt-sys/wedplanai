@@ -4,7 +4,7 @@ import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, 
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { saveUserDataToCloud, loadUserDataFromCloud } from '../services/cloudService';
 import { getMySharedPlan, createShareInvite, joinPlanByCode, revokeShare, leavePlan } from '../services/sharingService';
-import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS } from '../data/initialData';
+import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS, INITIAL_INVITATION } from '../data/initialData';
 import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
 import { supabase, TABLES } from '../lib/supabase';
 import { OWNER_UID } from '../lib/constants';
@@ -32,26 +32,7 @@ const sanitizeBudgetIds = (items: BudgetItem[]): BudgetItem[] => {
   });
 };
 
-const DEFAULT_INVITATION: InvitationData = {
-  templateId: 'traditional',
-  groomName: '',
-  brideName: '',
-  groomParents: { father: '', mother: '' },
-  brideParents: { father: '', mother: '' },
-  date: '',
-  lunarDate: '',
-  time: '10:30',
-  location: '',
-  address: '',
-  wishes: 'Rất hân hạnh được đón tiếp quý khách!',
-  themeColor: '#e11d48',
-  bankInfo: { bankId: '', accountNumber: '', accountName: '' },
-  couplePhoto: '',
-  galleryImages: [],
-  musicUrl: '',
-  photoConfig: { scale: 1, x: 0, y: 0 },
-  events: []
-};
+// Removed DEFAULT_INVITATION in favor of INITIAL_INVITATION from initialData.ts
 
 interface AppState {
   user: UserProfile | null;
@@ -203,7 +184,7 @@ export const useStore = create<AppState>()(
       notifications: [],
       users: INITIAL_USERS,
       guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
-      invitation: DEFAULT_INVITATION,
+      invitation: INITIAL_INVITATION,
       localProvince: '',
       localDistrict: '',
       localMarketReport: null,
@@ -374,7 +355,7 @@ export const useStore = create<AppState>()(
           procedures: WEDDING_PROCEDURES,
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] },
-          invitation: DEFAULT_INVITATION
+          invitation: INITIAL_INVITATION
         });
         get().addNotification('WARNING', 'Dữ liệu đã được đặt lại về mặc định.');
       },
@@ -386,7 +367,7 @@ export const useStore = create<AppState>()(
           procedures: data.procedures || WEDDING_PROCEDURES,
           fengShuiProfile: data.fengShuiProfile || null,
           fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] },
-          invitation: data.invitation || DEFAULT_INVITATION
+          invitation: data.invitation || INITIAL_INVITATION
         });
         get().addNotification('SUCCESS', 'Khôi phục dữ liệu thành công.');
         triggerCloudSync(get);
@@ -474,7 +455,7 @@ export const useStore = create<AppState>()(
                 procedures: cloudData.procedures || WEDDING_PROCEDURES,
                 fengShuiProfile: cloudData.fengShuiProfile || null,
                 fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
-                invitation: cloudData.invitation || DEFAULT_INVITATION,
+                invitation: cloudData.invitation || INITIAL_INVITATION,
                 // Sync owner's weddingDate for countdown/timeline
                 ...(cloudData.weddingDate ? {
                   user: { ...get().user!, weddingDate: cloudData.weddingDate }
@@ -511,7 +492,7 @@ export const useStore = create<AppState>()(
                 procedures: ownData.procedures || WEDDING_PROCEDURES,
                 fengShuiProfile: ownData.fengShuiProfile || null,
                 fengShuiResults: ownData.fengShuiResults || { harmony: null, dates: [] },
-                invitation: ownData.invitation || DEFAULT_INVITATION,
+                invitation: ownData.invitation || INITIAL_INVITATION,
               });
             }
           }
@@ -548,7 +529,7 @@ export const useStore = create<AppState>()(
               procedures: cloudData.procedures || WEDDING_PROCEDURES,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
-              invitation: cloudData.invitation || DEFAULT_INVITATION,
+              invitation: cloudData.invitation || INITIAL_INVITATION,
               // Sync owner's weddingDate for partner
               ...(!isSharedPlanOwner && cloudData.weddingDate ? {
                 user: { ...get().user!, weddingDate: cloudData.weddingDate }
@@ -605,7 +586,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'wedplan-storage-v11',
+      name: 'wedplan-storage-v12',
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,
