@@ -1,6 +1,6 @@
-import React, { useMemo, useEffect, useState, useRef } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent } from '../../types';
-import { MapPin, Calendar, Clock, Heart, Quote, CreditCard } from 'lucide-react';
+import { MapPin, Calendar, Clock, Heart, Quote, CreditCard, ChevronDown, Gift, Send, BookOpen, Camera, MessageCircle } from 'lucide-react';
 
 interface InvitationPreviewProps {
     data: InvitationData;
@@ -19,7 +19,6 @@ const useScrollReveal = (data: any) => {
             });
         }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
-        // Small delay to ensure DOM is ready
         const timeout = setTimeout(() => {
             document.querySelectorAll('.reveal, .reveal-zoom, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
         }, 100);
@@ -71,82 +70,25 @@ const FloatingEffect: React.FC<{ type: 'petals' | 'hearts' | 'sparkles' }> = ({ 
     );
 };
 
-// --- DECORATIVE ELEMENTS ---
-const TemplateDecor: React.FC<{ templateId: string; position: 'corners' | 'divider' }> = ({ templateId, position }) => {
-    const decors: any = {
-        floral: {
-            corners: (
-                <>
-                    <div className="absolute top-0 left-0 text-5xl opacity-20 pointer-events-none -translate-x-4 -translate-y-4">🌸</div>
-                    <div className="absolute top-0 right-0 text-5xl opacity-20 pointer-events-none translate-x-4 -translate-y-4">🌸</div>
-                    <div className="absolute bottom-0 left-0 text-5xl opacity-20 pointer-events-none -translate-x-4 translate-y-4">🌷</div>
-                    <div className="absolute bottom-0 right-0 text-5xl opacity-20 pointer-events-none translate-x-4 translate-y-4">🌷</div>
-                </>
-            ),
-            divider: <div className="flex justify-center gap-2 py-2 opacity-40"><span>🌿</span><span>✿</span><span>🌿</span></div>
-        },
-        romantic: {
-            corners: (
-                <>
-                    <div className="absolute top-4 left-4 text-3xl opacity-20 pointer-events-none">💕</div>
-                    <div className="absolute top-4 right-4 text-3xl opacity-20 pointer-events-none">💕</div>
-                </>
-            ),
-            divider: <div className="flex justify-center gap-2 py-2 opacity-30"><span>♥</span><span className="text-[10px] mt-1">⋆</span><span>♥</span></div>
-        },
-        luxury: {
-            corners: (
-                <>
-                    <div className="absolute top-4 left-4 text-3xl opacity-30 pointer-events-none text-yellow-500">⚜</div>
-                    <div className="absolute top-4 right-4 text-3xl opacity-30 pointer-events-none text-yellow-500">⚜</div>
-                    <div className="absolute bottom-4 left-4 text-3xl opacity-30 pointer-events-none text-yellow-500 rotate-180">⚜</div>
-                    <div className="absolute bottom-4 right-4 text-3xl opacity-30 pointer-events-none text-yellow-500 rotate-180">⚜</div>
-                </>
-            ),
-            divider: <div className="flex justify-center gap-2 py-2 opacity-40 text-yellow-500"><span>✦</span><span className="text-xs mt-1">◆</span><span>✦</span></div>
-        },
-        vintage: {
-            corners: (
-                <>
-                    <div className="absolute top-2 left-2 w-16 h-16 border-t-2 border-l-2 border-[#A0845C] opacity-50 pointer-events-none"></div>
-                    <div className="absolute top-2 right-2 w-16 h-16 border-t-2 border-r-2 border-[#A0845C] opacity-50 pointer-events-none"></div>
-                    <div className="absolute bottom-2 left-2 w-16 h-16 border-b-2 border-l-2 border-[#A0845C] opacity-50 pointer-events-none"></div>
-                    <div className="absolute bottom-2 right-2 w-16 h-16 border-b-2 border-r-2 border-[#A0845C] opacity-50 pointer-events-none"></div>
-                </>
-            ),
-            divider: <div className="flex justify-center py-2 opacity-40 text-[#A0845C] tracking-[0.5em]">— ✦ —</div>
-        },
-        traditional: {
-            corners: (
-                <>
-                    <div className="absolute top-3 left-3 w-12 h-12 border-t-4 border-l-4 border-double border-[#C9A24D] opacity-80 pointer-events-none"></div>
-                    <div className="absolute top-3 right-3 w-12 h-12 border-t-4 border-r-4 border-double border-[#C9A24D] opacity-80 pointer-events-none"></div>
-                    <div className="absolute bottom-3 left-3 w-12 h-12 border-b-4 border-l-4 border-double border-[#C9A24D] opacity-80 pointer-events-none"></div>
-                    <div className="absolute bottom-3 right-3 w-12 h-12 border-b-4 border-r-4 border-double border-[#C9A24D] opacity-80 pointer-events-none"></div>
-                </>
-            ),
-            divider: <div className="w-24 h-0.5 bg-[#C9A24D]/60 mx-auto my-2"></div>
-        },
-        garden: {
-            corners: (
-                <>
-                    <div className="absolute top-0 left-0 text-4xl opacity-30 pointer-events-none -translate-x-2 -translate-y-2">🌿</div>
-                    <div className="absolute top-0 right-0 text-4xl opacity-30 pointer-events-none translate-x-2 -translate-y-2 scale-x-[-1]">🌿</div>
-                </>
-            ),
-            divider: <div className="flex justify-center gap-2 py-2 opacity-40"><span>🍃</span><span>✿</span><span>🍃</span></div>
-        },
-        minimalist: {
-            corners: null,
-            divider: <div className="w-16 h-px bg-current mx-auto my-2 opacity-20"></div>
-        },
-        modern: {
-            corners: null,
-            divider: <div className="flex items-center justify-center gap-3 py-2 opacity-30"><span className="w-12 h-px bg-current"></span><span className="text-[10px]">◇</span><span className="w-12 h-px bg-current"></span></div>
-        }
-    };
-    return decors[templateId]?.[position] || null;
+// --- ORNAMENTAL DIVIDER ---
+const OrnamentalDivider: React.FC<{ templateId: string; className?: string }> = ({ templateId, className = '' }) => {
+    const isDark = templateId === 'luxury';
+    return (
+        <div className={`flex items-center justify-center gap-3 py-4 ${className}`}>
+            <div className={`w-12 sm:w-20 h-px ${isDark ? 'bg-yellow-500/40' : 'bg-current opacity-15'}`}></div>
+            <span className={`text-xs ${isDark ? 'text-yellow-500/60' : 'opacity-25'}`}>✦</span>
+            <div className={`w-12 sm:w-20 h-px ${isDark ? 'bg-yellow-500/40' : 'bg-current opacity-15'}`}></div>
+        </div>
+    );
 };
+
+// --- SECTION HEADER ---
+const SectionHeader: React.FC<{ subtitle: string; title: string; s: any; className?: string }> = ({ subtitle, title, s, className = '' }) => (
+    <div className={`text-center mb-10 ${className}`}>
+        <p className={`${s.title} text-[10px] sm:text-xs uppercase tracking-[0.3em] opacity-60 mb-3 font-semibold`}>{subtitle}</p>
+        <h2 className={`${s.script} text-3xl sm:text-4xl ${s.accent}`}>{title}</h2>
+    </div>
+);
 
 // --- STICKER DECOR ---
 const StickerDecor: React.FC<{ emoji?: string; size?: string; className?: string }> = ({ emoji, size = 'text-3xl', className = '' }) => {
@@ -160,7 +102,7 @@ const StickerDecor: React.FC<{ emoji?: string; size?: string; className?: string
 
 // --- MAIN COMPONENT ---
 const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook }) => {
-    useScrollReveal(data); // Initialize animations
+    useScrollReveal(data);
 
     const {
         templateId = 'modern', groomName, brideName, groomParents, brideParents, date, lunarDate, time,
@@ -206,18 +148,21 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
         return () => clearInterval(interval);
     }, [date, time, countdownEnabled, isValidDate]);
 
-    // Style Mapping for Unified Layout
+    // Lightbox state
+    const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+
+    // Style Mapping
     const getStyles = () => {
         switch (templateId) {
-            case 'luxury': return { title: "font-['Cinzel',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-stone-900', text: 'text-stone-200', accent: 'text-yellow-400 text-shadow-sm', accentBg: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' };
-            case 'traditional': return { title: "font-['Playfair_Display',serif]", body: "font-['Merriweather',serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#FFF6E5]', text: 'text-[#9B1C1C]', accent: 'text-[#C9A24D]', accentBg: 'bg-[#9B1C1C] text-[#FFF6E5] border-[#C9A24D]' };
-            case 'vintage': return { title: "font-['Cinzel',serif]", body: "font-['Merriweather',serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#F5EED8]', text: 'text-[#5C4A1E]', accent: 'text-[#A0845C]', accentBg: 'bg-[#7B5C2A] text-[#FDF6E3] border-[#A0845C]' };
-            case 'floral': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-pink-50/50', text: 'text-gray-700', accent: 'text-pink-500', accentBg: 'bg-pink-500 text-white border-pink-200' };
-            case 'romantic': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-rose-50/50', text: 'text-rose-900', accent: 'text-rose-500', accentBg: 'bg-rose-500 text-white border-rose-200' };
-            case 'garden': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-emerald-50/30', text: 'text-emerald-950', accent: 'text-emerald-600', accentBg: 'bg-emerald-600 text-white border-emerald-200' };
-            case 'minimalist': return { title: "font-['Montserrat',sans-serif]", body: "font-['Montserrat',sans-serif]", script: "font-['Montserrat',sans-serif]", bg: 'bg-white', text: 'text-gray-900', accent: 'text-gray-900', accentBg: 'bg-gray-900 text-white border-gray-900' };
+            case 'luxury': return { title: "font-['Cinzel',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-stone-900', text: 'text-stone-200', accent: 'text-yellow-400', accentBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', accentColor: '#facc15', cardBg: 'bg-stone-800/60', cardBorder: 'border-stone-700/50', sectionAlt: 'bg-stone-800/30' };
+            case 'traditional': return { title: "font-['Playfair_Display',serif]", body: "font-['Merriweather',serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#FFF6E5]', text: 'text-[#9B1C1C]', accent: 'text-[#9B1C1C]', accentBg: 'bg-[#9B1C1C] text-[#FFF6E5] border-[#C9A24D]', accentColor: '#9B1C1C', cardBg: 'bg-white/60', cardBorder: 'border-[#C9A24D]/20', sectionAlt: 'bg-[#F5ECD5]/50' };
+            case 'vintage': return { title: "font-['Cinzel',serif]", body: "font-['Merriweather',serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#F5EED8]', text: 'text-[#5C4A1E]', accent: 'text-[#7B5C2A]', accentBg: 'bg-[#7B5C2A] text-[#FDF6E3] border-[#A0845C]', accentColor: '#7B5C2A', cardBg: 'bg-white/50', cardBorder: 'border-[#A0845C]/20', sectionAlt: 'bg-[#EDE4CC]/40' };
+            case 'floral': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-pink-50/50', text: 'text-gray-700', accent: 'text-pink-600', accentBg: 'bg-pink-500 text-white border-pink-200', accentColor: '#db2777', cardBg: 'bg-white/70', cardBorder: 'border-pink-200/40', sectionAlt: 'bg-pink-50/60' };
+            case 'romantic': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-rose-50/50', text: 'text-rose-900', accent: 'text-rose-600', accentBg: 'bg-rose-500 text-white border-rose-200', accentColor: '#e11d48', cardBg: 'bg-white/70', cardBorder: 'border-rose-200/40', sectionAlt: 'bg-rose-50/60' };
+            case 'garden': return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-emerald-50/30', text: 'text-emerald-950', accent: 'text-emerald-700', accentBg: 'bg-emerald-600 text-white border-emerald-200', accentColor: '#047857', cardBg: 'bg-white/60', cardBorder: 'border-emerald-200/30', sectionAlt: 'bg-emerald-50/40' };
+            case 'minimalist': return { title: "font-['Montserrat',sans-serif]", body: "font-['Montserrat',sans-serif]", script: "font-['Montserrat',sans-serif]", bg: 'bg-white', text: 'text-gray-900', accent: 'text-gray-900', accentBg: 'bg-gray-900 text-white border-gray-900', accentColor: '#111827', cardBg: 'bg-gray-50/80', cardBorder: 'border-gray-200/50', sectionAlt: 'bg-gray-50/60' };
             default: // modern
-                return { title: "font-['Montserrat',sans-serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-white', text: 'text-slate-800', accent: 'text-rose-500', accentBg: 'bg-rose-500 text-white border-rose-200' };
+                return { title: "font-['Playfair_Display',serif]", body: "font-['Inter',sans-serif]", script: "font-['Great_Vibes',cursive]", bg: 'bg-[#fdf8f6]', text: 'text-[#2A2626]', accent: 'text-[#7c1d00]', accentBg: 'bg-[#a12f0c] text-white border-[#a12f0c]', accentColor: '#7c1d00', cardBg: 'bg-white/70', cardBorder: 'border-[#e0bfb7]/30', sectionAlt: 'bg-[#f7f3f1]' };
         }
     };
     const s = getStyles();
@@ -227,154 +172,219 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
         <div className={`w-full overflow-x-hidden relative ${s.bg} ${s.text} ${s.body}`}>
             {/* Fonts Import */}
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap');
-                .text-shadow-sm { text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-                .text-shadow-lg { text-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-                .glass-card { background: ${isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.6)'}; backdrop-filter: blur(8px); }
+                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Be+Vietnam+Pro:wght@400;500&display=swap');
+                .text-shadow-elegant { text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+                .text-shadow-hero { text-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+                .glass-card-v2 {
+                    background: ${isDark ? 'rgba(28,25,23,0.7)' : 'rgba(253,248,246,0.85)'};
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                }
+                .inner-glow { box-shadow: inset 0 0 30px ${isDark ? 'rgba(250,204,21,0.03)' : 'rgba(255,255,255,0.5)'}; }
+                .floral-shadow { box-shadow: 0 4px 30px rgba(0,0,0,0.06); }
+                .countdown-circle {
+                    background: ${isDark ? 'rgba(28,25,23,0.8)' : 'rgba(255,255,255,0.9)'};
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.08), inset 0 0 20px ${isDark ? 'rgba(250,204,21,0.05)' : 'rgba(0,0,0,0.02)'};
+                }
+                .event-connector {
+                    background: linear-gradient(to bottom, transparent, ${s.accentColor}40, transparent);
+                }
+                @keyframes gentle-float {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-6px); }
+                }
+                .animate-gentle-float { animation: gentle-float 3s ease-in-out infinite; }
             `}</style>
 
             {/* Global Petal/Floating Effects */}
             {petalEffect && petalEffect !== 'none' && <FloatingEffect type={petalEffect} />}
 
-            {/* 1. HERO SECTION */}
-            <section className="relative w-full h-[100dvh] flex flex-col items-center justify-center overflow-hidden">
-                <TemplateDecor templateId={templateId} position="corners" />
+            {/* ============================== */}
+            {/* 1. HERO SECTION                */}
+            {/* ============================== */}
+            <section className="relative w-full h-[100dvh] flex items-end justify-center overflow-hidden">
+                {/* Background */}
                 {couplePhoto ? (
                     <div className="absolute inset-0 z-0">
                         <img src={couplePhoto} alt="Couple" className="w-full h-full object-cover object-center" />
-                        <div className={`absolute inset-0 bg-gradient-to-t ${isDark ? 'from-stone-900 via-stone-900/60 to-black/30' : 'from-white via-white/40 to-transparent'}`}></div>
+                        <div className={`absolute inset-0 ${isDark
+                            ? 'bg-gradient-to-t from-stone-900 via-stone-900/50 to-black/20'
+                            : 'bg-gradient-to-t from-black/70 via-black/20 to-transparent'
+                            }`}></div>
                     </div>
                 ) : (
-                    <div className="absolute inset-0 z-0 flex items-center justify-center opacity-5">
-                        <Heart className="w-64 h-64" />
+                    <div className="absolute inset-0 z-0">
+                        <div className={`w-full h-full ${isDark ? 'bg-stone-900' : 'bg-gradient-to-b from-[#f7f3f1] via-[#fdf8f6] to-[#f7f3f1]'}`}></div>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03]">
+                            <Heart className="w-80 h-80" />
+                        </div>
                     </div>
                 )}
 
-                <div className="relative z-10 w-full px-6 flex flex-col items-center text-center mt-12">
+                {/* Hero Content — positioned at bottom like reference */}
+                <div className="relative z-10 w-full px-6 pb-16 flex flex-col items-center text-center">
                     <div className="reveal">
-                        <p className={`text-[10px] uppercase tracking-[0.4em] mb-4 opacity-80 font-bold ${couplePhoto && !isDark ? 'text-gray-800' : ''}`}>Trân Trọng Kính Mời</p>
-                        <StickerDecor emoji={headerSticker} size="text-4xl" className="mb-2" />
+                        <StickerDecor emoji={headerSticker} size="text-3xl" className="mb-3" />
+                        <p className={`text-[10px] sm:text-[11px] uppercase tracking-[0.4em] mb-4 font-semibold ${couplePhoto ? 'text-white/80' : `opacity-60`}`}>
+                            Trân Trọng Kính Mời
+                        </p>
                     </div>
 
                     <div className="reveal delay-200">
-                        <h1 className={`${s.script} text-5xl sm:text-6xl lg:text-7xl leading-tight ${s.accent} mb-1 drop-shadow-md px-2 break-words`}>{groomName || 'Chú Rể'}</h1>
-                        <span className={`${s.title} text-xl opacity-60 my-2 block ${couplePhoto && !isDark ? 'text-gray-800' : ''}`}>&amp;</span>
-                        <h1 className={`${s.script} text-5xl sm:text-6xl lg:text-7xl leading-tight ${s.accent} mt-1 drop-shadow-md px-2 break-words`}>{brideName || 'Cô Dâu'}</h1>
+                        {/* Names — controlled size, never overflow */}
+                        <h1 className={`${s.script} leading-[1.15] mb-1 ${couplePhoto ? 'text-white text-shadow-hero' : s.accent}`}
+                            style={{ fontSize: 'clamp(2rem, 10vw, 3.5rem)' }}>
+                            {groomName || 'Chú Rể'}
+                        </h1>
+                        <span className={`${s.title} text-lg block my-2 ${couplePhoto ? 'text-[#EFCB84] text-shadow-elegant' : 'opacity-50'}`}>&amp;</span>
+                        <h1 className={`${s.script} leading-[1.15] ${couplePhoto ? 'text-white text-shadow-hero' : s.accent}`}
+                            style={{ fontSize: 'clamp(2rem, 10vw, 3.5rem)' }}>
+                            {brideName || 'Cô Dâu'}
+                        </h1>
                     </div>
 
                     <div className="reveal delay-400 mt-6 w-full max-w-xs">
-                        {dividerSticker ? <StickerDecor emoji={dividerSticker} size="text-2xl" className="my-2" /> : <TemplateDecor templateId={templateId} position="divider" />}
-                        <div className={`${s.title} mt-4 tracking-widest uppercase font-bold flex flex-col items-center gap-2 ${couplePhoto && !isDark ? 'text-gray-800' : ''}`}>
-                            <span className="text-base">{isValidDate ? `${day} . ${String(month).padStart(2,'0')} . ${year}` : '-- . -- . ----'}</span>
-                            <span className="text-[10px] opacity-70 tracking-[0.3em] font-normal">{dayName} {time && `· ${time}`}</span>
-                            {lunarDate && <span className="text-[10px] opacity-60 mt-1 capitalize font-normal italic">({lunarDate})</span>}
+                        <div className={`flex items-center justify-center gap-3 text-[11px] sm:text-xs tracking-[0.2em] uppercase font-medium ${couplePhoto ? 'text-white/90' : 'opacity-70'}`}>
+                            <span>{isValidDate ? `${String(day).padStart(2,'0')}.${String(month).padStart(2,'0')}.${year}` : '-- . -- . ----'}</span>
+                            {(location || address) && <>
+                                <span className={`w-1 h-1 rounded-full ${couplePhoto ? 'bg-[#EFCB84]' : 'bg-current opacity-40'}`}></span>
+                                <span className="truncate max-w-[140px]">{location || address}</span>
+                            </>}
                         </div>
+                        {lunarDate && <p className={`text-[10px] mt-2 italic ${couplePhoto ? 'text-white/60' : 'opacity-50'}`}>({lunarDate})</p>}
                     </div>
 
-                    <div className="reveal delay-500 absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
-                        <span className="text-[9px] uppercase tracking-widest opacity-50 mb-1">Kéo xuống</span>
-                        <svg className="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                        </svg>
+                    {/* Scroll indicator */}
+                    <div className="reveal delay-500 mt-10 flex flex-col items-center animate-bounce">
+                        <ChevronDown className={`w-6 h-6 ${couplePhoto ? 'text-white/50' : 'opacity-30'}`} />
                     </div>
                 </div>
             </section>
 
+            {/* ============================== */}
             {/* 2. INVITATION MESSAGE & FAMILY */}
-            <section className="py-16 px-6 text-center relative z-10 glass-card mx-4 rounded-3xl shadow-xl -mt-6">
-                <div className="reveal-zoom max-w-lg mx-auto">
-                    <Quote className={`w-8 h-8 mx-auto mb-4 opacity-20 ${s.accent}`} />
-                    <h2 className={`${s.title} text-sm font-bold mb-6 uppercase tracking-[0.2em] opacity-80`}>Lời Mời Trân Trọng</h2>
-                    <p className={`${s.body} text-sm leading-relaxed opacity-90 italic mb-8 px-4`}>
+            {/* ============================== */}
+            <section className={`py-14 sm:py-20 px-6 text-center relative z-10 ${s.sectionAlt} inner-glow`}>
+                <div className="reveal-zoom max-w-md mx-auto">
+                    <OrnamentalDivider templateId={templateId} className="mb-6" />
+
+                    <p className={`${s.title} text-[10px] sm:text-xs uppercase tracking-[0.3em] opacity-60 mb-6 font-semibold`}>Lời Mời Trân Trọng</p>
+
+                    <p className={`${s.body} text-sm sm:text-base leading-relaxed opacity-85 italic px-4 mb-10`}>
                         "{wishes || 'Sự hiện diện của quý vị là niềm vinh hạnh lớn nhất cho gia đình chúng tôi.'}"
                     </p>
 
-                    <div className="grid grid-cols-2 gap-4 text-xs mt-8 border-t border-current pt-8 opacity-90" style={{ borderColor: 'var(--tw-border-opacity, 0.2)' }}>
-                        <div className="border-r border-current" style={{ borderColor: 'inherit' }}>
-                            <strong className={`${s.title} text-[10px] uppercase tracking-wider block mb-3 ${s.accent}`}>Nhà Trai</strong>
-                            <p className="mb-1 leading-relaxed">Ông: {groomParents?.father || '...'}</p>
-                            <p className="leading-relaxed">Bà: {groomParents?.mother || '...'}</p>
+                    {/* Family Info — Card style */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+                        <div className={`glass-card-v2 rounded-2xl p-5 border ${s.cardBorder} floral-shadow`}>
+                            <p className={`${s.title} text-[10px] uppercase tracking-[0.2em] ${s.accent} font-bold mb-3`}>Nhà Trai</p>
+                            <p className="text-sm opacity-80 leading-relaxed">Ông: {groomParents?.father || '...'}</p>
+                            <p className="text-sm opacity-80 leading-relaxed">Bà: {groomParents?.mother || '...'}</p>
                         </div>
-                        <div>
-                            <strong className={`${s.title} text-[10px] uppercase tracking-wider block mb-3 ${s.accent}`}>Nhà Gái</strong>
-                            <p className="mb-1 leading-relaxed">Ông: {brideParents?.father || '...'}</p>
-                            <p className="leading-relaxed">Bà: {brideParents?.mother || '...'}</p>
+                        <div className={`glass-card-v2 rounded-2xl p-5 border ${s.cardBorder} floral-shadow`}>
+                            <p className={`${s.title} text-[10px] uppercase tracking-[0.2em] ${s.accent} font-bold mb-3`}>Nhà Gái</p>
+                            <p className="text-sm opacity-80 leading-relaxed">Ông: {brideParents?.father || '...'}</p>
+                            <p className="text-sm opacity-80 leading-relaxed">Bà: {brideParents?.mother || '...'}</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* 3. COUNTDOWN */}
+            {/* ============================== */}
+            {/* 3. COUNTDOWN                   */}
+            {/* ============================== */}
             {countdownEnabled && date && !timeLeft.passed && (
-                <section className="py-16 px-6 text-center reveal">
-                    <h3 className={`${s.title} text-xs uppercase tracking-[0.3em] mb-8 opacity-70`}>Đếm Ngược Ngày Vui</h3>
-                    <div className="flex justify-center gap-3 sm:gap-6">
+                <section className="py-14 sm:py-20 px-6 text-center reveal">
+                    <SectionHeader subtitle="Đếm Ngược" title="Ngày Trọng Đại" s={s} />
+                    <div className="flex justify-center gap-3 sm:gap-5">
                         {[
                             { label: 'Ngày', value: timeLeft.days },
                             { label: 'Giờ', value: timeLeft.hours },
                             { label: 'Phút', value: timeLeft.minutes },
                             { label: 'Giây', value: timeLeft.seconds },
-                        ].map((item, i) => (
+                        ].map((item) => (
                             <div key={item.label} className="flex flex-col items-center">
-                                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center border shadow-lg glass-card ${isDark ? 'border-stone-700' : 'border-white'}`}>
-                                    <span className={`${s.title} text-2xl sm:text-3xl font-bold ${s.accent} animate-countdown tabular-nums`}>
+                                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full countdown-circle flex items-center justify-center border ${s.cardBorder} transition-all`}>
+                                    <span className={`${s.title} text-xl sm:text-2xl font-bold ${s.accent} tabular-nums`}>
                                         {String(item.value).padStart(2, '0')}
                                     </span>
                                 </div>
-                                <span className="text-[9px] uppercase tracking-wider mt-3 opacity-60 font-bold">{item.label}</span>
+                                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider mt-3 opacity-50 font-semibold">{item.label}</span>
                             </div>
                         ))}
                     </div>
                 </section>
             )}
 
-            {/* 4. EVENTS TIMELINE */}
+            {/* ============================== */}
+            {/* 4. EVENTS TIMELINE             */}
+            {/* ============================== */}
             {events && events.length > 0 && (
-                <section className="py-16 px-6">
-                    <div className="reveal text-center mb-10">
-                        <h3 className={`${s.title} text-xs uppercase tracking-[0.3em] opacity-70 mb-2`}>Chương Trình</h3>
-                        <h2 className={`${s.script} text-4xl ${s.accent}`}>Sự Kiện</h2>
+                <section className={`py-14 sm:py-20 px-6 ${s.sectionAlt}`}>
+                    <div className="reveal">
+                        <SectionHeader subtitle="Chương Trình" title="Sự Kiện" s={s} />
                     </div>
 
-                    <div className="max-w-md mx-auto space-y-6">
+                    <div className="max-w-md mx-auto space-y-0">
                         {events.map((evt, idx) => (
-                            <div key={evt.id} className={`reveal-left delay-${(idx % 3 + 1) * 100} glass-card p-5 rounded-2xl border shadow-sm ${isDark ? 'border-stone-700' : 'border-white'}`}>
-                                <div className="flex items-start gap-4">
-                                    <div className={`w-12 h-12 rounded-full flex-shrink-0 flex flex-col items-center justify-center border-2 shadow-inner ${s.accentBg}`}>
-                                        <span className="text-xs font-bold">{evt.time.split(':')[0]}</span>
-                                        <span className="text-[8px] opacity-80 -mt-1">{evt.time.split(':')[1]}</span>
+                            <React.Fragment key={evt.id}>
+                                <div className="reveal-left flex flex-col items-center text-center relative py-2">
+                                    {/* Event Icon Circle */}
+                                    <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-4 border-2 floral-shadow ${s.accentBg}`}>
+                                        {idx === 0
+                                            ? <Heart className="w-5 h-5 fill-current" />
+                                            : <Gift className="w-5 h-5" />
+                                        }
                                     </div>
-                                    <div className="flex-1">
-                                        <h4 className={`${s.title} font-bold text-sm uppercase tracking-wider mb-1 ${s.accent}`}>{evt.title}</h4>
-                                        <p className="text-[11px] font-bold opacity-80 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(evt.date).toLocaleDateString('vi-VN')}</p>
-                                        <p className="text-[11px] opacity-80 mb-2 flex items-start gap-1"><MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" /> <span className="leading-tight">{evt.location}</span></p>
-                                        {evt.description && <p className="text-[11px] opacity-70 italic leading-relaxed bg-black/5 p-2 rounded">{evt.description}</p>}
-                                        
-                                        <div className="mt-3 text-[10px]">
-                                            <a href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(evt.title)}&dates=${evt.date.replace(/-/g,'')}T${evt.time.replace(':','')}00Z/${evt.date.replace(/-/g,'')}T${String(parseInt(evt.time)+2).padStart(2,'0')}${evt.time.split(':')[1]}00Z&location=${encodeURIComponent(evt.location)}`} 
-                                               target="_blank" rel="noopener noreferrer"
-                                               className="inline-flex items-center gap-1 text-blue-500 hover:underline font-bold">
-                                                <Calendar className="w-3 h-3" /> Thêm vào Lịch Google
+
+                                    {/* Event Details */}
+                                    <h4 className={`${s.title} text-lg sm:text-xl font-semibold mb-2`}>{evt.title}</h4>
+                                    <p className={`text-[11px] sm:text-xs ${s.accent} tracking-[0.15em] uppercase font-semibold mb-3`}>
+                                        {evt.time} — {evt.date.split('-').reverse().join(' | ')}
+                                    </p>
+                                    <p className="text-sm opacity-75 mb-1 px-4 leading-relaxed">{evt.location}</p>
+                                    {evt.description && <p className="text-xs opacity-60 italic mt-1 px-6">{evt.description}</p>}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-3 mt-4">
+                                        {mapLink && (
+                                            <a href={mapLink} target="_blank" rel="noopener noreferrer"
+                                                className={`inline-flex items-center gap-1.5 px-5 py-2.5 text-[10px] sm:text-[11px] uppercase tracking-[0.15em] font-bold border transition-all active:scale-95 ${s.accentBg} rounded-sm`}>
+                                                <MapPin className="w-3.5 h-3.5" /> Chỉ Đường
                                             </a>
-                                        </div>
+                                        )}
+                                        <a href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(evt.title)}&dates=${evt.date.replace(/-/g, '')}T${evt.time.replace(':', '')}00Z/${evt.date.replace(/-/g, '')}T${String(parseInt(evt.time) + 2).padStart(2, '0')}${evt.time.split(':')[1]}00Z&location=${encodeURIComponent(evt.location)}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                            className={`inline-flex items-center gap-1.5 px-5 py-2.5 text-[10px] sm:text-[11px] uppercase tracking-[0.15em] font-bold border rounded-sm transition-all active:scale-95 ${isDark ? 'border-stone-600 text-stone-300 hover:bg-stone-700' : 'border-current/20 hover:bg-black/5'}`}>
+                                            <Calendar className="w-3.5 h-3.5" /> Lưu Lịch
+                                        </a>
                                     </div>
                                 </div>
-                            </div>
+
+                                {/* Connector Line between events */}
+                                {idx < events.length - 1 && (
+                                    <div className="flex justify-center py-3">
+                                        <div className="w-px h-12 event-connector"></div>
+                                    </div>
+                                )}
+                            </React.Fragment>
                         ))}
                     </div>
                 </section>
             )}
 
-            {/* 5. LOCATION & MAP (If single location provided outside events) */}
+            {/* ============================== */}
+            {/* 5. LOCATION (Fallback)         */}
+            {/* ============================== */}
             {(location || address) && (!events || events.length === 0) && (
-                <section className="py-16 px-6 text-center reveal-zoom">
-                    <h3 className={`${s.title} text-xs uppercase tracking-[0.3em] mb-4 opacity-70`}>Địa Điểm Tổ Chức</h3>
-                    <div className={`glass-card p-6 rounded-2xl border shadow-lg max-w-sm mx-auto ${isDark ? 'border-stone-700' : 'border-white'}`}>
+                <section className="py-14 sm:py-20 px-6 text-center reveal-zoom">
+                    <SectionHeader subtitle="Địa Điểm" title="Tổ Chức" s={s} />
+                    <div className={`glass-card-v2 p-6 sm:p-8 rounded-2xl border floral-shadow max-w-sm mx-auto ${s.cardBorder}`}>
                         <p className={`${s.title} font-bold text-lg mb-2 ${s.accent}`}>{location}</p>
-                        <p className="text-sm opacity-80 mb-6 px-4">{address}</p>
+                        <p className="text-sm opacity-75 mb-6 px-4">{address}</p>
                         {mapLink && (
-                            <a href={mapLink} target="_blank" rel="noopener noreferrer" 
-                               className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-xs tracking-wider uppercase transition-transform active:scale-95 shadow-md ${s.accentBg}`}>
+                            <a href={mapLink} target="_blank" rel="noopener noreferrer"
+                                className={`inline-flex items-center justify-center gap-2 px-6 py-3 font-bold text-[11px] tracking-[0.15em] uppercase transition-all active:scale-95 shadow-md ${s.accentBg} rounded-sm`}>
                                 <MapPin className="w-4 h-4" /> Xem Bản Đồ
                             </a>
                         )}
@@ -382,46 +392,73 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 </section>
             )}
 
-            {/* 6. PHOTO GALLERY */}
+            {/* ============================== */}
+            {/* 6. PHOTO GALLERY (Bento Grid)  */}
+            {/* ============================== */}
             {galleryImages && galleryImages.length > 0 && (
-                <section className="py-16 px-2 sm:px-6">
-                    <div className="reveal text-center mb-8">
-                        <h3 className={`${s.title} text-xs uppercase tracking-[0.3em] opacity-70 mb-2`}>Album Ảnh</h3>
-                        <h2 className={`${s.script} text-4xl ${s.accent}`}>Khoảnh Khắc</h2>
+                <section className="py-14 sm:py-20 px-2 sm:px-6">
+                    <div className="reveal">
+                        <SectionHeader subtitle="Album Ảnh" title="Khoảnh Khắc" s={s} />
                     </div>
-                    
-                    {/* Masonry-like Grid */}
-                    <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-2xl mx-auto">
+
+                    {/* Bento Grid like reference */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 max-w-2xl mx-auto">
                         {galleryImages.map((img, i) => (
-                            <div key={i} className={`reveal-zoom delay-${(i % 4) * 100} rounded-xl overflow-hidden shadow-sm relative group ${i % 3 === 0 ? 'col-span-2 aspect-[16/9]' : 'aspect-[4/5]'}`}>
-                                <img src={img} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Gallery" loading="lazy" />
+                            <div
+                                key={i}
+                                className={`reveal-zoom overflow-hidden relative group cursor-pointer floral-shadow ${i === 0 ? 'col-span-2 aspect-[16/9]' : 'aspect-[3/4]'} rounded-lg sm:rounded-xl`}
+                                onClick={() => setLightboxImg(img)}
+                            >
+                                <img src={img} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={`Ảnh ${i + 1}`} loading="lazy" />
+                                {/* Subtle hover overlay */}
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
+                                    <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-70 transition-opacity duration-300" />
+                                </div>
                             </div>
                         ))}
                     </div>
                 </section>
             )}
 
-            {/* 7. LOVE STORY */}
+            {/* Lightbox */}
+            {lightboxImg && (
+                <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 animate-fadeIn" onClick={() => setLightboxImg(null)}>
+                    <img src={lightboxImg} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" alt="Lightbox" />
+                    <button className="absolute top-6 right-6 text-white/70 hover:text-white text-3xl font-light transition-colors" onClick={() => setLightboxImg(null)}>✕</button>
+                </div>
+            )}
+
+            {/* ============================== */}
+            {/* 7. LOVE STORY (Timeline)       */}
+            {/* ============================== */}
             {loveStory && loveStory.length > 0 && (
-                <section className="py-16 px-6">
-                    <div className="reveal text-center mb-10">
-                        <h3 className={`${s.title} text-xs uppercase tracking-[0.3em] opacity-70 mb-2`}>Câu Chuyện Tình Yêu</h3>
-                        <h2 className={`${s.script} text-4xl ${s.accent}`}>Our Story</h2>
+                <section className={`py-14 sm:py-20 px-6 ${s.sectionAlt} inner-glow`}>
+                    <div className="reveal">
+                        <SectionHeader subtitle="Câu Chuyện Tình Yêu" title="Our Story" s={s} />
                     </div>
 
                     <div className="relative max-w-sm mx-auto">
-                        <div className="absolute left-[15px] top-4 bottom-4 w-px bg-current opacity-20"></div>
+                        {/* Center timeline line */}
+                        <div className="absolute left-[15px] top-4 bottom-4 w-px bg-current opacity-10"></div>
+
                         {loveStory.map((evt, idx) => (
-                            <div key={evt.id} className={`reveal-right delay-${(idx % 3) * 100} relative pl-10 mb-8`}>
-                                <div className={`absolute left-0 top-1 w-8 h-8 rounded-full border-4 flex items-center justify-center ${s.bg} border-current`} style={{ borderColor: 'inherit' }}>
+                            <div key={evt.id} className={`reveal-right relative pl-10 mb-8 last:mb-0`}>
+                                {/* Timeline dot */}
+                                <div className={`absolute left-0 top-2 w-8 h-8 rounded-full flex items-center justify-center ${s.bg} border-2 ${isDark ? 'border-yellow-500/40' : 'border-current/20'}`}>
                                     <Heart className={`w-3 h-3 fill-current ${s.accent}`} />
                                 </div>
-                                <div className={`glass-card p-4 rounded-2xl border shadow-sm ${isDark ? 'border-stone-700' : 'border-white'}`}>
-                                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 bg-current/10 px-2 py-0.5 rounded">{evt.date}</span>
-                                    <h4 className={`${s.title} font-bold text-sm mt-2 mb-1 ${s.accent}`}>{evt.title}</h4>
-                                    <p className="text-xs opacity-80 leading-relaxed">{evt.description}</p>
+
+                                {/* Content card */}
+                                <div className={`glass-card-v2 p-4 sm:p-5 rounded-2xl border ${s.cardBorder} floral-shadow`}>
+                                    <span className={`inline-block text-[10px] font-bold uppercase tracking-wider opacity-50 px-2 py-0.5 rounded mb-2 ${isDark ? 'bg-stone-700' : 'bg-black/5'}`}>
+                                        {evt.date}
+                                    </span>
+                                    <h4 className={`${s.title} font-bold text-sm sm:text-base mt-1 mb-1.5 ${s.accent}`}>{evt.title}</h4>
+                                    <p className="text-xs sm:text-sm opacity-75 leading-relaxed">{evt.description}</p>
                                     {evt.photo && (
-                                        <img src={evt.photo} alt={evt.title} className="w-full h-32 object-cover rounded-xl mt-3 shadow-sm" loading="lazy" />
+                                        <div className="mt-3 rounded-xl overflow-hidden floral-shadow cursor-pointer" onClick={() => setLightboxImg(evt.photo!)}>
+                                            <img src={evt.photo} alt={evt.title} className="w-full h-32 sm:h-40 object-cover hover:scale-105 transition-transform duration-500" loading="lazy" />
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -430,60 +467,66 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 </section>
             )}
 
-            {/* 8. BANKING / GIFT */}
+            {/* ============================== */}
+            {/* 8. BANKING / GIFT              */}
+            {/* ============================== */}
             {vietQrUrl && (
-                <section className="py-16 px-6 text-center reveal-zoom">
-                    <h3 className={`${s.title} text-xs uppercase tracking-[0.3em] mb-2 opacity-70`}>Hộp Mừng Cưới</h3>
-                    <h2 className={`${s.script} text-4xl mb-8 ${s.accent}`}>Gửi Lời Chúc Mừng</h2>
-                    
-                    <div className={`glass-card p-6 rounded-3xl border shadow-lg max-w-xs mx-auto ${isDark ? 'border-stone-700' : 'border-white'}`}>
-                        <div className="bg-white p-3 rounded-2xl shadow-inner mb-4 inline-block">
-                            <img src={vietQrUrl} alt="QR Code" className="w-40 h-40 object-contain" />
+                <section className="py-14 sm:py-20 px-6 text-center reveal-zoom">
+                    <SectionHeader subtitle="Hộp Mừng Cưới" title="Gửi Lời Chúc Mừng" s={s} />
+
+                    <div className={`glass-card-v2 p-6 sm:p-8 rounded-2xl border floral-shadow max-w-xs mx-auto ${s.cardBorder}`}>
+                        <div className="bg-white p-3 rounded-xl shadow-inner mb-5 inline-block">
+                            <img src={vietQrUrl} alt="QR Code" className="w-36 h-36 sm:w-44 sm:h-44 object-contain" />
                         </div>
-                        <div className="text-center">
-                            <p className="text-xs uppercase tracking-widest opacity-60 mb-1">{bankInfo?.bankId}</p>
-                            <p className={`font-mono text-lg font-bold tracking-wider mb-1 ${s.accent}`}>{bankInfo?.accountNumber}</p>
-                            <p className="font-bold text-sm uppercase">{bankInfo?.accountName}</p>
+                        <div className="text-center space-y-1.5">
+                            <p className="text-[10px] uppercase tracking-[0.2em] opacity-50 font-semibold">{bankInfo?.bankId}</p>
+                            <p className={`font-mono text-lg sm:text-xl font-bold tracking-wider ${s.accent}`}>{bankInfo?.accountNumber}</p>
+                            <p className="font-bold text-sm uppercase tracking-wide">{bankInfo?.accountName}</p>
                         </div>
                     </div>
                 </section>
             )}
 
-            {/* 9. RSVP & GUESTBOOK */}
-            <section className="py-16 px-6 text-center bg-black/5">
+            {/* ============================== */}
+            {/* 9. RSVP & GUESTBOOK            */}
+            {/* ============================== */}
+            <section className={`py-14 sm:py-20 px-6 text-center ${s.sectionAlt}`}>
                 <div className="reveal">
-                    {dividerSticker ? <StickerDecor emoji={dividerSticker} size="text-2xl" className="mb-4" /> : <TemplateDecor templateId={templateId} position="divider" />}
-                    <h2 className={`${s.script} text-4xl mb-6 mt-4 ${s.accent}`}>Tham Dự & Lưu Bút</h2>
+                    <OrnamentalDivider templateId={templateId} className="mb-4" />
+                    <SectionHeader subtitle="Xác Nhận" title="Tham Dự & Lưu Bút" s={s} className="mb-8" />
                 </div>
 
                 <div className="max-w-sm mx-auto space-y-4">
                     {rsvpEnabled && (
-                        <div className="reveal-left delay-100">
-                            <button onClick={onRSVP} className={`w-full py-4 rounded-2xl font-bold text-sm tracking-wider uppercase shadow-xl transition-transform active:scale-95 flex items-center justify-center gap-2 ${s.accentBg}`}>
-                                Xác Nhận Tham Dự
+                        <div className="reveal-left">
+                            <button onClick={onRSVP}
+                                className={`w-full py-4 font-bold text-[11px] sm:text-xs tracking-[0.2em] uppercase shadow-lg transition-all active:scale-[0.97] flex items-center justify-center gap-2 rounded-sm ${s.accentBg}`}>
+                                <Send className="w-4 h-4" /> Xác Nhận Tham Dự
                             </button>
-                            {rsvpDeadline && <p className="text-[10px] opacity-60 mt-2">Vui lòng phản hồi trước: {new Date(rsvpDeadline).toLocaleDateString('vi-VN')}</p>}
+                            {rsvpDeadline && <p className="text-[10px] opacity-50 mt-2">Vui lòng phản hồi trước: {new Date(rsvpDeadline).toLocaleDateString('vi-VN')}</p>}
                         </div>
                     )}
-                    
+
                     {guestbookEnabled && (
-                        <div className="reveal-right delay-200 mt-6">
-                            <button onClick={onGuestbook} className="w-full py-4 rounded-2xl font-bold text-sm tracking-wider uppercase border-2 shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2 hover:bg-black/5" style={{ borderColor: 'currentColor' }}>
-                                Gửi Lời Chúc
+                        <div className="reveal-right mt-4">
+                            <button onClick={onGuestbook}
+                                className={`w-full py-4 font-bold text-[11px] sm:text-xs tracking-[0.2em] uppercase border-2 shadow-sm transition-all active:scale-[0.97] flex items-center justify-center gap-2 rounded-sm ${isDark ? 'border-stone-600 text-stone-300 hover:bg-stone-800' : 'border-current/20 hover:bg-black/5'}`}>
+                                <MessageCircle className="w-4 h-4" /> Gửi Lời Chúc
                             </button>
                         </div>
                     )}
                 </div>
 
+                {/* Guest Wishes Display */}
                 {guestbookEnabled && guestWishes && guestWishes.length > 0 && (
                     <div className="mt-12 max-w-md mx-auto text-left space-y-3">
-                        <h4 className={`${s.title} text-xs uppercase tracking-widest text-center mb-6 opacity-60`}>Lời chúc từ mọi người</h4>
-                        <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        <h4 className={`${s.title} text-[10px] sm:text-xs uppercase tracking-[0.2em] text-center mb-6 opacity-50 font-semibold`}>Lời chúc từ mọi người</h4>
+                        <div className="max-h-[320px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
                             {guestWishes.map(w => (
-                                <div key={w.id} className={`glass-card p-4 rounded-xl border shadow-sm mb-3 reveal ${isDark ? 'border-stone-700' : 'border-white'}`}>
+                                <div key={w.id} className={`glass-card-v2 p-4 rounded-xl border ${s.cardBorder} floral-shadow reveal`}>
                                     <p className="font-bold text-sm mb-1">{w.name}</p>
-                                    <p className="text-xs opacity-80 leading-relaxed italic">"{w.message}"</p>
-                                    <p className="text-[9px] opacity-40 mt-2">{new Date(w.createdAt).toLocaleDateString('vi-VN')}</p>
+                                    <p className="text-xs opacity-75 leading-relaxed italic">"{w.message}"</p>
+                                    <p className="text-[9px] opacity-35 mt-2">{new Date(w.createdAt).toLocaleDateString('vi-VN')}</p>
                                 </div>
                             ))}
                         </div>
@@ -491,11 +534,14 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 )}
             </section>
 
-            {/* FOOTER */}
-            <footer className="py-12 text-center opacity-40">
+            {/* ============================== */}
+            {/* FOOTER                         */}
+            {/* ============================== */}
+            <footer className="py-12 sm:py-16 text-center">
                 <StickerDecor emoji={footerSticker} size="text-2xl" className="mb-4" />
-                <p className={`${s.script} text-2xl mb-2`}>{groomName} &amp; {brideName}</p>
-                <p className="text-[8px] uppercase tracking-[0.4em] font-bold">WEDPLAN AI</p>
+                <OrnamentalDivider templateId={templateId} className="mb-4" />
+                <p className={`${s.script} text-2xl sm:text-3xl mb-3 ${s.accent}`}>{groomName} &amp; {brideName}</p>
+                <p className="text-[8px] uppercase tracking-[0.5em] font-semibold opacity-30">WEDPLAN AI</p>
             </footer>
 
             {/* Spacer for sticky bottom bar in PublicView */}

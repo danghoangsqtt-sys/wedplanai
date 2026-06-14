@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>H &amp; M - Wedding Invitation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&amp;family=Be+Vietnam+Pro:wght@400;500&amp;family=Source+Serif+4:wght@400&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "inverse-on-surface": "#f4f0ee",
+                "on-surface-variant": "#58413b",
+                "outline-variant": "#e0bfb7",
+                "on-error-container": "#93000a",
+                "surface-container-lowest": "#ffffff",
+                "surface-container": "#f1edeb",
+                "primary-fixed-dim": "#ffb5a1",
+                "rose-gold": "#EFCB84",
+                "on-primary-fixed": "#3b0900",
+                "surface-variant": "#e5e2e0",
+                "on-primary-container": "#ffbfae",
+                "inverse-primary": "#ffb5a1",
+                "tertiary-container": "#66544a",
+                "on-tertiary": "#ffffff",
+                "secondary": "#6e5c41",
+                "on-tertiary-container": "#e2c9bd",
+                "inverse-surface": "#31302f",
+                "tertiary": "#4d3d34",
+                "secondary-fixed": "#f8dfbc",
+                "on-secondary": "#ffffff",
+                "ink-charcoal": "#2A2626",
+                "secondary-fixed-dim": "#dbc3a2",
+                "tertiary-fixed": "#f7ded1",
+                "surface-dim": "#ddd9d7",
+                "tertiary-fixed-dim": "#dac2b5",
+                "on-tertiary-fixed-variant": "#54433a",
+                "primary-container": "#a12f0c",
+                "on-tertiary-fixed": "#261911",
+                "surface-bright": "#fdf8f6",
+                "on-secondary-container": "#746146",
+                "on-primary": "#ffffff",
+                "surface-container-high": "#ebe7e5",
+                "on-primary-fixed-variant": "#882000",
+                "surface-container-low": "#f7f3f1",
+                "on-surface": "#1c1b1b",
+                "surface": "#fdf8f6",
+                "on-error": "#ffffff",
+                "primary-fixed": "#ffdbd1",
+                "error-container": "#ffdad6",
+                "on-background": "#1c1b1b",
+                "outline": "#8c716a",
+                "deep-earth": "#61564F",
+                "secondary-container": "#f8dfbc",
+                "background": "#fdf8f6",
+                "on-secondary-fixed-variant": "#55442b",
+                "surface-container-highest": "#e5e2e0",
+                "surface-tint": "#aa3613",
+                "primary": "#7c1d00",
+                "on-secondary-fixed": "#261905",
+                "error": "#ba1a1a"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "element-gap": "1rem",
+                "section-gap": "4rem",
+                "gutter": "1.5rem",
+                "container-margin": "2rem"
+        },
+        "fontFamily": {
+                "display-script": [
+                        "Playfair Display"
+                ],
+                "countdown-num": [
+                        "Playfair Display"
+                ],
+                "body-md": [
+                        "\"Source Serif 4\""
+                ],
+                "label-sm": [
+                        "Be Vietnam Pro"
+                ],
+                "headline-lg-mobile": [
+                        "Playfair Display"
+                ],
+                "headline-lg": [
+                        "Playfair Display"
+                ]
+        },
+        "fontSize": {
+                "display-script": [
+                        "48px",
+                        {
+                                "lineHeight": "1.2",
+                                "fontWeight": "400"
+                        }
+                ],
+                "countdown-num": [
+                        "36px",
+                        {
+                                "lineHeight": "1",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.1em",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "0.02em",
+                                "fontWeight": "600"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        body { background-color: #ffffff; }
+        
+        /* Hide scrollbar for gallery */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface-container-lowest text-ink-charcoal font-label-sm antialiased selection:bg-surface-variant selection:text-ink-charcoal">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-surface-variant/30 transition-all duration-300 ease-in-out">
+<div class="flex justify-between items-center px-container-margin h-16 w-full max-w-[480px] mx-auto">
+<button aria-label="Menu" class="text-ink-charcoal hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined font-light">menu</span>
+</button>
+<h1 class="font-display-script text-2xl text-ink-charcoal text-center absolute left-1/2 -translate-x-1/2">
+                H &amp; M
+            </h1>
+<button aria-label="Favorite" class="text-ink-charcoal hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined font-light">favorite_border</span>
+</button>
+</div>
+</header>
+<!-- Main Container (Mobile Constrained) -->
+<main class="w-full max-w-[480px] mx-auto bg-surface-container-lowest min-h-screen relative pb-24 shadow-sm overflow-hidden">
+<!-- Hero Section -->
+<section class="relative w-full h-[800px] flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 bg-surface-container-lowest">
+<img alt="A romantic, cinematic shot of a bride and groom embracing outdoors in a serene, sunlit landscape. The mood is intimate and elegant, styled with warm, earthy tones and soft natural lighting to fit a premium wedding invitation aesthetic." class="w-full h-full object-cover opacity-90" data-alt="A romantic, cinematic shot of a bride and groom embracing outdoors in a serene, sunlit landscape. The mood is intimate and elegant, styled with warm, earthy tones and soft natural lighting to fit a premium wedding invitation aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAARe0wuMSJeUJUH-7aVMBPvo_vwRUb2ZwpO1mU6C8haemjdFLK6dfusC0ZBwuob1Il-KvHVvpoauuIPXn7qUZJ4M-UfHOm8fQQsTwY8bzjvZrHinUzCaGZfTZzVUXERCXCLY1EMtGjX2RzvjPMNF-4S_QS67RTlpdZ0NDXjC0Qm-b6B6bFCPUHCdaHCpWU1ojoIqbWDM4jGwfjEGn0ZPVkNtKy1edLtiOpAa00bscKvL03w3Bilz5L2dXGYGFFe62KNmtje1uQyuA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent"></div>
+</div>
+<div class="relative z-10 text-center flex flex-col items-center justify-end h-full pb-20 px-container-margin">
+<p class="font-label-sm text-secondary uppercase tracking-widest mb-4">Lễ Thành Hôn</p>
+<h2 class="font-display-script text-[56px] leading-[1.1] text-ink-charcoal mb-8">
+                    Hải Nam<br/>&amp;<br/>Quỳnh Mai
+                </h2>
+<div class="flex items-center gap-4 text-ink-charcoal/80 font-label-sm tracking-widest uppercase mb-12">
+<span>25.12.2024</span>
+<span class="w-px h-3 bg-secondary/50"></span>
+<span>Hà Nội</span>
+</div>
+<!-- Scroll indicator -->
+<div class="animate-bounce text-ink-charcoal/40 mt-4">
+<span class="material-symbols-outlined text-2xl font-light">arrow_downward</span>
+</div>
+</div>
+</section>
+<!-- Our Story Section -->
+<section class="py-20 px-container-margin relative bg-white" id="our-story">
+<h3 class="font-headline-lg-mobile text-ink-charcoal text-center mb-10 tracking-wide">
+                Our Story
+            </h3>
+<div class="text-ink-charcoal/70 font-body-md leading-loose text-center space-y-6 max-w-sm mx-auto">
+<p>Hai đứa quen nhau qua một hội bạn. Lúc đầu chả có chút chú ý gì đến nhau hết vì mỗi người một phong cách khác nhau. Nam thì thể hiện ra là một chàng trai có vẻ nghịch nghịch, còn Mai thì có phần truyền thống hơn.</p>
+<p>Thế nào mà sau một buổi đi chơi chung cả nhóm, Nam lại để ý rồi bắt đầu gợi chuyện và tỏ ý muốn tìm hiểu. Và đặc biệt là mong muốn thật sự về việc xây dựng một cuộc sống gia đình ổn định lâu dài.</p>
+</div>
+<!-- Story Image Minimal -->
+<div class="mt-16 overflow-hidden relative">
+<img alt="A beautiful, soft-focus image of a couple holding hands walking down a sun-dappled path. The lighting is golden hour, creating a warm, romantic, and dreamy atmosphere. The color palette features deep greens, warm creams, and soft earthy tones." class="w-full aspect-[4/5] object-cover grayscale-[20%]" data-alt="A beautiful, soft-focus image of a couple holding hands walking down a sun-dappled path. The lighting is golden hour, creating a warm, romantic, and dreamy atmosphere. The color palette features deep greens, warm creams, and soft earthy tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbp3hiosUUIQMmlmX3pGypOlbGXvMz9ZVt04Mgh8WNGoFfQmTy-KhET_Qfl6vTNBjU-GGORqO-Rk71afyDJsofCpCtvuhZiPtxGhokCPxjpaUWYvapy2cMmeVtWzhJnBnJIt5nliCQfKo2ASZ29GACkG5ridrBNXnji3qG7yyCNVfY7bFN7fY6JMNUAqZfmGmnzQE3BJ7XrQhowrqKdFyMAyJ7695RxCYMJmtt8qRpGyNp9-CZl8WtoFDybDMSVzuhIZFh4TgWWnU"/>
+<div class="pt-6 text-center">
+<p class="font-label-sm text-secondary uppercase tracking-widest">Ngày chính thức hẹn hò</p>
+</div>
+</div>
+</section>
+<!-- Event Details (Timeline) Section -->
+<section class="py-20 px-container-margin bg-surface-bright relative border-t border-surface-variant/30" id="events">
+<h3 class="font-headline-lg-mobile text-ink-charcoal text-center mb-16 tracking-wide">
+                Sự kiện
+            </h3>
+<div class="space-y-16">
+<!-- Event 1 -->
+<div class="flex flex-col items-center text-center relative">
+<span class="material-symbols-outlined text-2xl text-secondary mb-6 font-light">favorite_border</span>
+<h4 class="font-headline-lg-mobile text-2xl text-ink-charcoal mb-4">Lễ Thành Hôn</h4>
+<p class="font-label-sm text-secondary tracking-widest mb-6">08:00 AM — 25 . 12 . 2024</p>
+<p class="font-body-md text-ink-charcoal/70 mb-8 px-4 leading-relaxed">
+                        Tổ chức tại tư gia nhà gái<br/>
+                        Số 1 Thái Thịnh, Đống Đa, Hà Nội
+                    </p>
+<button class="bg-transparent border border-ink-charcoal text-ink-charcoal font-label-sm uppercase tracking-widest py-3 px-8 hover:bg-ink-charcoal hover:text-white transition-colors duration-300">
+                        Chỉ Đường
+                    </button>
+</div>
+<!-- Event Separator -->
+<div class="flex justify-center py-4">
+<div class="w-px h-12 bg-surface-variant"></div>
+</div>
+<!-- Event 2 -->
+<div class="flex flex-col items-center text-center relative">
+<span class="material-symbols-outlined text-2xl text-secondary mb-6 font-light">restaurant</span>
+<h4 class="font-headline-lg-mobile text-2xl text-ink-charcoal mb-4">Tiệc Cưới</h4>
+<p class="font-label-sm text-secondary tracking-widest mb-6">11:30 AM — 25 . 12 . 2024</p>
+<p class="font-body-md text-ink-charcoal/70 mb-8 px-4 leading-relaxed">
+                        Nhà hàng Trống Đồng Palace<br/>
+                        Số 2 Lãng Yên, Hai Bà Trưng, Hà Nội
+                    </p>
+<button class="bg-transparent border border-ink-charcoal text-ink-charcoal font-label-sm uppercase tracking-widest py-3 px-8 hover:bg-ink-charcoal hover:text-white transition-colors duration-300">
+                        Chỉ Đường
+                    </button>
+</div>
+</div>
+</section>
+<!-- Photo Gallery Section Minimal -->
+<section class="py-20 bg-white relative border-t border-surface-variant/30" id="gallery">
+<h3 class="font-headline-lg-mobile text-ink-charcoal text-center mb-12 tracking-wide px-container-margin">
+                Album Ảnh
+            </h3>
+<div class="flex flex-col gap-4 px-4">
+<div class="w-full overflow-hidden">
+<img alt="A wide, cinematic shot of a bride and groom standing near classical architecture. The tone is editorial and elegant, with soft, diffused lighting highlighting the flowing wedding dress. High contrast and sophisticated composition." class="w-full h-auto object-cover grayscale-[10%]" data-alt="A wide, cinematic shot of a bride and groom standing near classical architecture. The tone is editorial and elegant, with soft, diffused lighting highlighting the flowing wedding dress. High contrast and sophisticated composition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7JCFNQFLr7RhUR1fUAV1PJ2yYTrcwyp6CqVhyU9XSR0hSjDEqzTM4fY1PvIgoy-_j2tIqiy9JH2nLDtxmKYC8JYpAGfxyuoGVrwvQw4yOfNqR1FbeyQ05YpdV0ZK4y3vOrFk56BdoW9SjqPbGz-kCb0O6I4MGDbbeg6Jt4nSSA1A8WFzJyDEgd4KACNhx0XUbnAzI25muxH0J1iDUk1BjU3SatTcPWs9zmydwIKUUPESX7dKa-ZBuUo5aTJN3HzXG_mVg7ocHIP0"/>
+</div>
+<div class="flex gap-4">
+<div class="w-1/2 overflow-hidden">
+<img alt="A close-up, intimate portrait of a bride looking serene, with soft backlighting creating a halo effect. The mood is romantic and delicate, matching a premium wedding invitation theme with warm, pastel tones." class="w-full h-auto object-cover grayscale-[10%]" data-alt="A close-up, intimate portrait of a bride looking serene, with soft backlighting creating a halo effect. The mood is romantic and delicate, matching a premium wedding invitation theme with warm, pastel tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCE8RTKcXTNw-P76X99G8x36kj2SxJ0mc2fQrYB3B95pE2BnDiI9gsB1YKTsYxY1Bvhv66O_GIrDebwLFklwm6wd2TP9v3QaD06j5F3XCm5IeUpqkbh60lh4BcCWKI3RNcnWfk1KXaOISNZAYpKC65DFZk4k3HxR8ahHCai4MyEKc_X8orL4iwN9neAtperiKr7WB76MEx1Ek_4bHFiTbLQLP3H30_ZWn_S73Ogz5mxQpNiSH7NvJf2KLgiAD1XsxQe7owkjQe-C-8"/>
+</div>
+<div class="w-1/2 overflow-hidden">
+<img alt="A stylish portrait of the groom adjusting his suit tie, shot in black and white or muted sepia tones for a timeless, classic feel. The lighting emphasizes texture and sophistication." class="w-full h-auto object-cover grayscale-[10%]" data-alt="A stylish portrait of the groom adjusting his suit tie, shot in black and white or muted sepia tones for a timeless, classic feel. The lighting emphasizes texture and sophistication." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEHFCx341b-MmT8jIyLWTYNtO9n5f7AVSvge0oFVbbLgsxkpnyLh1M8h__DntdjetDsUin30lGV9mrnEFT-SWAZRl3Xi3YwyG0eULMuwaqBdGoKWb-QRT7ZrbPV9aQEsU4pFPrHjctSC-9SxY-u8Wf9oCbU_nseJbOFdGG693JCE-6DRc-93KITAKl4CRej-704zYwZBDCOmLXKghhigG5V5je0eVogCtlyu3KKCl-L3zFCEFGOdrTBv0p8FAUXM6ng1f4jeMcgBE"/>
+</div>
+</div>
+</div>
+<div class="flex justify-center mt-12">
+<button class="bg-transparent text-secondary border-b border-secondary font-label-sm uppercase tracking-widest pb-1 hover:text-ink-charcoal hover:border-ink-charcoal transition-colors">
+                    Xem Thêm Ảnh
+                 </button>
+</div>
+</section>
+<!-- Gift/Registry Section -->
+<section class="py-20 px-container-margin bg-surface-bright relative border-t border-surface-variant/30" id="gift">
+<h3 class="font-headline-lg-mobile text-ink-charcoal text-center mb-12 tracking-wide">
+                Mừng Cưới
+            </h3>
+<div class="bg-white p-8 max-w-sm mx-auto text-center border border-surface-variant/50 shadow-sm">
+<p class="font-body-md text-ink-charcoal/70 mb-6 leading-relaxed">
+                    Sự hiện diện của quý vị là món quà ý nghĩa nhất đối với chúng tôi. Nếu quý vị muốn gửi lời chúc mừng, có thể sử dụng mã QR dưới đây.
+                </p>
+<div class="w-48 h-48 mx-auto mb-6 p-2 border border-surface-variant/30">
+<img alt="A clean, professional QR code placeholder for a wedding gift (mừng cưới), styled with a subtle floral or elegant border, minimalist and modern, high contrast for scanning." class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCh0EnOm9x6cOGIR5_rxV92KzaSOnRiQT4QbUwUtyQbNFyOcQxBF6fPYZSMlgCvBYrBoSZ-MRRR3euKSlgVxr7u9bb8bK28R5zOYWMf25Hpit6FG9xVGoTzYVQWLqeMykh4bUJrZU8N0NiTPByti8mX_wtejMEFVA4d06BpXa-Ul9sz8gnqG6JwZM0Xy9WUgzVkWANIISJohEMnkAhGB_YoJ9PvbxH11jqvuDuF5qB28HHguSH0krTbvojSvdQUxQFnIgSJ-bT78kw"/>
+</div>
+<p class="font-label-sm text-secondary uppercase tracking-widest">Trân trọng cảm ơn</p>
+</div>
+</section>
+<!-- RSVP Section Minimal -->
+<section class="py-24 px-container-margin bg-white relative border-t border-surface-variant/30" id="rsvp">
+<div class="max-w-md mx-auto relative z-10 text-center">
+<h3 class="font-headline-lg-mobile text-3xl text-ink-charcoal mb-4 tracking-wide">RSVP</h3>
+<p class="font-label-sm text-secondary mb-12 uppercase tracking-widest">Xác nhận tham dự</p>
+<form class="space-y-8 text-left">
+<div>
+<input class="w-full bg-transparent border-0 border-b border-surface-variant focus:ring-0 focus:border-ink-charcoal px-0 py-3 font-body-md text-ink-charcoal placeholder:text-outline-variant transition-colors" placeholder="Tên của bạn" type="text"/>
+</div>
+<div class="flex flex-col gap-4 pt-4">
+<label class="flex items-center gap-4 cursor-pointer group">
+<input class="text-ink-charcoal focus:ring-ink-charcoal border-surface-variant bg-transparent w-5 h-5" name="attendance" type="radio"/>
+<span class="font-label-sm text-ink-charcoal/80 group-hover:text-ink-charcoal transition-colors tracking-widest uppercase">Tham dự</span>
+</label>
+<label class="flex items-center gap-4 cursor-pointer group">
+<input class="text-ink-charcoal focus:ring-ink-charcoal border-surface-variant bg-transparent w-5 h-5" name="attendance" type="radio"/>
+<span class="font-label-sm text-ink-charcoal/80 group-hover:text-ink-charcoal transition-colors tracking-widest uppercase">Không thể tham dự</span>
+</label>
+</div>
+<div class="pt-8">
+<button class="w-full bg-ink-charcoal text-white font-label-sm uppercase tracking-widest py-4 hover:bg-ink-charcoal/90 transition-colors" type="button">
+                            Gửi Xác Nhận
+                        </button>
+</div>
+</form>
+</div>
+</section>
+<!-- Bottom Spacing for Nav Bar -->
+<div class="h-24 bg-white"></div>
+</main>
+<!-- Bottom Nav Bar Minimal -->
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] flex justify-around items-center py-4 px-4 z-50 bg-white/95 backdrop-blur-md border-t border-surface-variant/30">
+<a class="flex flex-col items-center justify-center text-ink-charcoal/50 hover:text-ink-charcoal transition-colors" href="#our-story">
+<span class="material-symbols-outlined mb-1 font-light text-xl">auto_stories</span>
+<span class="font-label-sm text-[10px] uppercase tracking-wider">Story</span>
+</a>
+<a class="flex flex-col items-center justify-center text-ink-charcoal/50 hover:text-ink-charcoal transition-colors" href="#events">
+<span class="material-symbols-outlined mb-1 font-light text-xl">event</span>
+<span class="font-label-sm text-[10px] uppercase tracking-wider">Events</span>
+</a>
+<a class="flex flex-col items-center justify-center text-ink-charcoal/50 hover:text-ink-charcoal transition-colors" href="#gallery">
+<span class="material-symbols-outlined mb-1 font-light text-xl">photo_library</span>
+<span class="font-label-sm text-[10px] uppercase tracking-wider">Gallery</span>
+</a>
+<a class="flex flex-col items-center justify-center text-ink-charcoal hover:text-ink-charcoal/80 transition-colors" href="#rsvp">
+<span class="material-symbols-outlined mb-1 font-light text-xl">mail</span>
+<span class="font-label-sm text-[10px] uppercase tracking-wider font-bold">RSVP</span>
+</a>
+</nav>
+</body></html>
