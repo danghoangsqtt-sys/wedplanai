@@ -397,7 +397,7 @@ const InvitationManager: React.FC = () => {
                                     <select 
                                         className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none bg-white cursor-pointer"
                                         value={
-                                            ['/audio/romantic.mp3', '/audio/piano.mp3', ''].includes(invitation.musicUrl || '') 
+                                            ['/audio/canon-in-d.mp3', '/audio/wedding-march.mp3', ''].includes(invitation.musicUrl || '') 
                                             ? (invitation.musicUrl || '') 
                                             : 'custom'
                                         }
@@ -411,12 +411,12 @@ const InvitationManager: React.FC = () => {
                                         }}
                                     >
                                         <option value="">Không phát nhạc</option>
-                                        <option value="/audio/romantic.mp3">Nhạc Lãng Mạn (Mặc định)</option>
-                                        <option value="/audio/piano.mp3">Nhạc Piano Nhẹ Nhàng</option>
+                                        <option value="/audio/canon-in-d.mp3">Canon in D – Pachelbel (Cổ điển)</option>
+                                        <option value="/audio/wedding-march.mp3">Wedding March – Mendelssohn (Hành khúc)</option>
                                         <option value="custom">Tùy chỉnh (Nhập URL mp3 riêng)</option>
                                     </select>
 
-                                    {!['/audio/romantic.mp3', '/audio/piano.mp3', ''].includes(invitation.musicUrl || '') && (
+                                    {!['/audio/canon-in-d.mp3', '/audio/wedding-march.mp3', ''].includes(invitation.musicUrl || '') && (
                                         <div className="relative animate-fadeIn">
                                             <Music className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input 
