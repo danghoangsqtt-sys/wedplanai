@@ -569,13 +569,17 @@ export const useStore = create<AppState>()(
         try {
           const cloudData = await loadUserDataFromCloud(OWNER_UID);
           if (cloudData) {
+            // Smart merge: only overwrite invitation if cloud has real data
+            const cloudInvitation = cloudData.invitation;
+            const hasRealInvitation = cloudInvitation && cloudInvitation.groomName && cloudInvitation.groomName.trim() !== '';
+
             set({
               guests: cloudData.guests ?? get().guests,
               budgetItems: sanitizeBudgetIds(cloudData.budgetItems ?? get().budgetItems),
               procedures: cloudData.procedures ?? get().procedures,
               fengShuiProfile: cloudData.fengShuiProfile ?? get().fengShuiProfile,
               fengShuiResults: cloudData.fengShuiResults ?? get().fengShuiResults,
-              invitation: cloudData.invitation ?? get().invitation,
+              invitation: hasRealInvitation ? cloudInvitation : get().invitation,
             });
           }
         } catch (e) {
