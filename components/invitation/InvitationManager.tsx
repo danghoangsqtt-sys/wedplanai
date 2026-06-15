@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent } from '../../types';
 import InvitationPreview from './InvitationPreview';
+import TemplateGalleryModal from './TemplateGalleryModal';
 import { uploadInvitationImage, loadInvitationResponses, InvitationResponse } from '../../services/cloudService';
 import { uploadLog } from '../../lib/logger';
 import {
@@ -35,6 +36,25 @@ const PETAL_EFFECTS = [
     { id: 'hearts',   label: 'Trái tim',     emoji: '❤' },
     { id: 'sparkles', label: 'Sao nhấp nháy', emoji: '✦' },
 ] as const;
+
+const AVAILABLE_SONGS = [
+    { value: '/audio/canon-in-d.mp3', label: 'Canon in D – Pachelbel (Cổ điển)' },
+    { value: '/audio/wedding-march.mp3', label: 'Wedding March – Mendelssohn (Hành khúc)' },
+    { value: '/audio/a thousand years.mp3', label: 'A Thousand Years (Christina Perri)' },
+    { value: '/audio/Chăm Em Một Đời.mp3', label: 'Chăm Em Một Đời' },
+    { value: '/audio/Die With A Smile.mp3', label: 'Die With A Smile' },
+    { value: '/audio/Em Đồng Ý (I Do).mp3', label: 'Em Đồng Ý (I Do)' },
+    { value: '/audio/In Your Eyes.mp3', label: 'In Your Eyes' },
+    { value: '/audio/Lover (First Dance Remix).mp3', label: 'Lover (First Dance Remix)' },
+    { value: '/audio/Lễ Đường.mp3', label: 'Lễ Đường' },
+    { value: '/audio/Marry You.mp3', label: 'Marry You (Bruno Mars)' },
+    { value: '/audio/Ngày Này, Người Con Gái Này.mp3', label: 'Ngày Này, Người Con Gái Này' },
+    { value: '/audio/Ordinary (Wedding Version).mp3', label: 'Ordinary (Wedding Version)' },
+    { value: '/audio/Summertime (Imanbek Remix).mp3', label: 'Summertime (Imanbek Remix)' },
+    { value: '/audio/The Most Beautiful Bride In The World.mp3', label: 'The Most Beautiful Bride In The World' },
+    { value: '/audio/một đời.mp3', label: 'Một Đời' },
+    { value: '/audio/50 Năm Về Sau (Nghĩ Đến Ngày Chúng Ta Sẽ Già).mp3', label: '50 Năm Về Sau' },
+];
 
 // ─── PHOTO POSITION EDITOR ───
 const PhotoPositionEditor: React.FC<{
@@ -164,6 +184,7 @@ const InvitationManager: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [showQRPanel, setShowQRPanel] = useState(false);
+    const [showTemplateGallery, setShowTemplateGallery] = useState(false);
     const [responses, setResponses] = useState<{ rsvps: InvitationResponse[]; wishes: InvitationResponse[] }>({ rsvps: [], wishes: [] });
     const [responsesLoading, setResponsesLoading] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
@@ -438,7 +459,16 @@ const InvitationManager: React.FC = () => {
                     {activeSection === 'STYLE' && (
                         <div className="p-5 space-y-6 bg-gray-50 animate-fadeIn">
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block flex items-center gap-1"><Layout className="w-3 h-3" /> Chọn Phong Cách Thiệp</label>
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Layout className="w-3 h-3" /> Chọn Phong Cách Thiệp</label>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowTemplateGallery(true)}
+                                        className="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 shadow-sm"
+                                    >
+                                        Kho Mẫu Thiệp <Sparkles className="w-3 h-3" />
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     {TEMPLATES.map(t => (
                                         <button
@@ -529,7 +559,7 @@ const InvitationManager: React.FC = () => {
                                     <select 
                                         className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none bg-white cursor-pointer"
                                         value={
-                                            ['/audio/canon-in-d.mp3', '/audio/wedding-march.mp3', ''].includes(invitation.musicUrl || '') 
+                                            [...AVAILABLE_SONGS.map(s => s.value), ''].includes(invitation.musicUrl || '') 
                                             ? (invitation.musicUrl || '') 
                                             : 'custom'
                                         }
@@ -543,12 +573,13 @@ const InvitationManager: React.FC = () => {
                                         }}
                                     >
                                         <option value="">Không phát nhạc</option>
-                                        <option value="/audio/canon-in-d.mp3">Canon in D – Pachelbel (Cổ điển)</option>
-                                        <option value="/audio/wedding-march.mp3">Wedding March – Mendelssohn (Hành khúc)</option>
+                                        {AVAILABLE_SONGS.map(song => (
+                                            <option key={song.value} value={song.value}>{song.label}</option>
+                                        ))}
                                         <option value="custom">Tùy chỉnh (Nhập URL mp3 riêng)</option>
                                     </select>
 
-                                    {!['/audio/canon-in-d.mp3', '/audio/wedding-march.mp3', ''].includes(invitation.musicUrl || '') && (
+                                    {![...AVAILABLE_SONGS.map(s => s.value), ''].includes(invitation.musicUrl || '') && (
                                         <div className="relative animate-fadeIn">
                                             <Music className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input 
@@ -1267,6 +1298,14 @@ const InvitationManager: React.FC = () => {
                     )}
                 </div>
             </div>
+            
+            {/* Template Gallery Modal */}
+            <TemplateGalleryModal
+                isOpen={showTemplateGallery}
+                onClose={() => setShowTemplateGallery(false)}
+                currentTemplateId={invitation.templateId}
+                onSelectTemplate={(id) => handleChange('templateId', id)}
+            />
         </div>
     );
 };

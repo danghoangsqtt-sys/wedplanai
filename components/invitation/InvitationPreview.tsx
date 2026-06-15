@@ -456,6 +456,12 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             )}
 
             <div ref={rootRef} className={`iv-root iv-theme-${tid}`} style={themeStyle}>
+                {/* Floral Overlays */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.85] mix-blend-multiply" aria-hidden>
+                    <img src="/floral-top-left.png" alt="" className="absolute top-0 left-0 w-[85%] max-w-[420px] object-contain opacity-95 -translate-x-4 -translate-y-4" />
+                    <img src="/floral-bottom-right.png" alt="" className="absolute bottom-0 right-0 w-[90%] max-w-[460px] object-contain opacity-95 translate-x-4 translate-y-4" />
+                </div>
+
                 {ec && <FloatingTextToolbar containerRef={rootRef} />}
 
                 {/* ── FLOATING MUSIC BUTTON ── */}
@@ -579,10 +585,35 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                 {data.date && <span><Calendar size={14} /> {fmtDate}</span>}
                                 {data.time && <span><Clock size={14} /> {data.time}</span>}
                             </div>
+                            
                             {data.mapLink && (
-                                <a href={data.mapLink} target="_blank" rel="noopener noreferrer" className="iv-venue-map">
-                                    <Navigation size={15} /> {isModern ? 'Get Directions' : 'Chỉ Đường'}
-                                </a>
+                                <div className="mt-5 rounded-xl overflow-hidden border border-[var(--t-outline)] shadow-inner group">
+                                    {data.mapLink.includes('pb=') || data.mapLink.includes('embed') ? (
+                                        <iframe 
+                                            src={data.mapLink} 
+                                            width="100%" 
+                                            height="220" 
+                                            style={{ border: 0 }} 
+                                            allowFullScreen 
+                                            loading="lazy" 
+                                            referrerPolicy="no-referrer-when-downgrade"
+                                            className="w-full grayscale group-hover:grayscale-0 transition-all duration-500"
+                                            title="Google Maps"
+                                        />
+                                    ) : (
+                                        <a href={data.mapLink} target="_blank" rel="noopener noreferrer" className="relative block h-[180px] w-full flex items-center justify-center overflow-hidden" style={{ background: 'var(--t-surface-dim)' }}>
+                                            {/* Stylized map placeholder */}
+                                            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(var(--t-accent) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--t-surface)] to-transparent opacity-80" />
+                                            <div className="relative z-10 flex flex-col items-center gap-2 text-[var(--t-primary)] transform group-hover:scale-110 transition-transform">
+                                                <div className="w-12 h-12 bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] flex items-center justify-center animate-bounce">
+                                                    <MapPin size={24} className="text-rose-500 fill-rose-100" />
+                                                </div>
+                                                <span className="font-bold text-xs uppercase tracking-widest bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm">{isModern ? 'Open Google Maps' : 'Mở Bản Đồ Google'}</span>
+                                            </div>
+                                        </a>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </section>
@@ -658,13 +689,20 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     <section className="iv-sec rv" {...secProps('gallery')}>
                         <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" />{isRomantic ? 'Album Ảnh Cưới' : isModern ? 'Gallery' : 'Khoảnh Khắc'}</h2>
                         <Divider glyph={dividerSticker} />
-                        <div className="iv-gallery">
+                        
+                        <div className="iv-gallery-slider">
                             {data.galleryImages!.map((img, i) => (
-                                <div key={i} className={`iv-gal-item ${bentoClass(i, data.galleryImages!.length)}`} onClick={() => setLbIndex(i)}>
+                                <div key={i} className="iv-gal-slide" onClick={() => setLbIndex(i)}>
                                     <img src={img} alt={`Ảnh ${i + 1}`} loading="lazy"
-                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.parentElement?.classList.add('iv-gal-broken'); }} />
-                                    <div className="iv-gal-hover"><Camera size={20} /></div>
+                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('iv-gal-broken'); }} />
+                                    <div className="iv-gal-hover"><Camera size={24} /></div>
                                 </div>
+                            ))}
+                        </div>
+                        
+                        <div className="flex justify-center gap-1.5 mt-4">
+                            {data.galleryImages!.map((_, i) => (
+                                <div key={i} className="w-1.5 h-1.5 rounded-full bg-[var(--t-outline)] opacity-50" />
                             ))}
                         </div>
                     </section>
@@ -1324,44 +1362,56 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     line-height: 1.6;
 }
 
-/* ── GALLERY (BENTO) ── */
-.iv-gallery {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: 120px;
-    grid-auto-flow: dense;
-    gap: 8px;
+/* ── GALLERY (SLIDER) ── */
+.iv-gallery-slider {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 16px;
+    padding: 10px 0 20px;
+    margin: 0 -2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
-.iv-gal-item {
+.iv-gallery-slider::-webkit-scrollbar {
+    display: none;
+}
+.iv-gal-slide {
+    flex: 0 0 75%;
+    max-width: 280px;
+    aspect-ratio: 3 / 4;
+    scroll-snap-align: center;
     position: relative;
+    border-radius: var(--t-card-radius);
     overflow: hidden;
-    border-radius: calc(var(--t-card-radius) * 0.6);
     cursor: pointer;
-    border: 2px solid color-mix(in srgb, white 80%, transparent);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    transition: transform 0.3s;
+    background: var(--t-surface-dim);
 }
-.iv-gal-wide { grid-column: span 2; }
-.iv-gal-tall { grid-row: span 2; }
-.iv-gal-item img {
+.iv-gal-slide img {
     width: 100%; height: 100%;
     object-fit: cover;
     transition: transform 0.5s cubic-bezier(.23,1,.32,1);
 }
-.iv-gal-item:hover img { transform: scale(1.06); }
+.iv-gal-slide:hover { transform: translateY(-5px); }
+.iv-gal-slide:hover img { transform: scale(1.05); }
 .iv-gal-hover {
     position: absolute; inset: 0;
-    background: color-mix(in srgb, var(--t-primary) 25%, transparent);
+    background: color-mix(in srgb, var(--t-primary) 30%, transparent);
     display: flex; align-items: center; justify-content: center;
     color: white;
     opacity: 0;
     transition: opacity 0.3s;
 }
-.iv-gal-item:hover .iv-gal-hover { opacity: 1; }
+.iv-gal-slide:hover .iv-gal-hover { opacity: 1; }
 .iv-gal-broken {
-    background: color-mix(in srgb, var(--t-on-surface) 8%, transparent);
     display: flex; align-items: center; justify-content: center;
 }
 .iv-gal-broken::after {
-    content: '\\1F5BC'; font-size: 1.5rem; opacity: 0.3;
+    content: '\\1F5BC'; font-size: 2rem; opacity: 0.3; color: var(--t-on-surface);
 }
 
 /* ── GIFT / QR ── */
