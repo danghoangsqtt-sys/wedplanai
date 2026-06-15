@@ -202,43 +202,46 @@ const InvitationManager: React.FC = () => {
     // Cover Photo Upload Handler (Uploads to Supabase)
     const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && user?.uid) {
-            if (file.size > 2 * 1024 * 1024) {
-                alert("Vui lòng chọn ảnh dung lượng dưới 2MB để tối ưu tốc độ.");
-                return;
-            }
-            setUploadingImage(true);
-            try {
-                const url = await uploadInvitationImage(file, user.uid);
-                if (url) handleChange('couplePhoto', url);
-            } catch (err) {
-                alert('Có lỗi xảy ra khi tải ảnh bìa.');
-            } finally {
-                setUploadingImage(false);
-            }
-        } else if (!user?.uid) {
-            alert('Lỗi: Phiên đăng nhập hết hạn.');
+        e.target.value = '';
+        if (!user?.uid) { alert('Lỗi: Phiên đăng nhập hết hạn.'); return; }
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Vui lòng chọn ảnh dung lượng dưới 2MB để tối ưu tốc độ.");
+            return;
+        }
+        setUploadingImage(true);
+        try {
+            const url = await uploadInvitationImage(file, user.uid);
+            handleChange('couplePhoto', url);
+        } catch (err: any) {
+            alert('Có lỗi xảy ra khi tải ảnh bìa: ' + (err?.message || 'Vui lòng thử lại.'));
+        } finally {
+            setUploadingImage(false);
         }
     };
 
     // Gallery Handling
     const handleAddGalleryImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
-        if (files && files.length > 0 && user?.uid) {
-            setUploadingImage(true);
-            try {
-                const newUrls: string[] = [];
-                for (let i = 0; i < files.length; i++) {
-                    const url = await uploadInvitationImage(files[i], user.uid);
-                    if (url) newUrls.push(url);
-                }
-                const currentGallery = invitation.galleryImages || [];
-                handleChange('galleryImages', [...currentGallery, ...newUrls]);
-            } catch (err) {
-                alert('Có lỗi khi tải ảnh lên album.');
-            } finally {
-                setUploadingImage(false);
-            }
+        e.target.value = '';
+        if (!files || files.length === 0 || !user?.uid) return;
+        const fileArray = Array.from(files) as File[];
+        const oversized = fileArray.find(f => f.size > 2 * 1024 * 1024);
+        if (oversized) {
+            alert(`Ảnh "${oversized.name}" vượt quá 2MB. Vui lòng chọn ảnh nhỏ hơn.`);
+            return;
+        }
+        setUploadingImage(true);
+        try {
+            const urls = await Promise.all(
+                fileArray.map(f => uploadInvitationImage(f, user.uid))
+            );
+            const currentGallery = invitation.galleryImages || [];
+            handleChange('galleryImages', [...currentGallery, ...urls]);
+        } catch (err: any) {
+            alert('Có lỗi khi tải ảnh lên album: ' + (err?.message || 'Vui lòng thử lại.'));
+        } finally {
+            setUploadingImage(false);
         }
     };
 

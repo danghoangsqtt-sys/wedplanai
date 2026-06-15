@@ -224,31 +224,25 @@ export const loadPublicInvitation = async (uid: string): Promise<InvitationData 
 };
 
 // --- STORAGE SYNC ---
-export const uploadInvitationImage = async (file: File, uid: string): Promise<string | null> => {
-  try {
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    // Validate extension
-    if (!['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExt || '')) {
-        throw new Error('Định dạng ảnh không hợp lệ (chỉ hỗ trợ jpg, png, webp, gif)');
-    }
-    const fileName = `${uid}_${Date.now()}.${fileExt}`;
-    const filePath = `${uid}/${fileName}`;
-
-    const { error } = await supabase.storage
-      .from('invitation_assets')
-      .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-    if (error) throw error;
-
-    const { data } = supabase.storage
-      .from('invitation_assets')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    return null;
+export const uploadInvitationImage = async (file: File, uid: string): Promise<string> => {
+  const fileExt = file.name.split('.').pop()?.toLowerCase();
+  if (!['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExt || '')) {
+    throw new Error('Định dạng ảnh không hợp lệ (chỉ hỗ trợ jpg, png, webp, gif)');
   }
+  const fileName = `${uid}_${Date.now()}.${fileExt}`;
+  const filePath = `${uid}/${fileName}`;
+
+  const { error } = await supabase.storage
+    .from('invitation_assets')
+    .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage
+    .from('invitation_assets')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
 };
 
 // --- PROFILE SYNC ---

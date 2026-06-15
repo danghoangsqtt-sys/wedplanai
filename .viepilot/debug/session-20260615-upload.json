@@ -1,0 +1,22 @@
+{
+  "id": "debug-20260615-upload",
+  "status": "resolved",
+  "created_at": "2026-06-15T00:00:00.000Z",
+  "updated_at": "2026-06-15T00:00:00.000Z",
+  "problem": {
+    "description": "Chỉnh sửa tính năng upload ảnh lên của tính năng tạo thiệp cưới online",
+    "affected_files": [
+      "services/cloudService.ts",
+      "components/invitation/InvitationManager.tsx"
+    ]
+  },
+  "resolution": {
+    "root_cause": "4 bugs: silent fail (rethrow bị nuốt), input không reset, gallery thiếu size check, gallery upload tuần tự",
+    "fix_applied": "Bug 1: uploadInvitationImage rethrow thay vì return null. Bug 2: e.target.value reset sau upload. Bug 3: size check 2MB cho từng file gallery. Bug 4: Promise.all thay for loop.",
+    "files_changed": [
+      "services/cloudService.ts (line 227-252)",
+      "components/invitation/InvitationManager.tsx (handleCoverUpload, handleAddGalleryImagesUpload)"
+    ],
+    "verification": "npx tsc --noEmit: 0 errors"
+  }
+}
