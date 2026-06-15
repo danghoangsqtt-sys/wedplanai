@@ -226,10 +226,11 @@ const InvitationManager: React.FC = () => {
 
     // Gallery Handling
     const handleAddGalleryImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
+        // Convert to Array BEFORE clearing value — FileList is a live DOM collection
+        // that becomes empty when e.target.value is reset.
+        const fileArray = Array.from(e.target.files ?? []) as File[];
         e.target.value = '';
-        if (!files || files.length === 0 || !user?.uid) return;
-        const fileArray = Array.from(files) as File[];
+        if (fileArray.length === 0 || !user?.uid) return;
         const oversized = fileArray.find(f => f.size > 2 * 1024 * 1024);
         if (oversized) {
             alert(`Ảnh "${oversized.name}" vượt quá 2MB. Vui lòng chọn ảnh nhỏ hơn.`);

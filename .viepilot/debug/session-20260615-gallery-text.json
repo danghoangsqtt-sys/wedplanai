@@ -1,0 +1,45 @@
+{
+  "id": "debug-20260615-gallery-text",
+  "status": "resolved",
+  "created_at": "2026-06-15T00:00:00.000Z",
+  "updated_at": "2026-06-15T00:00:00.000Z",
+  "problem": {
+    "description": "Upload ảnh album không hiển thị; text trong thiệp bị chìm khó đọc trên tất cả template",
+    "symptoms": [
+      "Tải ảnh lên album nhưng không có ảnh nào hiển thị, không có [upload] log",
+      "Chữ trong thiệp bị chìm trong ảnh nền, khó đọc trên tất cả 6 template"
+    ],
+    "affected_files": [
+      "components/invitation/InvitationManager.tsx",
+      "components/invitation/InvitationPreview.tsx"
+    ]
+  },
+  "investigation": {
+    "hypotheses": [
+      {
+        "id": 1,
+        "description": "e.target.value reset trước Array.from → FileList (live collection) bị cleared → files.length === 0 → return sớm, không upload",
+        "status": "confirmed"
+      },
+      {
+        "id": 2,
+        "description": ".iv-hero-body và tất cả 8 hero text elements thiếu text-shadow → chữ không có độ tương phản khi ảnh nền sáng",
+        "status": "confirmed"
+      }
+    ],
+    "findings": [
+      "Không có [upload] log vì hàm return ở dòng files.length === 0 trước uploadLog.group()",
+      "handleCoverUpload không bị vì lấy File object (không phải live collection)",
+      "Tất cả 6 template đều bị vì text-shadow thiếu ở css class .iv-hero-body"
+    ]
+  },
+  "resolution": {
+    "root_cause": "Bug 1: FileList live collection cleared by value reset before Array.from. Bug 2: Missing text-shadow on .iv-hero-body (inherited property).",
+    "fix_applied": "Bug 1: Swap to Array.from(e.target.files) BEFORE value reset. Bug 2: Add text-shadow to .iv-hero-body (cascades to all children). Suppress inherited shadow on .iv-hero-sticker (uses filter:drop-shadow instead).",
+    "files_changed": [
+      "components/invitation/InvitationManager.tsx",
+      "components/invitation/InvitationPreview.tsx"
+    ],
+    "verification": "npx tsc --noEmit: 0 errors"
+  }
+}

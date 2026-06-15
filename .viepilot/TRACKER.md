@@ -22,7 +22,7 @@ Updated: 2026-06-15
 ## Previous Milestone
 **Personal Tool Mode** (PIN gate + cloud auto-save + auth removal) — ✅ COMPLETE (v1.0.0)
 
-## Active Work — Debug Logging & Observability
+## Completed — Debug Logging Phase 1 ✅
 **Milestone:** Structured Logging
 **Source:** `docs/brainstorm/session-2026-06-15-debug-logging.md`
 
@@ -35,9 +35,12 @@ Updated: 2026-06-15
 
 **SPEC:** `.viepilot/phases/logging-phase-1/SPEC.md`
 
+## Active Work — None
+Awaiting next user request. See **Next** section below.
+
 ---
 
 ## Next
-- **Logging Phase 1:** instrument cloud + upload + store (xem SPEC)
-- User chạy SQL migration → RSVP/lời chúc thật chảy về
+- **User action:** chạy SQL `invitation_responses` trong Supabase → RSVP/lời chúc thật chảy về
+- **Logging Phase 2** (backlog): instrument `aiService.ts` / `geminiService.ts` → `aiLog`; user actions `InvitationManager` → `uiLog`; `SettingsPage.tsx` → `uiLog`
 - (Optional) Phase 3 — theme parity với mockups `public/theme/*`

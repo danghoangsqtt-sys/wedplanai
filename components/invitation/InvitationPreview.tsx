@@ -691,12 +691,16 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     text-align: center;
     padding: 0 2rem;
     width: 100%;
+    /* Protect text readability over any background photo across all templates.
+       text-shadow is inherited → cascades to all hero text children. */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.35), 0 2px 10px rgba(0,0,0,0.18);
 }
 .iv-hero-sticker {
     font-size: 40px;
     line-height: 1;
     margin-bottom: 0.5rem;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.28));
+    text-shadow: none;
 }
 .iv-hero-pre {
     font-family: var(--t-font-label);
