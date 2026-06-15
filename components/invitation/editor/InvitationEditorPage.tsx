@@ -4,7 +4,8 @@ import { InvitationData, SectionId } from '../../../types';
 import { useEditorHistory } from '../../../hooks/useEditorHistory';
 import InvitationPreview from '../InvitationPreview';
 import EditorTopBar from './EditorTopBar';
-import EditorContextPanel from './EditorContextPanel';
+import EditorFormPanel from './EditorFormPanel';
+import TemplateGalleryModal from '../TemplateGalleryModal';
 
 const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@400;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Spectral:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=DM+Sans:wght@400;500;600&family=Fahkwang:wght@400;500;600&family=Nunito:wght@400;500;600&family=Quicksand:wght@400;500;600&family=Josefin+Sans:wght@400;500;600&family=Mulish:wght@400;500;600&display=swap';
 
@@ -14,6 +15,7 @@ const InvitationEditorPage: React.FC = () => {
 
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile' | false>(false);
+    const [showTemplateGallery, setShowTemplateGallery] = useState(false);
 
     // Sync store → history when cloud data loads externally
     const prevInvRef = useRef(invitation);
@@ -107,11 +109,15 @@ const InvitationEditorPage: React.FC = () => {
                 onSave={handleSave}
                 onBack={handleBack}
                 onReset={handleReset}
+                onShowTemplates={() => setShowTemplateGallery(true)}
                 onChange={handleChange}
             />
 
             <div className="flex flex-1 min-h-0 overflow-hidden">
-                {/* Canvas area — full width */}
+                {/* Left Form Panel */}
+                <EditorFormPanel data={data} onChange={handleChange} />
+
+                {/* Canvas area */}
                 <div
                     className="flex-1 overflow-y-auto overflow-x-hidden"
                     onClick={() => setSelectedSection(null)}
@@ -144,14 +150,14 @@ const InvitationEditorPage: React.FC = () => {
                     )}
                 </div>
 
-                {/* Right context panel (for non-text editing: photos, dates, events, bank...) */}
-                <EditorContextPanel
-                    selectedSection={selectedSection}
-                    data={data}
-                    onClose={() => setSelectedSection(null)}
-                    onChange={handleChange}
-                />
             </div>
+
+            <TemplateGalleryModal
+                isOpen={showTemplateGallery}
+                onClose={() => setShowTemplateGallery(false)}
+                currentTemplateId={data.templateId || 'traditional'}
+                onSelectTemplate={(id) => handleChange({ templateId: id })}
+            />
         </div>
     );
 };

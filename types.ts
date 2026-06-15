@@ -189,20 +189,35 @@ export interface InvitationData {
   templateId: 'traditional' | 'romantic' | 'modern' | 'royal' | 'garden' | 'indochine';
   groomName: string;
   brideName: string;
-  groomParents?: { father: string; mother: string };
-  brideParents?: { father: string; mother: string };
+  groomShortName?: string;
+  brideShortName?: string;
+  groomTitle?: string;
+  brideTitle?: string;
+  displayOrder?: 'groom_first' | 'bride_first';
+  groomParents?: { title?: string; father: string; mother: string; address?: string };
+  brideParents?: { title?: string; father: string; mother: string; address?: string };
+  openingMessage?: string;
   date: string;
   lunarDate?: string;
-  time: string;
+  time: string; // Khai tiệc
+  receptionTime?: string; // Đón khách
+  partyType?: 'wedding' | 'announcement';
   location: string;
   address: string;
+  mapEnabled?: boolean;
   mapLink?: string;
   wishes: string;
   themeColor: string;
   bankInfo: BankInfo;
-  couplePhoto?: string; // URL or Base64
+  couplePhoto?: string; // URL or Base64 (legacy or shared)
+  groomPhoto?: string;
+  bridePhoto?: string;
   galleryImages?: string[]; // Array of URLs
+  galleryStyle?: 'grid' | 'collage' | '3d';
   musicUrl?: string; // Background music URL
+  thankYouMessage?: string;
+  envelopeMessage?: string;
+  dressCodeEnabled?: boolean;
   photoConfig?: {
     scale: number;
     x: number;

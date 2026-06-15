@@ -19,8 +19,22 @@ const BANKS = [
 ];
 
 const MUSIC_OPTIONS = [
-    { label: 'Canon in D (Pachelbel)', url: 'https://ia800207.us.archive.org/17/items/PachelbelsCanon/Pachelbel_Canon_in_D_Major.mp3' },
-    { label: 'Wedding March (Mendelssohn)', url: 'https://ia800501.us.archive.org/1/items/WeddingMarch_985/WeddingMarch.mp3' },
+    { url: '/audio/canon-in-d.mp3', label: 'Canon in D – Pachelbel (Cổ điển)' },
+    { url: '/audio/wedding-march.mp3', label: 'Wedding March – Mendelssohn (Hành khúc)' },
+    { url: '/audio/a thousand years.mp3', label: 'A Thousand Years (Christina Perri)' },
+    { url: '/audio/Chăm Em Một Đời.mp3', label: 'Chăm Em Một Đời' },
+    { url: '/audio/Die With A Smile.mp3', label: 'Die With A Smile' },
+    { url: '/audio/Em Đồng Ý (I Do).mp3', label: 'Em Đồng Ý (I Do)' },
+    { url: '/audio/In Your Eyes.mp3', label: 'In Your Eyes' },
+    { url: '/audio/Lover (First Dance Remix).mp3', label: 'Lover (First Dance Remix)' },
+    { url: '/audio/Lễ Đường.mp3', label: 'Lễ Đường' },
+    { url: '/audio/Marry You.mp3', label: 'Marry You (Bruno Mars)' },
+    { url: '/audio/Ngày Này, Người Con Gái Này.mp3', label: 'Ngày Này, Người Con Gái Này' },
+    { url: '/audio/Ordinary (Wedding Version).mp3', label: 'Ordinary (Wedding Version)' },
+    { url: '/audio/Summertime (Imanbek Remix).mp3', label: 'Summertime (Imanbek Remix)' },
+    { url: '/audio/The Most Beautiful Bride In The World.mp3', label: 'The Most Beautiful Bride In The World' },
+    { url: '/audio/một đời.mp3', label: 'Một Đời' },
+    { url: '/audio/50 Năm Về Sau (Nghĩ Đến Ngày Chúng Ta Sẽ Già).mp3', label: '50 Năm Về Sau' },
 ];
 
 const STICKER_GROUPS = {

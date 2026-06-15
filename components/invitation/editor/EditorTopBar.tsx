@@ -57,6 +57,7 @@ interface EditorTopBarProps {
     onSave: () => void;
     onBack: () => void;
     onReset: () => void;
+    onShowTemplates?: () => void;
     onChange: (patch: Partial<InvitationData>) => void;
 }
 
@@ -246,7 +247,7 @@ const SizeStepper: React.FC<{
 // ─── Main Top Bar ───
 const EditorTopBar: React.FC<EditorTopBarProps> = ({
     data, canUndo, canRedo, previewMode,
-    onUndo, onRedo, onSetPreview, onSave, onBack, onReset, onChange,
+    onUndo, onRedo, onSetPreview, onSave, onBack, onReset, onShowTemplates, onChange,
 }) => {
     const currentTitleFont = data.fontTitle || 'Playfair Display';
     const currentBodyFont = data.fontBody || 'Be Vietnam Pro';
@@ -318,8 +319,15 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
                     <Music size={15} />
                 </button>
 
+                <button 
+                    onClick={onShowTemplates}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 ml-1"
+                >
+                    Mẫu Thiệp ✨
+                </button>
+
                 <button onClick={onSave}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-sm">
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-sm ml-1">
                     Lưu Trang
                 </button>
             </div>
