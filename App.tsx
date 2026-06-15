@@ -38,7 +38,7 @@ const DetailedBudgetPlanner = lazyWithRetry(() => import('./components/DetailedB
 const ProcessGuide = lazyWithRetry(() => import('./components/ProcessGuide'));
 const FengShuiConsultant = lazyWithRetry(() => import('./components/fengshui/FengShuiConsultant'));
 const SettingsPage = lazyWithRetry(() => import('./components/SettingsPage').then(mod => ({ default: mod.default })));
-const InvitationManager = lazyWithRetry(() => import('./components/invitation/InvitationManager'));
+const InvitationEditorPage = lazyWithRetry(() => import('./components/invitation/editor/InvitationEditorPage'));
 const PublicInvitationView = lazyWithRetry(() => import('./components/invitation/PublicInvitationView'));
 const LocalMarketInsights = lazyWithRetry(() => import('./components/LocalMarketInsights'));
 
@@ -219,7 +219,7 @@ function App() {
 
                 {activeTab === 'invitation' && (
                   <div className="h-full min-h-[600px] bg-white lg:rounded-2xl shadow-sm border border-rose-100 overflow-hidden">
-                    <InvitationManager />
+                    <InvitationEditorPage />
                   </div>
                 )}
 

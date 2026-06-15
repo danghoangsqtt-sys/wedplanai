@@ -63,3 +63,51 @@ Updated: 2026-06-15
 | L3.1 | `console.group` cho gallery batch upload | Nhóm N files vào 1 collapsible group |
 | L3.2 | Performance budget warning upload > 10s | `uploadLog.warn('slow upload', { ms })` |
 | L3.3 | Log summary khi component unmount | Tổng errors trong session |
+
+---
+
+## Milestone: Wedding Invitation Canvas Editor v2
+**Source:** `docs/brainstorm/session-2026-06-15-invitation-canvas-rebuild.md`
+**Trigger:** Rebuild toàn bộ tính năng tạo thiệp — canvas-first editor như namtay.vn
+
+### Canvas Phase 1 — Editor Core
+**Status:** ✅ COMPLETE (2026-06-15)
+
+| # | Task | Files | Status |
+|---|------|-------|--------|
+| C1.1 | `InvitationEditorPage.tsx` — layout container | `components/invitation/editor/InvitationEditorPage.tsx` | ⬜ TODO |
+| C1.2 | `EditorTopBar.tsx` — Undo/Redo, Template picker, Preview, Share | `components/invitation/editor/EditorTopBar.tsx` | ⬜ TODO |
+| C1.3 | `EditorLeftSidebar.tsx` — icon strip | `components/invitation/editor/EditorLeftSidebar.tsx` | ⬜ TODO |
+| C1.4 | `EditorCanvas.tsx` — phone frame + @dnd-kit SortableContext | `components/invitation/editor/EditorCanvas.tsx` | ⬜ TODO |
+| C1.5 | `SectionWrapper.tsx` — HOC drag handle + selected state + floating toolbar | `components/invitation/editor/SectionWrapper.tsx` | ⬜ TODO |
+| C1.6 | `InlineTextEditor.tsx` — contentEditable overlay | `components/invitation/editor/InlineTextEditor.tsx` | ⬜ TODO |
+| C1.7 | Section components: Hero, Family, Events, Gallery, LoveStory, Bank, Footer | `components/invitation/editor/sections/` | ⬜ TODO |
+| C1.8 | Context panels: Text, Photo, Color, Event, Bank | `components/invitation/editor/context-panels/` | ⬜ TODO |
+| C1.9 | `AddSectionPanel.tsx` — block picker UI | `components/invitation/editor/AddSectionPanel.tsx` | ⬜ TODO |
+| C1.10 | Undo/Redo system (`useEditorHistory` hook, immer, 20 steps) | `hooks/useEditorHistory.ts` | ⬜ TODO |
+| C1.11 | `InvitationData` migration: `sectionOrder`, `sectionVisibility` | `types.ts` | ⬜ TODO |
+| C1.12 | Wire vào App.tsx — thay InvitationManager bằng InvitationEditorPage | `App.tsx` | ⬜ TODO |
+
+**Constraints:**
+- Giữ nguyên: `PublicInvitationView.tsx`, `cloudService.ts`, VietQR + html2canvas QR, `useStore.ts`
+- Desktop-only editor (≥768px), 1 instance per section type
+- Undo/Redo: immer + 20 steps
+- @dnd-kit/core cho drag-and-drop
+
+### Canvas Phase 2 — Templates Expansion
+**Status:** ⬜ BACKLOG
+
+| # | Task | Notes |
+|---|------|-------|
+| C2.1 | Rebuild CSS 6 templates cũ (canvas-ready CSS variables) | traditional, romantic, modern, royal, garden, indochine |
+| C2.2 | 6 template mới | vintage, minimalist, boho, luxury-gold, blossom, zen |
+| C2.3 | Template picker UI với live mini-preview (scale transform) | EditorTopBar |
+
+### Canvas Phase 3 — Polish
+**Status:** ⬜ BACKLOG
+
+| # | Task | Notes |
+|---|------|-------|
+| C3.1 | Keyboard shortcuts: Ctrl+Z/Y, Delete, Escape | `useEditorKeyboard` hook |
+| C3.2 | Mobile preview mode toggle (375px / 768px frame) | EditorTopBar |
+| C3.3 | Section layout variants: heroLayout, galleryLayout | context panels |

@@ -1,5 +1,5 @@
 # WedPlan AI — TRACKER
-Version: 1.2.0
+Version: 2.1.0
 Updated: 2026-06-15
 
 ## Current Milestone
@@ -35,12 +35,28 @@ Updated: 2026-06-15
 
 **SPEC:** `.viepilot/phases/logging-phase-1/SPEC.md`
 
+## Completed — Canvas Editor v2 Phase 1 ✅
+**Milestone:** Wedding Invitation Canvas Editor v2
+**Source:** `docs/brainstorm/session-2026-06-15-invitation-canvas-rebuild.md`
+
+| Task | Status |
+|------|--------|
+| C1.1–C1.12 (all 12 tasks) | ✅ DONE |
+
+**New files:**
+- `hooks/useEditorHistory.ts` — immer undo/redo
+- `components/invitation/editor/InvitationEditorPage.tsx`
+- `components/invitation/editor/EditorTopBar.tsx`
+- `components/invitation/editor/EditorLeftSidebar.tsx`
+- `components/invitation/editor/EditorContextPanel.tsx`
+
 ## Active Work — None
-Awaiting next user request. See **Next** section below.
+See **Next** section below.
 
 ---
 
 ## Next
+- **Canvas Phase 2** (backlog): mở rộng lên 10–12 templates (vintage, minimalist, boho, luxury-gold, blossom, zen)
+- **Canvas Phase 3** (backlog): polish — mobile preview toggle, Delete key shortcut, section layout variants
 - **User action:** chạy SQL `invitation_responses` trong Supabase → RSVP/lời chúc thật chảy về
-- **Logging Phase 2** (backlog): instrument `aiService.ts` / `geminiService.ts` → `aiLog`; user actions `InvitationManager` → `uiLog`; `SettingsPage.tsx` → `uiLog`
-- (Optional) Phase 3 — theme parity với mockups `public/theme/*`
+- **Logging Phase 2** (backlog): instrument aiService → aiLog, user actions → uiLog

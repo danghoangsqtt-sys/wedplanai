@@ -2,10 +2,16 @@ import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent } from '../../types';
 import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, X, Volume2, VolumeX, Navigation } from 'lucide-react';
 
+export interface EditorConfig {
+    selectedSection?: string;
+    onSectionClick?: (sectionId: string) => void;
+}
+
 interface InvitationPreviewProps {
     data: InvitationData;
     onRSVP?: () => void;
     onGuestbook?: () => void;
+    editorConfig?: EditorConfig;
 }
 
 /* ============================================================
@@ -63,10 +69,10 @@ const THEME_VARS: Record<string, Record<string, string>> = {
         '--t-outline': '#c3c6d5',
         '--t-card-bg': '#ffffff',
         '--t-hero-overlay': 'linear-gradient(to top, rgba(250,249,250,0.96) 0%, rgba(250,249,250,0.5) 40%, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.16) 100%)',
-        '--t-font-display': "'Noto Serif', serif",
-        '--t-font-body': "'Inter', sans-serif",
-        '--t-font-label': "'Public Sans', sans-serif",
-        '--t-font-script': "'Noto Serif', serif",
+        '--t-font-display': "'Cinzel', serif",
+        '--t-font-body': "'DM Sans', sans-serif",
+        '--t-font-label': "'DM Sans', sans-serif",
+        '--t-font-script': "'Cinzel', serif",
         '--t-hero-rounded': '0 0 1.5rem 1.5rem',
         '--t-card-radius': '16px',
         '--t-card-border': 'rgba(195,198,213,0.35)',
@@ -251,7 +257,15 @@ const bentoClass = (i: number, total: number): string => {
 // ════════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
-const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook }) => {
+const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook, editorConfig }) => {
+    const ec = editorConfig;
+    const secProps = (id: string) => ec ? {
+        'data-sec': id,
+        onClick: (e: React.MouseEvent) => { e.stopPropagation(); ec.onSectionClick?.(id); },
+        style: { position: 'relative' as const, cursor: 'pointer',
+            outline: ec.selectedSection === id ? '2px solid #ec4899' : undefined,
+            outlineOffset: ec.selectedSection === id ? '-2px' : undefined },
+    } : {};
     const countdown = useCountdown(data.date);
     const [lbIndex, setLbIndex] = useState<number | null>(null);
     const [audioPlaying, setAudioPlaying] = useState(false);
@@ -339,7 +353,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 )}
 
                 {/* ══════ HERO ══════ */}
-                <section className="iv-hero">
+                <section className="iv-hero" {...secProps('hero')}>
                     {effectType && <FloatingEffect type={effectType} />}
                     {data.couplePhoto && (
                         <img src={data.couplePhoto} alt="Ảnh cưới" className="iv-hero-photo"
@@ -413,7 +427,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ THƯ MỜI — CHA MẸ HAI BÊN ══════ */}
                 {hasParents && (
-                    <section className="iv-sec iv-invite rv">
+                    <section className="iv-sec iv-invite rv" {...secProps('family')}>
                         <p className="iv-invite-pre">Trân Trọng Kính Mời</p>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-parents">
@@ -441,7 +455,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ ĐỊA ĐIỂM & THỜI GIAN ══════ */}
                 {hasVenue && (
-                    <section className="iv-sec iv-sec-alt iv-venue rv">
+                    <section className="iv-sec iv-sec-alt iv-venue rv" {...secProps('venue')}>
                         <h2 className="iv-sec-title">{isModern ? 'Venue' : 'Địa Điểm Tổ Chức'}</h2>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-venue-card">
@@ -463,7 +477,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ CHƯƠNG TRÌNH (Events) ══════ */}
                 {hasEvents && (
-                    <section className="iv-sec rv">
+                    <section className="iv-sec rv" {...secProps('events')}>
                         <h2 className="iv-sec-title">{isModern ? 'Schedule' : 'Chương Trình'}</h2>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-events">
@@ -503,7 +517,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ LOVE STORY ══════ */}
                 {hasLoveStory && (
-                    <section className="iv-sec iv-sec-alt rv">
+                    <section className="iv-sec iv-sec-alt rv" {...secProps('loveStory')}>
                         <h2 className="iv-sec-title">{isRomantic ? 'Our Story' : isModern ? 'Our Story' : 'Chuyện Tình Yêu'}</h2>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-timeline">
@@ -528,7 +542,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ GALLERY ══════ */}
                 {hasGallery && (
-                    <section className="iv-sec rv">
+                    <section className="iv-sec rv" {...secProps('gallery')}>
                         <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" />{isRomantic ? 'Album Ảnh Cưới' : isModern ? 'Gallery' : 'Khoảnh Khắc'}</h2>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-gallery">
@@ -544,7 +558,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ MỪNG CƯỚI (Gift) ══════ */}
                 {hasBank && (
-                    <section className="iv-sec iv-sec-alt rv">
+                    <section className="iv-sec iv-sec-alt rv" {...secProps('bank')}>
                         <h2 className="iv-sec-title"><Gift size={20} className="inline -mt-1 mr-2" />Mừng Cưới</h2>
                         <Divider glyph={dividerSticker} />
                         <p className="iv-gift-desc">
@@ -563,7 +577,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ RSVP ══════ */}
                 {hasRSVP && (
-                    <section className="iv-sec rv">
+                    <section className="iv-sec rv" {...secProps('rsvp')}>
                         <h2 className="iv-sec-title">{isModern ? 'RSVP' : 'Xác Nhận Tham Dự'}</h2>
                         <Divider glyph={dividerSticker} />
                         <p className="iv-gift-desc">Sự góp mặt của bạn là niềm vinh hạnh của chúng tôi. Vui lòng xác nhận để chúng tôi chuẩn bị chu đáo.</p>
@@ -574,7 +588,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ GUESTBOOK ══════ */}
                 {data.guestbookEnabled && (
-                    <section className="iv-sec iv-sec-alt rv">
+                    <section className="iv-sec iv-sec-alt rv" {...secProps('guestbook')}>
                         <h2 className="iv-sec-title"><MessageCircle size={20} className="inline -mt-1 mr-2" />Sổ Lưu Bút</h2>
                         <Divider glyph={dividerSticker} />
                         {data.guestWishes && data.guestWishes.length > 0 ? (
@@ -607,7 +621,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             ══════════════════════════════════════════════════ */}
             <style>{`
 /* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=Great+Vibes&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Public+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=Great+Vibes&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Cinzel:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap');
 
 /* ── ROOT CONTAINER ── */
 .iv-root {
@@ -1319,6 +1333,159 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-size: clamp(1.2rem, 5.5vw, 1.5rem);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FRONTEND-DESIGN UPGRADE — Phase 1 + 2 + 3
+   ════════════════════════════════════════════════════════════════ */
+
+/* P1A — Hero entrance: couple names slide-skew in */
+@keyframes heroNameIn {
+    from { opacity: 0; transform: translateY(32px) skewY(2deg); }
+    to   { opacity: 1; transform: translateY(0) skewY(0deg); }
+}
+.iv-couple {
+    font-size: clamp(2rem, 9vw, 3rem);
+    line-height: 1.2;
+    animation: heroNameIn 1.2s cubic-bezier(.23,1,.32,1) 0.4s both;
+}
+
+/* P1B — Scroll reveal stagger inside sections */
+.iv-sec > .rv:nth-child(2) { transition-delay: 80ms; }
+.iv-sec > .rv:nth-child(3) { transition-delay: 160ms; }
+.iv-sec > .rv:nth-child(4) { transition-delay: 240ms; }
+.iv-sec > .rv:nth-child(5) { transition-delay: 320ms; }
+.iv-sec > .rv:nth-child(n+6) { transition-delay: 400ms; }
+
+/* P1C — Card hover lift */
+.iv-event-card, .iv-venue-card {
+    transition: transform 0.25s cubic-bezier(.23,1,.32,1), box-shadow 0.25s;
+}
+.iv-event-card:hover, .iv-venue-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* P1D — Button hover elevation */
+.iv-rsvp-btn {
+    transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+.iv-rsvp-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--t-primary) 35%, transparent);
+}
+
+/* P1E — Royal: gold shimmer on couple names */
+@keyframes goldShimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+.iv-theme-royal .iv-couple {
+    background: linear-gradient(105deg, #c2a14d 0%, #f0d87e 28%, #eacc72 50%, #f0d87e 72%, #c2a14d 100%);
+    background-size: 300% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: goldShimmer 6s linear infinite, heroNameIn 1.2s cubic-bezier(.23,1,.32,1) 0.4s both;
+}
+
+/* P1F — Per-theme section title personalities */
+.iv-theme-traditional .iv-sec-title::after {
+    content: '';
+    display: block;
+    width: 48px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--t-accent), transparent);
+    margin: 8px auto 0;
+}
+.iv-theme-romantic .iv-sec-title {
+    font-family: var(--t-font-script);
+    font-weight: 400;
+    font-size: clamp(2rem, 9vw, 2.6rem);
+}
+.iv-theme-modern .iv-sec-title {
+    border-bottom: 2px solid var(--t-outline);
+    padding-bottom: 10px;
+}
+.iv-theme-royal .iv-sec-title {
+    border-bottom: 1px solid color-mix(in srgb, var(--t-accent) 45%, transparent);
+    padding-bottom: 12px;
+}
+.iv-theme-indochine .iv-sec-title {
+    border-bottom: 2px solid var(--t-accent);
+    padding-bottom: 8px;
+}
+
+/* P2A — Paper grain texture on invitation surface */
+.iv-root {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+}
+
+/* P2B — Elevated base card shadows */
+.iv-event-card, .iv-venue-card, .iv-qr-card, .iv-wish-card {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
+}
+
+/* P2C — Per-theme alt-section background patterns */
+.iv-theme-traditional .iv-sec-alt {
+    background-image: repeating-linear-gradient(
+        45deg, transparent, transparent 22px,
+        color-mix(in srgb, var(--t-primary) 3.5%, transparent) 22px,
+        color-mix(in srgb, var(--t-primary) 3.5%, transparent) 23px
+    );
+}
+.iv-theme-royal .iv-sec-alt {
+    background-image: radial-gradient(circle,
+        color-mix(in srgb, var(--t-accent) 20%, transparent) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+.iv-theme-romantic .iv-sec-alt {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Cpath d='M22 11C18 7 11 7 11 13C11 19 22 26 22 26C22 26 33 19 33 13C33 7 26 7 22 11Z' fill='%23e0a96d' opacity='0.09'/%3E%3C/svg%3E");
+    background-size: 44px 44px;
+}
+.iv-theme-garden .iv-sec-alt {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cellipse cx='30' cy='22' rx='9' ry='17' fill='%233f5e43' opacity='0.06' transform='rotate(-35 30 22)'/%3E%3Cellipse cx='30' cy='22' rx='9' ry='17' fill='%233f5e43' opacity='0.05' transform='rotate(35 30 22)'/%3E%3C/svg%3E");
+    background-size: 60px 60px;
+}
+.iv-theme-modern .iv-sec-alt {
+    background-image:
+        linear-gradient(color-mix(in srgb, var(--t-outline) 30%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--t-outline) 30%, transparent) 1px, transparent 1px);
+    background-size: 30px 30px;
+}
+.iv-theme-indochine .iv-sec-alt {
+    background-image:
+        repeating-linear-gradient(45deg, transparent, transparent 13px,
+            color-mix(in srgb, var(--t-accent) 7%, transparent) 13px,
+            color-mix(in srgb, var(--t-accent) 7%, transparent) 14px),
+        repeating-linear-gradient(-45deg, transparent, transparent 13px,
+            color-mix(in srgb, var(--t-accent) 5%, transparent) 13px,
+            color-mix(in srgb, var(--t-accent) 5%, transparent) 14px);
+}
+
+/* P3A — Traditional: corner bracket ornaments on hero */
+.iv-theme-traditional .iv-hero-body::before,
+.iv-theme-traditional .iv-hero-body::after {
+    content: '';
+    position: absolute;
+    width: 36px; height: 36px;
+    border-color: var(--t-primary);
+    border-style: solid;
+    opacity: 0.4;
+}
+.iv-theme-traditional .iv-hero-body::before { top: -4px; left: 16px; border-width: 2px 0 0 2px; }
+.iv-theme-traditional .iv-hero-body::after  { bottom: -4px; right: 16px; border-width: 0 2px 2px 0; }
+
+/* P3B — Garden: leaf glyph watermark in alt sections */
+.iv-theme-garden .iv-sec-alt { position: relative; overflow: hidden; }
+.iv-theme-garden .iv-sec-alt::after {
+    content: '❧';
+    position: absolute; bottom: 0.25rem; right: 1rem;
+    font-size: 72px; opacity: 0.04;
+    pointer-events: none; z-index: 0;
+    color: var(--t-primary); line-height: 1;
+    transform: rotate(-15deg);
 }
 
 /* ── MOBILE POLISH ── */

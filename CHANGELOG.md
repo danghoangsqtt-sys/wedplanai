@@ -2,6 +2,60 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [v2.1.0] — 2026-06-15: Invitation Design Upgrade (frontend-design)
+
+> Áp dụng `frontend-design` principles: typography đặc sắc, motion stagger, grain texture, signature elements cho từng theme. (tsc ✓)
+
+### ✨ Nâng Cấp Thiết Kế
+- **Modern theme fonts**: thay `Inter`/`Public Sans` (generic) → **Cinzel** (regal geometric serif) + **DM Sans** (contemporary body)
+- **Couple names lớn hơn**: `clamp(2rem, 9vw, 3rem)` — tên đôi vợ chồng xứng đáng là tâm điểm hero
+- **Hero entrance animation**: tên cặp đôi slide-up + skew-in với `cubic-bezier(.23,1,.32,1)` 1.2s
+- **Scroll reveal stagger**: mỗi phần tử con trong section có `transition-delay` 0/80/160/240/320ms cascading
+- **Card hover lift**: `translateY(-3px)` + deeper shadow — tactile nhưng không gây phân tâm
+- **Button hover glow**: `brightness(1.08)` + thematic glow màu `--t-primary`
+- **Royal gold shimmer**: tên cặp đôi theme Royal có gradient gold tự động chạy 6s (CSS-only, không JS)
+- **Per-theme section title**: Traditional có accent underline, Romantic có script font, Modern/Royal/Indochine có border-bottom theo màu chủ đạo
+- **Paper grain texture**: SVG fractalNoise trên toàn bộ surface — cảm giác giấy cao cấp
+- **Alt-section patterns**: 6 hoa văn riêng — Traditional (kẻ chéo), Royal (chấm vàng), Romantic (heart), Garden (lá elipse), Modern (grid ô), Indochine (kim cương đan chéo)
+- **Traditional: corner ornaments**: khung góc `L` trên-trái và `⌐` dưới-phải trong hero
+- **Garden: leaf watermark**: `❧` mờ 4% ở góc section xen kẽ
+
+### 🏗️ Kỹ Thuật
+- Zero new dependencies — toàn bộ CSS-only trong `InvitationPreview.tsx`
+- Zero breaking changes — không đụng store/editor/types/API
+- Google Fonts: `Cinzel:wght@400;600` + `DM+Sans:wght@400;500;600` (drop Inter, Public Sans)
+
+## [v2.0.0] — 2026-06-15: Canvas Editor v2 — Thiệp Cưới Rebuild
+
+> Đập đi xây lại toàn bộ tính năng tạo thiệp theo mô hình **canvas-first editor** (giống namtay.vn / Canva). Click thẳng vào thiệp để chỉnh sửa, kéo thả sections, undo/redo. (tsc ✓)
+
+### ✨ Tính Năng Mới
+- **Canvas Editor:** thay toàn bộ sidebar accordion bằng canvas-first editor — click vào section trong thiệp để mở context panel
+- **Click-to-select:** mỗi section (Hero, Cha Mẹ, Địa Điểm, Events, Gallery, Love Story, QR/Bank, RSVP, Guestbook) có viền highlight khi selected
+- **Context Panel:** panel trượt từ phải với form chỉnh sửa phù hợp cho từng section
+- **Drag-to-reorder sections:** kéo thả reorder sections trong panel bên trái (dnd-kit)
+- **Undo/Redo 20 bước:** Ctrl+Z / Ctrl+Y — dùng immer + history array
+- **Template picker dropdown:** chọn template với preview emoji ngay trong top bar
+- **Style panel:** màu nhấn + color picker + hiệu ứng rơi trong icon sidebar
+- **Preview mode:** toggle xem trước thiệp full-screen không có UI editor
+- **Phone frame canvas:** preview trong khung điện thoại thật với notch
+
+### 🏗️ Kiến Trúc
+- `hooks/useEditorHistory.ts` — immer-based undo/redo factory (20 steps)
+- `components/invitation/editor/InvitationEditorPage.tsx` — layout container
+- `components/invitation/editor/EditorTopBar.tsx` — toolbar
+- `components/invitation/editor/EditorLeftSidebar.tsx` — icon strip + dnd section list
+- `components/invitation/editor/EditorContextPanel.tsx` — 9 section panels
+- `types.ts` — thêm `SectionId`, `DEFAULT_SECTION_ORDER`, `sectionOrder`, `sectionVisibility`
+- `InvitationPreview.tsx` — thêm `EditorConfig` prop, `secProps()`, click handler mỗi section
+- Dependencies: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`, `immer`
+
+### 🔒 Giữ Nguyên
+- `PublicInvitationView.tsx` — view khách không đổi
+- VietQR integration + html2canvas QR export
+- Cloud sync (Supabase) — `updateInvitation` vẫn trigger cloud sync tự động
+- Tất cả 6 template hiện tại
+
 ## [v1.3.0] — 2026-06-15: Thiệp Cưới Phase 3 — Theme Parity + 2 Theme Mới
 
 > Nâng layout gần mockup `public/theme/*` + cho 2 mockup mồ côi (garden_romance, indochine) một "home" thật. (tsc ✓ / build ✓)

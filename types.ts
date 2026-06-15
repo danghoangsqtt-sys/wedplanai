@@ -181,6 +181,10 @@ export interface GuestWish {
   createdAt: string;
 }
 
+export type SectionId = 'hero' | 'family' | 'venue' | 'events' | 'loveStory' | 'gallery' | 'bank' | 'rsvp' | 'guestbook';
+
+export const DEFAULT_SECTION_ORDER: SectionId[] = ['hero', 'family', 'venue', 'events', 'loveStory', 'gallery', 'bank', 'rsvp', 'guestbook'];
+
 export interface InvitationData {
   templateId: 'traditional' | 'romantic' | 'modern' | 'royal' | 'garden' | 'indochine';
   groomName: string;
@@ -217,6 +221,9 @@ export interface InvitationData {
   headerSticker?: string;   // Emoji sticker for header area
   dividerSticker?: string;  // Emoji sticker for divider areas
   footerSticker?: string;   // Emoji sticker for footer area
+  // --- Canvas editor fields ---
+  sectionOrder?: SectionId[];
+  sectionVisibility?: Partial<Record<SectionId, boolean>>;
 }
 
 // --- Local Market Intelligence Types ---
