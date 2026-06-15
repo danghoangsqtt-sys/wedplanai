@@ -998,12 +998,20 @@ const InvitationManager: React.FC = () => {
                                                         accept="image/*" 
                                                         onChange={async (e) => {
                                                             const file = e.target.files?.[0];
-                                                            if (file && user?.uid) {
-                                                                setUploadingImage(true);
-                                                                try {
-                                                                    const url = await uploadInvitationImage(file, user.uid);
-                                                                    if (url) handleUpdateLoveStory(idx, 'photo', url);
-                                                                } finally { setUploadingImage(false); }
+                                                            e.target.value = '';
+                                                            if (!file || !user?.uid) return;
+                                                            if (file.size > 2 * 1024 * 1024) {
+                                                                alert('Vui lòng chọn ảnh dung lượng dưới 2MB.');
+                                                                return;
+                                                            }
+                                                            setUploadingImage(true);
+                                                            try {
+                                                                const url = await uploadInvitationImage(file, user.uid);
+                                                                handleUpdateLoveStory(idx, 'photo', url);
+                                                            } catch (err: any) {
+                                                                alert('Có lỗi khi tải ảnh lên: ' + (err?.message || 'Vui lòng thử lại.'));
+                                                            } finally {
+                                                                setUploadingImage(false);
                                                             }
                                                         }} 
                                                     />

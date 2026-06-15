@@ -146,26 +146,36 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
    const dateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
    const [tempWeddingDate, setTempWeddingDate] = useState(user?.weddingDate || '');
+   const savedDateRef = useRef(user?.weddingDate || '');
+
+   const isValidWeddingDate = (date: string) => {
+      const year = parseInt(date.split('-')[0]);
+      return date.length === 10 && year >= 2024 && year <= 2099;
+   };
 
    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const date = e.target.value;
       setTempWeddingDate(date);
-
-      // Clear any pending save
       if (dateTimeoutRef.current) clearTimeout(dateTimeoutRef.current);
-
-      // Only process when year has 4 digits (complete date entered)
-      // HTML date format: YYYY-MM-DD
-      const year = date.split('-')[0];
-      if (!date || !year || year.length !== 4 || parseInt(year) < 2024) return;
-
-      // Debounce: wait 800ms after last keystroke before saving + asking
+      if (!isValidWeddingDate(date)) return;
+      // Save silently — no confirm() here to avoid closing the native date picker
       dateTimeoutRef.current = setTimeout(() => {
          updateUser(user!.uid, { weddingDate: date });
-         if (confirm("Bạn có muốn tự động cập nhật lại hạn chót (deadline) cho các công việc dựa trên ngày cưới mới không?")) {
-            recalculateDeadlines(date);
-         }
+         savedDateRef.current = date;
       }, 800);
+   };
+
+   const handleDateBlur = () => {
+      const date = tempWeddingDate;
+      if (!isValidWeddingDate(date) || date === savedDateRef.current) return;
+      // Cancel pending debounce and save immediately
+      if (dateTimeoutRef.current) clearTimeout(dateTimeoutRef.current);
+      updateUser(user!.uid, { weddingDate: date });
+      savedDateRef.current = date;
+      // Safe to show confirm now — user has left the field, picker is closed
+      if (confirm("Bạn có muốn tự động cập nhật lại hạn chót (deadline) cho các công việc dựa trên ngày cưới mới không?")) {
+         recalculateDeadlines(date);
+      }
    };
 
    const handleSaveApiKey = async () => {
@@ -364,6 +374,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
                                     min="2024-01-01"
                                     max="2099-12-31"
                                     onChange={handleDateChange}
+                                    onBlur={handleDateBlur}
                                  />
                               </div>
                               <p className="text-[10px] text-gray-500 mt-1 italic">* Thay đổi ngày cưới sẽ gợi ý cập nhật lại hạn chót công việc.</p>

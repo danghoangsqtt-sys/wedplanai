@@ -1,0 +1,47 @@
+{
+  "id": "debug-20260615-upload-lovestory",
+  "status": "resolved",
+  "created_at": "2026-06-15T00:00:00.000Z",
+  "updated_at": "2026-06-15T00:00:00.000Z",
+  "problem": {
+    "description": "Upload ảnh thất bại, console báo PGRST205 sau ~40 giây",
+    "symptoms": [
+      "Upload ảnh không thành công, không thấy thông báo lỗi",
+      "Console: PGRST205 - Could not find table 'public.invitation_responses'"
+    ],
+    "error_messages": [
+      "PGRST205: Could not find the table 'public.invitation_responses' in the schema cache"
+    ],
+    "affected_files": [
+      "components/invitation/InvitationManager.tsx (line 999-1008)",
+      "services/cloudService.ts"
+    ]
+  },
+  "investigation": {
+    "hypotheses": [
+      {
+        "id": 1,
+        "description": "PGRST205 là nguyên nhân upload thất bại",
+        "status": "rejected",
+        "note": "Hai vấn đề hoàn toàn độc lập"
+      },
+      {
+        "id": 2,
+        "description": "Love Story upload handler thiếu catch block → silent fail sau fix uploadInvitationImage (now throws)",
+        "status": "confirmed"
+      }
+    ],
+    "findings": [
+      "PGRST205 = Phase 2 migration chưa chạy (invitation_responses table chưa tạo) — đã biết, không liên quan upload",
+      "Love Story inline upload onChange (line 999) chỉ có try/finally không có catch",
+      "Sau fix sáng nay uploadInvitationImage giờ throw thay vì return null → Love Story handler throw unhandled",
+      "Cover và Gallery handlers đã có catch đúng cách"
+    ]
+  },
+  "resolution": {
+    "root_cause": "Love Story upload handler thiếu catch block + thiếu size validation + thiếu input reset",
+    "fix_applied": "Thêm catch với alert lỗi, size check 2MB, e.target.value reset, bỏ if(url) vì uploadInvitationImage giờ throw thay vì return null",
+    "files_changed": ["components/invitation/InvitationManager.tsx"],
+    "verification": "npx tsc --noEmit: 0 errors"
+  }
+}
