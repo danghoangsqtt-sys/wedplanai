@@ -381,7 +381,8 @@ const GalleryPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invit
             <div className="grid grid-cols-3 gap-2">
                 {images.map((img, i) => (
                     <div key={i} className="relative aspect-square rounded-lg overflow-hidden group border border-gray-100">
-                        <img src={img} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                        <img src={img} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" loading="lazy"
+                            onError={e => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).className = 'w-full h-full bg-gray-100 flex items-center justify-center'; }} />
                         <button
                             onClick={() => removeImage(i)}
                             className="absolute top-1 right-1 bg-black/50 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-all"

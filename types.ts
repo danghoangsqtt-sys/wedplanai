@@ -222,6 +222,12 @@ export interface InvitationData {
   dividerSticker?: string;  // Emoji sticker for divider areas
   footerSticker?: string;   // Emoji sticker for footer area
   // --- Canvas editor fields ---
+  fontTitle?: string;
+  fontBody?: string;
+  titleColor?: string;
+  bodyColor?: string;
+  titleSize?: number;
+  bodySize?: number;
   sectionOrder?: SectionId[];
   sectionVisibility?: Partial<Record<SectionId, boolean>>;
 }

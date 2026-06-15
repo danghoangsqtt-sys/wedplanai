@@ -261,8 +261,34 @@ export const uploadInvitationImage = async (file: File, uid: string): Promise<st
     .from('invitation_assets')
     .getPublicUrl(filePath);
 
-  uploadLog.info('success', { url: data.publicUrl });
-  return data.publicUrl;
+  const url = data.publicUrl;
+
+  // Verify the URL is actually accessible (catches private bucket / RLS issues)
+  try {
+    const check = await fetch(url, { method: 'HEAD' });
+    if (!check.ok) {
+      uploadLog.warn('public URL not accessible, falling back to signed URL', { status: check.status, url });
+      const { data: signed, error: signErr } = await supabase.storage
+        .from('invitation_assets')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+      if (signErr || !signed?.signedUrl) {
+        uploadLog.error('signed URL fallback failed', signErr);
+        throw new Error('Ảnh đã tải lên nhưng không thể tạo đường dẫn truy cập.');
+      }
+      uploadLog.info('using signed URL', { url: signed.signedUrl });
+      return signed.signedUrl;
+    }
+  } catch (fetchErr) {
+    // HEAD check failed (e.g. CORS) — try signed URL as fallback
+    uploadLog.warn('HEAD check failed, trying signed URL', fetchErr);
+    const { data: signed } = await supabase.storage
+      .from('invitation_assets')
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+    if (signed?.signedUrl) return signed.signedUrl;
+  }
+
+  uploadLog.info('success', { url });
+  return url;
 };
 
 // --- PROFILE SYNC ---

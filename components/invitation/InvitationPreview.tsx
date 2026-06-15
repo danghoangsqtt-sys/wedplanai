@@ -1,10 +1,11 @@
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent } from '../../types';
-import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, X, Volume2, VolumeX, Navigation } from 'lucide-react';
+import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, X, Volume2, VolumeX, Navigation, Bold, Italic, Underline, Strikethrough } from 'lucide-react';
 
 export interface EditorConfig {
     selectedSection?: string;
     onSectionClick?: (sectionId: string) => void;
+    onFieldEdit?: (field: string, value: string) => void;
 }
 
 interface InvitationPreviewProps {
@@ -254,18 +255,123 @@ const bentoClass = (i: number, total: number): string => {
     return '';
 };
 
+// ─── FLOATING TEXT TOOLBAR ───
+const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivElement | null> }> = ({ containerRef }) => {
+    const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+    const [active, setActive] = useState<Record<string, boolean>>({});
+    const toolbarRef = useRef<HTMLDivElement>(null);
+
+    const updateToolbar = useCallback(() => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || !sel.rangeCount) { setPos(null); return; }
+        const anchor = sel.anchorNode?.parentElement;
+        if (!anchor || !containerRef.current?.contains(anchor)) { setPos(null); return; }
+        const editable = anchor.closest('[contenteditable="true"]');
+        if (!editable) { setPos(null); return; }
+
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const containerRect = containerRef.current.getBoundingClientRect();
+        setPos({
+            x: rect.left + rect.width / 2 - containerRect.left,
+            y: rect.top - containerRect.top - 48,
+        });
+        setActive({
+            bold: document.queryCommandState('bold'),
+            italic: document.queryCommandState('italic'),
+            underline: document.queryCommandState('underline'),
+            strikeThrough: document.queryCommandState('strikeThrough'),
+        });
+    }, [containerRef]);
+
+    useEffect(() => {
+        document.addEventListener('selectionchange', updateToolbar);
+        return () => document.removeEventListener('selectionchange', updateToolbar);
+    }, [updateToolbar]);
+
+    const exec = (cmd: string) => {
+        document.execCommand(cmd, false);
+        updateToolbar();
+    };
+
+    if (!pos) return null;
+    const btns = [
+        { cmd: 'bold', icon: <Bold size={15} />, label: 'B' },
+        { cmd: 'italic', icon: <Italic size={15} />, label: 'I' },
+        { cmd: 'underline', icon: <Underline size={15} />, label: 'U' },
+        { cmd: 'strikeThrough', icon: <Strikethrough size={15} />, label: 'S' },
+    ];
+
+    return (
+        <div
+            ref={toolbarRef}
+            className="iv-text-toolbar"
+            style={{ left: pos.x, top: pos.y }}
+            onMouseDown={e => e.preventDefault()}
+        >
+            <span className="iv-toolbar-label">Sửa văn bản</span>
+            <div className="iv-toolbar-sep" />
+            {btns.map(b => (
+                <button
+                    key={b.cmd}
+                    onClick={() => exec(b.cmd)}
+                    className={`iv-toolbar-btn ${active[b.cmd] ? 'iv-toolbar-active' : ''}`}
+                    title={b.label}
+                >
+                    {b.icon}
+                </button>
+            ))}
+        </div>
+    );
+};
+
 // ════════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook, editorConfig }) => {
     const ec = editorConfig;
+    const rootRef = useRef<HTMLDivElement>(null);
     const secProps = (id: string) => ec ? {
         'data-sec': id,
-        onClick: (e: React.MouseEvent) => { e.stopPropagation(); ec.onSectionClick?.(id); },
+        onClick: (e: React.MouseEvent) => {
+            if ((e.target as HTMLElement).isContentEditable) return;
+            e.stopPropagation(); ec.onSectionClick?.(id);
+        },
         style: { position: 'relative' as const, cursor: 'pointer',
             outline: ec.selectedSection === id ? '2px solid #ec4899' : undefined,
             outlineOffset: ec.selectedSection === id ? '-2px' : undefined },
     } : {};
+
+    // Inline editable text props — makes text contentEditable in editor mode
+    const editProps = (field: string, placeholder?: string) => ec?.onFieldEdit ? {
+        contentEditable: true,
+        suppressContentEditableWarning: true,
+        'data-field': field,
+        'data-placeholder': placeholder,
+        onClick: (e: React.MouseEvent) => e.stopPropagation(),
+        onBlur: (e: React.FocusEvent<HTMLElement>) => {
+            const text = e.currentTarget.textContent?.trim() || '';
+            ec.onFieldEdit!(field, text);
+        },
+        onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                (e.target as HTMLElement).blur();
+            }
+        },
+        style: {
+            outline: 'none',
+            cursor: 'text',
+            borderBottom: '2px solid transparent',
+            transition: 'border-color 0.2s',
+        },
+        onFocus: (e: React.FocusEvent<HTMLElement>) => {
+            e.currentTarget.style.borderBottomColor = '#3b82f6';
+        },
+        onBlurCapture: (e: React.FocusEvent<HTMLElement>) => {
+            e.currentTarget.style.borderBottomColor = 'transparent';
+        },
+    } as Record<string, unknown> : {};
     const countdown = useCountdown(data.date);
     const [lbIndex, setLbIndex] = useState<number | null>(null);
     const [audioPlaying, setAudioPlaying] = useState(false);
@@ -312,8 +418,14 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     const themeStyle = useMemo(() => {
         const vars = { ...(THEME_VARS[tid] || THEME_VARS.traditional) };
         if (data.themeColor) vars['--t-accent'] = data.themeColor;
+        if (data.fontTitle) vars['--t-font-display'] = `'${data.fontTitle}', serif`;
+        if (data.fontBody) vars['--t-font-body'] = `'${data.fontBody}', sans-serif`;
+        if (data.titleColor) vars['--t-primary'] = data.titleColor;
+        if (data.bodyColor) vars['--t-on-surface'] = data.bodyColor;
+        if (data.titleSize) vars['--t-title-scale'] = `${data.titleSize}rem`;
+        if (data.bodySize) vars['--t-body-size'] = `${data.bodySize}px`;
         return vars as React.CSSProperties;
-    }, [tid, data.themeColor]);
+    }, [tid, data.themeColor, data.fontTitle, data.fontBody, data.titleColor, data.bodyColor, data.titleSize, data.bodySize]);
 
     // Lightweight reveal key — re-observe only when the set of sections changes.
     const revealKey = [tid, hasParents, hasVenue, hasEvents, hasLoveStory, hasGallery, hasBank, hasRSVP, !!data.guestbookEnabled, (data.guestWishes || []).length].join('|');
@@ -343,7 +455,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 <Lightbox images={data.galleryImages} index={lbIndex} onClose={() => setLbIndex(null)} />
             )}
 
-            <div className={`iv-root iv-theme-${tid}`} style={themeStyle}>
+            <div ref={rootRef} className={`iv-root iv-theme-${tid}`} style={themeStyle}>
+                {ec && <FloatingTextToolbar containerRef={rootRef} />}
 
                 {/* ── FLOATING MUSIC BUTTON ── */}
                 {data.musicUrl && (
@@ -379,9 +492,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         )}
 
                         <h1 className="iv-couple">
-                            <span className="iv-name">{groomName}</span>
+                            <span className="iv-name" {...editProps('groomName', 'Chú Rể')}>{groomName}</span>
                             <span className="iv-amp">&</span>
-                            <span className="iv-name">{brideName}</span>
+                            <span className="iv-name" {...editProps('brideName', 'Cô Dâu')}>{brideName}</span>
                         </h1>
 
                         {/* Date badge */}
@@ -400,7 +513,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         )}
 
                         {data.lunarDate && <p className="iv-lunar">(Âm lịch: {data.lunarDate})</p>}
-                        {data.wishes && <p className="iv-wishes-text">{data.wishes}</p>}
+                        {(data.wishes || ec) && <p className="iv-wishes-text" {...editProps('wishes', 'Lời mời...')}>{data.wishes || (ec ? '' : '')}</p>}
 
                         {/* Countdown */}
                         {hasCountdown && (
@@ -460,8 +573,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         <Divider glyph={dividerSticker} />
                         <div className="iv-venue-card">
                             <div className="iv-venue-icon"><MapPin size={22} /></div>
-                            {data.location && <p className="iv-venue-name">{data.location}</p>}
-                            {data.address && <p className="iv-venue-addr">{data.address}</p>}
+                            {(data.location || ec) && <p className="iv-venue-name" {...editProps('location', 'Tên địa điểm...')}>{data.location}</p>}
+                            {(data.address || ec) && <p className="iv-venue-addr" {...editProps('address', 'Địa chỉ...')}>{data.address}</p>}
                             <div className="iv-venue-meta">
                                 {data.date && <span><Calendar size={14} /> {fmtDate}</span>}
                                 {data.time && <span><Clock size={14} /> {data.time}</span>}
@@ -548,7 +661,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         <div className="iv-gallery">
                             {data.galleryImages!.map((img, i) => (
                                 <div key={i} className={`iv-gal-item ${bentoClass(i, data.galleryImages!.length)}`} onClick={() => setLbIndex(i)}>
-                                    <img src={img} alt={`Ảnh ${i + 1}`} loading="lazy" />
+                                    <img src={img} alt={`Ảnh ${i + 1}`} loading="lazy"
+                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.parentElement?.classList.add('iv-gal-broken'); }} />
                                     <div className="iv-gal-hover"><Camera size={20} /></div>
                                 </div>
                             ))}
@@ -621,11 +735,11 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             ══════════════════════════════════════════════════ */}
             <style>{`
 /* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=Great+Vibes&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Cinzel:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=Great+Vibes&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Cinzel:wght@400;600&family=DM+Sans:wght@400;500;600&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Spectral:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Fahkwang:wght@400;500;600&family=Nunito:wght@400;500;600&family=Quicksand:wght@400;500;600&family=Josefin+Sans:wght@400;500;600&family=Mulish:wght@400;500;600&display=swap');
 
 /* ── ROOT CONTAINER ── */
 .iv-root {
-    max-width: 480px;
+    max-width: 680px;
     margin: 0 auto;
     background: var(--t-surface);
     color: var(--t-on-surface);
@@ -633,6 +747,91 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     font-family: var(--t-font-body);
+    font-size: var(--t-body-size, 14px);
+}
+
+/* ── FLOATING TEXT TOOLBAR ── */
+.iv-text-toolbar {
+    position: absolute;
+    z-index: 100;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #1f2937;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    white-space: nowrap;
+    pointer-events: auto;
+}
+.iv-text-toolbar::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #1f2937;
+}
+.iv-toolbar-label {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 0 6px;
+    opacity: 0.7;
+    font-family: var(--t-font-label);
+}
+.iv-toolbar-sep {
+    width: 1px;
+    height: 18px;
+    background: rgba(255,255,255,0.2);
+    margin: 0 4px;
+}
+.iv-toolbar-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.iv-toolbar-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+.iv-toolbar-active {
+    background: rgba(59,130,246,0.5) !important;
+    color: white !important;
+}
+
+/* ── INLINE EDIT (contentEditable) ── */
+[data-field][contenteditable] {
+    outline: none;
+    border-radius: 4px;
+    transition: box-shadow 0.2s, background 0.2s;
+    min-width: 40px;
+    cursor: text;
+}
+[data-field][contenteditable]:hover {
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.25);
+}
+[data-field][contenteditable]:focus {
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.5);
+    background: rgba(255,255,255,0.15);
+}
+[data-field][contenteditable]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--t-on-surface-variant);
+    opacity: 0.4;
+    pointer-events: none;
+    font-style: italic;
 }
 
 /* ── SCROLL REVEAL ── */
@@ -727,7 +926,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 }
 .iv-couple {
     font-family: var(--t-font-display);
-    font-size: clamp(1.5rem, 7vw, 2.2rem);
+    font-size: var(--t-title-scale, clamp(1.5rem, 7vw, 2.2rem));
     font-weight: 400;
     color: var(--t-primary);
     line-height: 1.3;
@@ -850,7 +1049,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 }
 .iv-sec-title {
     font-family: var(--t-font-display);
-    font-size: clamp(1.4rem, 6vw, 1.75rem);
+    font-size: calc(var(--t-title-scale, 1.75rem) * 0.72);
     font-weight: 600;
     color: var(--t-primary);
     text-align: center;
@@ -1157,6 +1356,13 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     transition: opacity 0.3s;
 }
 .iv-gal-item:hover .iv-gal-hover { opacity: 1; }
+.iv-gal-broken {
+    background: color-mix(in srgb, var(--t-on-surface) 8%, transparent);
+    display: flex; align-items: center; justify-content: center;
+}
+.iv-gal-broken::after {
+    content: '\\1F5BC'; font-size: 1.5rem; opacity: 0.3;
+}
 
 /* ── GIFT / QR ── */
 .iv-gift-desc {
@@ -1310,17 +1516,17 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 .iv-theme-modern .iv-venue-icon { border-radius: 12px; }
 
 /* ROMANTIC — softer, larger script titles */
-.iv-theme-romantic .iv-sec-title { font-size: clamp(2rem, 9vw, 2.6rem); font-weight: 400; }
-.iv-theme-romantic .iv-invite-couple { font-family: var(--t-font-script); font-size: clamp(2rem, 9vw, 2.5rem); }
+.iv-theme-romantic .iv-sec-title { font-size: calc(var(--t-title-scale, 2.6rem) * 0.72); font-weight: 400; }
+.iv-theme-romantic .iv-invite-couple { font-family: var(--t-font-script); font-size: var(--t-title-scale, clamp(2rem, 9vw, 2.5rem)); }
 
 /* TRADITIONAL — refined serif emphasis */
 .iv-theme-traditional .iv-sec-title { letter-spacing: 0.04em; }
 
 /* GARDEN — soft botanical, rounded, sage */
-.iv-theme-garden .iv-sec-title { font-size: clamp(1.6rem, 7vw, 2rem); font-weight: 400; }
+.iv-theme-garden .iv-sec-title { font-size: calc(var(--t-title-scale, 2rem) * 0.72); font-weight: 400; }
 .iv-theme-garden .iv-event-icon,
 .iv-theme-garden .iv-venue-icon { border-radius: 50%; }
-.iv-theme-garden .iv-invite-couple { font-family: var(--t-font-script); font-size: clamp(1.8rem, 8vw, 2.3rem); }
+.iv-theme-garden .iv-invite-couple { font-family: var(--t-font-script); font-size: var(--t-title-scale, clamp(1.8rem, 8vw, 2.3rem)); }
 
 /* INDOCHINE — jade art-deco frame, crisp uppercase */
 .iv-theme-indochine .iv-event-card,
@@ -1345,7 +1551,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     to   { opacity: 1; transform: translateY(0) skewY(0deg); }
 }
 .iv-couple {
-    font-size: clamp(2rem, 9vw, 3rem);
+    font-size: var(--t-title-scale, clamp(2rem, 9vw, 3rem));
     line-height: 1.2;
     animation: heroNameIn 1.2s cubic-bezier(.23,1,.32,1) 0.4s both;
 }
