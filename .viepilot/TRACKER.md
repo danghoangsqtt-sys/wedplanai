@@ -22,7 +22,22 @@ Updated: 2026-06-15
 ## Previous Milestone
 **Personal Tool Mode** (PIN gate + cloud auto-save + auth removal) — ✅ COMPLETE (v1.0.0)
 
+## Active Work — Debug Logging & Observability
+**Milestone:** Structured Logging
+**Source:** `docs/brainstorm/session-2026-06-15-debug-logging.md`
+
+| Task | Status |
+|------|--------|
+| `lib/logger.ts` — factory + exports | ✅ DONE |
+| Instrument `cloudService.ts` | ✅ DONE |
+| Instrument upload handlers | ✅ DONE |
+| Instrument `useStore.ts` | ✅ DONE |
+
+**SPEC:** `.viepilot/phases/logging-phase-1/SPEC.md`
+
+---
+
 ## Next
+- **Logging Phase 1:** instrument cloud + upload + store (xem SPEC)
 - User chạy SQL migration → RSVP/lời chúc thật chảy về
 - (Optional) Phase 3 — theme parity với mockups `public/theme/*`
-- Git: Phase 1+2 chưa commit (chờ user duyệt)

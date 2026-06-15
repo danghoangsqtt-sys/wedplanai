@@ -3,6 +3,7 @@ import { useStore } from '../../store/useStore';
 import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent } from '../../types';
 import InvitationPreview from './InvitationPreview';
 import { uploadInvitationImage, loadInvitationResponses, InvitationResponse } from '../../services/cloudService';
+import { uploadLog } from '../../lib/logger';
 import {
     Palette, MapPin, Calendar, Heart, QrCode, Download, X,
     Save, Type, Image as ImageIcon, ExternalLink,
@@ -209,11 +210,14 @@ const InvitationManager: React.FC = () => {
             alert("Vui lòng chọn ảnh dung lượng dưới 2MB để tối ưu tốc độ.");
             return;
         }
+        uploadLog.info('cover start', { name: file.name, sizeMB: +(file.size / 1048576).toFixed(2) });
         setUploadingImage(true);
         try {
             const url = await uploadInvitationImage(file, user.uid);
+            uploadLog.info('cover success', { url });
             handleChange('couplePhoto', url);
         } catch (err: any) {
+            uploadLog.error('cover failed', { error: err?.message });
             alert('Có lỗi xảy ra khi tải ảnh bìa: ' + (err?.message || 'Vui lòng thử lại.'));
         } finally {
             setUploadingImage(false);
@@ -231,14 +235,19 @@ const InvitationManager: React.FC = () => {
             alert(`Ảnh "${oversized.name}" vượt quá 2MB. Vui lòng chọn ảnh nhỏ hơn.`);
             return;
         }
+        uploadLog.group(`gallery upload (${fileArray.length} files)`);
         setUploadingImage(true);
         try {
             const urls = await Promise.all(
                 fileArray.map(f => uploadInvitationImage(f, user.uid))
             );
+            uploadLog.info('gallery success', { count: urls.length });
+            uploadLog.groupEnd();
             const currentGallery = invitation.galleryImages || [];
             handleChange('galleryImages', [...currentGallery, ...urls]);
         } catch (err: any) {
+            uploadLog.error('gallery failed', { error: err?.message });
+            uploadLog.groupEnd();
             alert('Có lỗi khi tải ảnh lên album: ' + (err?.message || 'Vui lòng thử lại.'));
         } finally {
             setUploadingImage(false);
@@ -1004,11 +1013,14 @@ const InvitationManager: React.FC = () => {
                                                                 alert('Vui lòng chọn ảnh dung lượng dưới 2MB.');
                                                                 return;
                                                             }
+                                                            uploadLog.info('love story start', { name: file.name });
                                                             setUploadingImage(true);
                                                             try {
                                                                 const url = await uploadInvitationImage(file, user.uid);
+                                                                uploadLog.info('love story success', { url });
                                                                 handleUpdateLoveStory(idx, 'photo', url);
                                                             } catch (err: any) {
+                                                                uploadLog.error('love story failed', { error: err?.message });
                                                                 alert('Có lỗi khi tải ảnh lên: ' + (err?.message || 'Vui lòng thử lại.'));
                                                             } finally {
                                                                 setUploadingImage(false);

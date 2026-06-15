@@ -1,6 +1,7 @@
 import { supabase, TABLES } from '../lib/supabase';
 import { Guest, BudgetItem, UserProfile, ProcedureStep, WeddingRegion, InvitationData } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
+import { cloudLog, uploadLog } from '../lib/logger';
 
 export interface UserCloudData {
   guests: Guest[];
@@ -24,7 +25,7 @@ export const getPublicIP = async (): Promise<string | null> => {
     const data = await res.json();
     return data.ip;
   } catch (err) {
-    console.warn('getPublicIP failed:', err);
+    cloudLog.warn('getPublicIP failed', err);
     return null;
   }
 };
@@ -35,6 +36,8 @@ export const saveUserDataToCloud = async (
   uid: string,
   data: Omit<UserCloudData, 'lastUpdated'>
 ) => {
+  cloudLog.info('save start', { uid });
+  cloudLog.time('cloud-save');
   try {
     // Ensure profile row exists (FK: user_data.id → profiles.id)
     await supabase
@@ -72,16 +75,21 @@ export const saveUserDataToCloud = async (
           updated_at: new Date().toISOString(),
         }, { onConflict: 'uid' });
 
-      if (invError) console.warn('Error syncing public invitation:', invError);
+      if (invError) cloudLog.warn('sync public invitation failed', invError);
     }
 
+    cloudLog.timeEnd('cloud-save');
+    cloudLog.info('save complete', { uid });
     updateLastActive(uid);
   } catch (error) {
-    console.error('Error saving to cloud:', error);
+    cloudLog.timeEnd('cloud-save');
+    cloudLog.error('save to cloud failed', error);
   }
 };
 
 export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData | null> => {
+  cloudLog.info('load start', { uid });
+  cloudLog.time('cloud-load');
   try {
     const { data: doc, error } = await supabase
       .from(TABLES.USER_DATA)
@@ -90,9 +98,12 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
       .maybeSingle();
 
     if (error) {
-      console.error('Error loading from cloud:', error);
+      cloudLog.timeEnd('cloud-load');
+      cloudLog.error('load from cloud failed', error);
       return null;
     }
+    cloudLog.timeEnd('cloud-load');
+    cloudLog.info('load complete', { uid, hasData: !!doc });
     if (!doc) return null;
 
     return {
@@ -106,7 +117,8 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
       lastUpdated: new Date(doc.last_updated).getTime(),
     };
   } catch (e) {
-    console.error('Error loading from cloud:', e);
+    cloudLog.timeEnd('cloud-load');
+    cloudLog.error('load from cloud failed', e);
     return null;
   }
 };
@@ -157,7 +169,7 @@ export const submitRSVP = async (
     if (error) throw error;
     return true;
   } catch (e) {
-    console.warn('submitRSVP failed (table may not be migrated yet):', e);
+    cloudLog.warn('submitRSVP failed (table may not be migrated yet)', e);
     return false;
   }
 };
@@ -176,7 +188,7 @@ export const submitWish = async (
     if (error) throw error;
     return true;
   } catch (e) {
-    console.warn('submitWish failed (table may not be migrated yet):', e);
+    cloudLog.warn('submitWish failed (table may not be migrated yet)', e);
     return false;
   }
 };
@@ -197,7 +209,7 @@ export const loadInvitationResponses = async (
       wishes: rows.filter(r => r.kind === 'wish'),
     };
   } catch (e) {
-    console.warn('loadInvitationResponses failed (table may not be migrated yet):', e);
+    cloudLog.warn('loadInvitationResponses failed (table may not be migrated yet)', e);
     return { rsvps: [], wishes: [] };
   }
 };
@@ -211,20 +223,21 @@ export const loadPublicInvitation = async (uid: string): Promise<InvitationData 
       .maybeSingle();
 
     if (error) {
-      console.error('Error loading public invitation:', error);
+      cloudLog.error('load public invitation failed', error);
       return null;
     }
     if (!doc) return null;
 
     return (doc.invitation_json as InvitationData) ?? null;
   } catch (e) {
-    console.error('Error loading public invitation:', e);
+    cloudLog.error('load public invitation failed', e);
     return null;
   }
 };
 
 // --- STORAGE SYNC ---
 export const uploadInvitationImage = async (file: File, uid: string): Promise<string> => {
+  uploadLog.info('start', { name: file.name, sizeMB: +(file.size / 1048576).toFixed(2), type: file.type });
   const fileExt = file.name.split('.').pop()?.toLowerCase();
   if (!['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExt || '')) {
     throw new Error('Định dạng ảnh không hợp lệ (chỉ hỗ trợ jpg, png, webp, gif)');
@@ -232,16 +245,23 @@ export const uploadInvitationImage = async (file: File, uid: string): Promise<st
   const fileName = `${uid}_${Date.now()}.${fileExt}`;
   const filePath = `${uid}/${fileName}`;
 
+  uploadLog.time('upload');
   const { error } = await supabase.storage
     .from('invitation_assets')
     .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
-  if (error) throw error;
+  if (error) {
+    uploadLog.timeEnd('upload');
+    uploadLog.error('failed', { name: file.name, error });
+    throw error;
+  }
 
+  uploadLog.timeEnd('upload');
   const { data } = supabase.storage
     .from('invitation_assets')
     .getPublicUrl(filePath);
 
+  uploadLog.info('success', { url: data.publicUrl });
   return data.publicUrl;
 };
 
@@ -266,7 +286,7 @@ export const syncUserProfile = async (user: UserProfile) => {
 
     if (error) throw error;
   } catch (error) {
-    console.error('Error syncing profile:', error);
+    cloudLog.error('sync profile failed', error);
   }
 };
 
@@ -279,7 +299,7 @@ export const getUserPublicProfile = async (uid: string): Promise<UserProfile | n
       .maybeSingle();
 
     if (error) {
-      console.error('Error fetching public profile:', error);
+      cloudLog.error('fetch public profile failed', error);
       return null;
     }
     if (!doc) return null;
@@ -296,7 +316,7 @@ export const getUserPublicProfile = async (uid: string): Promise<UserProfile | n
       allowCustomApiKey: doc.allow_custom_api_key,
     } as UserProfile;
   } catch (e) {
-    console.error('Error fetching public profile:', e);
+    cloudLog.error('fetch public profile failed', e);
     return null;
   }
 };
@@ -307,7 +327,7 @@ const updateLastActive = async (uid: string) => {
       .from(TABLES.PROFILES)
       .update({ last_seen: new Date().toISOString() })
       .eq('id', uid);
-  } catch (err) { console.warn('updateLastSeen silent fail:', err); }
+  } catch (err) { cloudLog.warn('updateLastSeen failed', err); }
 };
 
 // --- ANALYTICS ---
@@ -332,7 +352,7 @@ export const logAppVisit = async (uid?: string) => {
     if (error) throw error;
     sessionStorage.setItem(sessionKey, 'true');
   } catch (error) {
-    console.warn('Analytics error:', error);
+    cloudLog.warn('analytics event failed', error);
   }
 };
 
@@ -376,7 +396,7 @@ export const checkGuestIPLimit = async (
 
     return (doc[col] || 0) >= maxLimit;
   } catch (err) {
-    console.warn('checkGuestIPUsage error:', err);
+    cloudLog.warn('checkGuestIPUsage failed', err);
     return false;
   }
 };
@@ -420,7 +440,7 @@ export const incrementGuestIPUsage = async (
         .eq('ip_id', ipId);
     }
   } catch (error) {
-    console.warn('Increment IP Usage failed:', error);
+    cloudLog.warn('incrementIPUsage failed', error);
   }
 };
 

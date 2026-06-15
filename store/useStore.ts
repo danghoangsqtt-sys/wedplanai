@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { UserProfile, AppSettings, Guest, BudgetItem, TaskStatus, Notification, NotificationType, WeddingRegion, ProcedureStep, InvitationData, LocalMarketReport, SharedPlan } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { saveUserDataToCloud, loadUserDataFromCloud } from '../services/cloudService';
+import { storeLog } from '../lib/logger';
 import { getMySharedPlan, createShareInvite, joinPlanByCode, revokeShare, leavePlan } from '../services/sharingService';
 import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS, INITIAL_INVITATION } from '../data/initialData';
 import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
@@ -149,6 +150,7 @@ const triggerCloudSync = (get: () => AppState) => {
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(async () => {
     const state = get();
+    storeLog.info('cloud sync triggered', { uid: OWNER_UID });
     try {
       await saveUserDataToCloud(OWNER_UID, {
         guests: state.guests,
@@ -160,7 +162,7 @@ const triggerCloudSync = (get: () => AppState) => {
         weddingDate: state.invitation?.date ?? null,
       });
     } catch (e) {
-      console.warn('Cloud sync failed (will retry on next change):', e);
+      storeLog.warn('cloud sync failed (will retry on next change)', e);
     }
   }, 2000);
 };
@@ -312,6 +314,7 @@ export const useStore = create<AppState>()(
 
       recalculateDeadlines: (weddingDateStr) => {
         if (!weddingDateStr) return;
+        storeLog.info('recalculate deadlines', { date: weddingDateStr });
         const weddingDate = new Date(weddingDateStr);
         set((state) => {
           const newItems = state.budgetItems.map(item => {
@@ -420,7 +423,7 @@ export const useStore = create<AppState>()(
             }
           }
         } catch (e) {
-          console.error('Init shared plan error:', e);
+          storeLog.error('init shared plan failed', e);
         }
       },
 
@@ -537,7 +540,7 @@ export const useStore = create<AppState>()(
             });
           }
         } catch (e) {
-          console.error('Shared plan polling error:', e);
+          storeLog.error('shared plan polling failed', e);
         }
       },
 
@@ -583,7 +586,7 @@ export const useStore = create<AppState>()(
             });
           }
         } catch (e) {
-          console.warn('Load from cloud failed, using local data:', e);
+          storeLog.warn('load from cloud failed, using local data', e);
         } finally {
           set({ isSyncing: false });
         }
