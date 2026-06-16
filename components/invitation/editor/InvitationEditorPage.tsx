@@ -10,7 +10,7 @@ import TemplateGalleryModal from '../TemplateGalleryModal';
 const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@400;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Spectral:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=DM+Sans:wght@400;500;600&family=Fahkwang:wght@400;500;600&family=Nunito:wght@400;500;600&family=Quicksand:wght@400;500;600&family=Josefin+Sans:wght@400;500;600&family=Mulish:wght@400;500;600&display=swap';
 
 const InvitationEditorPage: React.FC = () => {
-    const { invitation, updateInvitation } = useStore();
+    const { invitation, updateInvitation, addNotification } = useStore();
     const { data, push, undo, redo, canUndo, canRedo, reset } = useEditorHistory(invitation);
 
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
@@ -77,7 +77,10 @@ const InvitationEditorPage: React.FC = () => {
         push(draft => { (draft as Record<string, unknown>)[field] = value; });
     }, [push]);
 
-    const handleSave = () => updateInvitation(data);
+    const handleSave = () => {
+        updateInvitation(data);
+        addNotification('SUCCESS', 'Đã lưu thiết kế thiệp thành công');
+    };
 
     const handleBack = () => {
         updateInvitation(data);
@@ -115,7 +118,7 @@ const InvitationEditorPage: React.FC = () => {
 
             <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Left Form Panel */}
-                <EditorFormPanel data={data} onChange={handleChange} />
+                <EditorFormPanel data={data} onChange={handleChange} selectedSection={selectedSection} />
 
                 {/* Canvas area */}
                 <div
@@ -126,7 +129,7 @@ const InvitationEditorPage: React.FC = () => {
                         className={`mx-auto transition-all duration-300 ${
                             previewMode === 'mobile'
                                 ? 'max-w-[375px] my-6 rounded-3xl shadow-2xl ring-8 ring-gray-800 overflow-hidden'
-                                : 'max-w-[680px]'
+                                : 'w-full max-w-[1024px] min-h-full bg-white shadow-xl'
                         }`}
                         onClick={e => e.stopPropagation()}
                     >
@@ -157,6 +160,7 @@ const InvitationEditorPage: React.FC = () => {
                 onClose={() => setShowTemplateGallery(false)}
                 currentTemplateId={data.templateId || 'traditional'}
                 onSelectTemplate={(id) => handleChange({ templateId: id })}
+                currentData={data}
             />
         </div>
     );

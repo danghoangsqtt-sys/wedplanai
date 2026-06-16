@@ -2,6 +2,7 @@ import { supabase, TABLES } from '../lib/supabase';
 import { Guest, BudgetItem, UserProfile, ProcedureStep, WeddingRegion, InvitationData } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { cloudLog, uploadLog } from '../lib/logger';
+import { isValidUid } from '../lib/sanitize';
 
 export interface UserCloudData {
   guests: Guest[];
@@ -36,6 +37,14 @@ export const saveUserDataToCloud = async (
   uid: string,
   data: Omit<UserCloudData, 'lastUpdated'>
 ) => {
+  if (!isValidUid(uid)) {
+    cloudLog.error('saveUserDataToCloud: invalid uid', { uid });
+    return;
+  }
+  if (!Array.isArray(data.guests)) {
+    cloudLog.error('saveUserDataToCloud: guests is not an array');
+    return;
+  }
   cloudLog.info('save start', { uid });
   cloudLog.time('cloud-save');
   try {
@@ -156,6 +165,7 @@ export const submitRSVP = async (
   uid: string,
   payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string }
 ): Promise<boolean> => {
+  if (!isValidUid(uid) || !payload.name?.trim()) return false;
   try {
     const { error } = await supabase.from(TABLES.INVITATION_RESPONSES).insert({
       uid,
@@ -178,6 +188,7 @@ export const submitWish = async (
   uid: string,
   wish: { name: string; message: string }
 ): Promise<boolean> => {
+  if (!isValidUid(uid) || !wish.name?.trim() || !wish.message?.trim()) return false;
   try {
     const { error } = await supabase.from(TABLES.INVITATION_RESPONSES).insert({
       uid,
@@ -215,6 +226,10 @@ export const loadInvitationResponses = async (
 };
 
 export const loadPublicInvitation = async (uid: string): Promise<InvitationData | null> => {
+  if (!isValidUid(uid)) {
+    cloudLog.warn('loadPublicInvitation: invalid uid format', { uid });
+    return null;
+  }
   try {
     const { data: doc, error } = await supabase
       .from(TABLES.PUBLIC_INVITATIONS)
@@ -238,10 +253,19 @@ export const loadPublicInvitation = async (uid: string): Promise<InvitationData 
 // --- STORAGE SYNC ---
 export const uploadInvitationImage = async (file: File, uid: string): Promise<string> => {
   uploadLog.info('start', { name: file.name, sizeMB: +(file.size / 1048576).toFixed(2), type: file.type });
-  const fileExt = file.name.split('.').pop()?.toLowerCase();
-  if (!['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExt || '')) {
-    throw new Error('Định dạng ảnh không hợp lệ (chỉ hỗ trợ jpg, png, webp, gif)');
+
+  // Use MIME type for validation — more reliable than extension (handles HEIC, HEIF, compressed .jpg files etc.)
+  if (!file.type.startsWith('image/')) {
+    throw new Error(`Định dạng tệp không hợp lệ: "${file.type || file.name}". Chỉ chấp nhận tệp ảnh.`);
   }
+
+  // Derive a safe extension from MIME type, falling back to original extension
+  const mimeToExt: Record<string, string> = {
+    'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+    'image/gif': 'gif', 'image/avif': 'avif', 'image/heic': 'jpg',
+    'image/heif': 'jpg',
+  };
+  const fileExt = mimeToExt[file.type] ?? (file.name.split('.').pop()?.toLowerCase() || 'jpg');
   const fileName = `${uid}_${Date.now()}.${fileExt}`;
   const filePath = `${uid}/${fileName}`;
 

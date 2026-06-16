@@ -132,17 +132,30 @@ export const DEFAULT_GUEST_USER: UserProfile = {
 
 export const INITIAL_INVITATION: InvitationData = {
   groomName: 'Hoàng',
-  brideName: 'Hoa',
+  brideName: 'Ngọc',
+  groomShortName: 'Thế Bảo',
+  brideShortName: 'Ngọc Ánh',
+  groomTitle: 'Trưởng Nam',
+  brideTitle: 'Út Nữ',
+  displayOrder: 'groom_first',
   groomParents: { father: 'Ông Nguyễn Văn Nam', mother: 'Bà Trần Thị Lan' },
   brideParents: { father: 'Ông Lê Văn Dũng', mother: 'Bà Phạm Thị Mai' },
+  openingMessage: 'Trân trọng kính mời quý khách tới dự buổi tiệc chung vui cùng gia đình chúng tôi, nhân lễ thành hôn của hai con.',
   date: '2026-10-20',
+  lunarDate: 'Ngày 04 tháng 09 năm Bính Ngọ',
   time: '11:00',
+  receptionTime: '10:30',
+  partyType: 'wedding',
   location: 'Nhà hàng tiệc cưới Trống Đồng Palace',
   address: 'Số 1, Phố Lý Thường Kiệt, Hoàn Kiếm, Hà Nội',
+  mapEnabled: true,
   mapLink: 'https://maps.google.com',
   wishes: 'Sự hiện diện của quý khách là niềm vinh hạnh cho gia đình chúng tôi!',
+  thankYouMessage: 'Xin chân thành cảm ơn quý khách đã dành thời gian đến chung vui cùng gia đình chúng tôi. Chúc quý khách luôn an lành, hạnh phúc!',
+  envelopeMessage: 'Sự hiện diện của bạn là món quà ý nghĩa nhất. Nếu muốn gửi lời chúc phúc thêm, xin vui lòng quét mã QR bên dưới.',
+  dressCodeEnabled: true,
   bankInfo: {
-    bankId: 'VCB', // Vietcombank
+    bankId: 'VCB',
     accountNumber: '123456789',
     accountName: 'NGUYEN VAN HOANG',
     qrTemplate: 'compact2',
@@ -150,7 +163,7 @@ export const INITIAL_INVITATION: InvitationData = {
   photoConfig: { scale: 1, x: 50, y: 50 },
   themeColor: '#e11d48',
   templateId: 'modern',
-  musicUrl: '/audio/canon-in-d.mp3', // Canon in D - Pachelbel (public domain)
+  musicUrl: '/audio/canon-in-d.mp3',
   couplePhoto: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
   galleryImages: [
     'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',

@@ -60,3 +60,14 @@ See **Next** section below.
 - **Canvas Phase 3** (backlog): polish — mobile preview toggle, Delete key shortcut, section layout variants
 - **User action:** chạy SQL `invitation_responses` trong Supabase → RSVP/lời chúc thật chảy về
 - **Logging Phase 2** (backlog): instrument aiService → aiLog, user actions → uiLog
+
+---
+
+## Backlog
+
+### Pending Requests
+| ID | Type | Title | Priority | Status |
+|----|------|-------|----------|--------|
+| FEAT-001 | ✨ | Bản đồ Google Map và địa chỉ | high | new |
+| BUG-001 | 🐛 | Lỗi tính năng lưu trang | high | new |
+| FEAT-002 | ✨ | Tính năng tạo QR code chia sẻ thiệp đẹp | medium | new |

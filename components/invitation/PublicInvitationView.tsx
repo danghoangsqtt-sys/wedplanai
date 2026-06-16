@@ -615,7 +615,7 @@ const PublicInvitationView: React.FC = () => {
             <div className="invite-desktop-pattern hidden lg:block fixed inset-0 pointer-events-none" aria-hidden />
 
             {/* Invitation content */}
-            <div className={`w-full max-w-md bg-white shadow-2xl min-h-[100dvh] relative ${hasActions ? 'pb-20' : ''}`}>
+            <div className={`w-full max-w-[1024px] bg-white shadow-2xl min-h-[100dvh] relative ${hasActions ? 'pb-20' : ''}`}>
                 <InvitationPreview
                     data={invitationWithWishes}
                     onRSVP={() => setShowRSVP(true)}
@@ -626,7 +626,7 @@ const PublicInvitationView: React.FC = () => {
             {/* Sticky bottom action bar */}
             {hasActions && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-                    <div className="w-full max-w-md pointer-events-auto">
+                    <div className="w-full max-w-[1024px] pointer-events-auto">
                         <div className="mx-3 mb-3 bg-white/90 backdrop-blur-xl rounded-2xl border border-rose-100 shadow-2xl shadow-black/15 px-3 py-2.5 flex items-center gap-2">
 
                             {/* RSVP */}

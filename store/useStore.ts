@@ -41,6 +41,11 @@ interface AppState {
 
   notifications: Notification[];
 
+  // Set to true once loadFromCloud() has been attempted (success or failure).
+  // triggerCloudSync blocks writes until this is true, preventing INITIAL_INVITATION
+  // from accidentally overwriting real cloud data during app startup.
+  isCloudLoaded: boolean;
+
   // App Data
   guests: Guest[];
   budgetItems: BudgetItem[];
@@ -147,12 +152,22 @@ const getEffectiveUidFromState = (state: AppState): string | null => {
 };
 
 const triggerCloudSync = (get: () => AppState) => {
+  // GUARD: Never write to cloud before loadFromCloud() has completed at least once.
+  // This prevents INITIAL_INVITATION (demo data) from overwriting real cloud data
+  // during app startup when localStorage is empty (e.g., after a persist-key change).
+  if (!get().isCloudLoaded) {
+    storeLog.info('cloud sync skipped — waiting for initial cloud load');
+    return;
+  }
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(async () => {
     const state = get();
-    storeLog.info('cloud sync triggered', { uid: OWNER_UID });
+    // Double-check: don't sync while loadFromCloud is in progress
+    if (!state.isCloudLoaded || state.isSyncing) return;
+    const uid = getEffectiveUidFromState(state) || OWNER_UID;
+    storeLog.info('cloud sync triggered', { uid });
     try {
-      await saveUserDataToCloud(OWNER_UID, {
+      await saveUserDataToCloud(uid, {
         guests: state.guests,
         budgetItems: state.budgetItems,
         procedures: state.procedures,
@@ -181,6 +196,7 @@ export const useStore = create<AppState>()(
       budgetItems: INITIAL_BUDGET_ITEMS,
       procedures: WEDDING_PROCEDURES,
       isSyncing: false,
+      isCloudLoaded: false,
       fengShuiProfile: null,
       fengShuiResults: { harmony: null, dates: [] },
       notifications: [],
@@ -230,7 +246,9 @@ export const useStore = create<AppState>()(
       },
 
       addGuest: (guest) => {
-        set((state) => ({ guests: [...state.guests, guest] }));
+        if (!guest.id || !guest.name?.trim()) return;
+        const sanitized = { ...guest, name: guest.name.trim().slice(0, 100) };
+        set((state) => ({ guests: [...state.guests, sanitized] }));
         get().addNotification('SUCCESS', 'Đã thêm khách mời mới.');
         triggerCloudSync(get);
       },
@@ -242,7 +260,9 @@ export const useStore = create<AppState>()(
       },
 
       updateGuest: (updatedGuest) => {
-        set((state) => ({ guests: state.guests.map(g => g.id === updatedGuest.id ? updatedGuest : g) }));
+        if (!updatedGuest.id || !updatedGuest.name?.trim()) return;
+        const sanitized = { ...updatedGuest, name: updatedGuest.name.trim().slice(0, 100) };
+        set((state) => ({ guests: state.guests.map(g => g.id === sanitized.id ? sanitized : g) }));
         triggerCloudSync(get);
       },
 
@@ -361,6 +381,9 @@ export const useStore = create<AppState>()(
           invitation: INITIAL_INVITATION
         });
         get().addNotification('WARNING', 'Dữ liệu đã được đặt lại về mặc định.');
+        // Sync the reset state to cloud so cloud and local stay consistent.
+        // Without this, if editor is open its auto-save would race to overwrite cloud anyway.
+        triggerCloudSync(get);
       },
 
       importData: (data: any) => {
@@ -588,12 +611,24 @@ export const useStore = create<AppState>()(
         } catch (e) {
           storeLog.warn('load from cloud failed, using local data', e);
         } finally {
-          set({ isSyncing: false });
+          // Mark cloud load as attempted — unblocks triggerCloudSync for future mutations.
+          // Always set this, even on failure, so user changes after login still sync.
+          set({ isSyncing: false, isCloudLoaded: true });
         }
       },
     }),
     {
+      // IMPORTANT: Never rename this key again. Use `version` + `migrate` for schema changes.
+      // Renaming abandons all localStorage data (users lose data until cloud sync restores it).
       name: 'wedplan-storage-v14',
+      // Version 1 = first versioned release. Future schema changes: bump version + add migrate case.
+      version: 1,
+      migrate: (persistedState: unknown, fromVersion: number) => {
+        // v0 (unversioned) → v1: no schema changes, just start tracking version
+        if (fromVersion === 0) return persistedState;
+        // Future: if (fromVersion === 1) { /* migrate v1→v2 */ }
+        return persistedState;
+      },
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,
@@ -608,10 +643,13 @@ export const useStore = create<AppState>()(
         localProvince: state.localProvince,
         localDistrict: state.localDistrict,
         localMarketReport: state.localMarketReport,
+        // isCloudLoaded intentionally NOT persisted — always starts false on page load
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.budgetItems = sanitizeBudgetIds(state.budgetItems);
+        // isCloudLoaded must always start as false — never persist this flag
+        state.isCloudLoaded = false;
       },
     }
   )

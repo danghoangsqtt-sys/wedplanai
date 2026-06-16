@@ -12,49 +12,9 @@ import {
     Star, ToggleLeft, ToggleRight, BookOpen, Flower2, Feather, Timer, Inbox, RefreshCw, Phone, MessageCircle
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { BANKS, TEMPLATES, PETAL_EFFECTS, MUSIC_OPTIONS } from '../../lib/invitation-constants';
 
-// Bank list for suggestions (shortened)
-const BANKS = [
-    { id: 'MB', name: 'MBBank' }, { id: 'VCB', name: 'Vietcombank' },
-    { id: 'TCB', name: 'Techcombank' }, { id: 'ICB', name: 'VietinBank' },
-    { id: 'BIDV', name: 'BIDV' }, { id: 'ACB', name: 'ACB' },
-    { id: 'VPB', name: 'VPBank' }, { id: 'TPB', name: 'TPBank' },
-];
-
-const TEMPLATES = [
-    { id: 'traditional', name: 'Truyền Thống',   color: 'bg-[#fdf8f6] border-[#7c1d00] text-[#7c1d00]',  emoji: '🏮' },
-    { id: 'romantic',    name: 'Lãng Mạn',       color: 'bg-[#fff0f3] border-[#e11d48] text-[#e11d48]',  emoji: '💕' },
-    { id: 'modern',      name: 'Hiện Đại',       color: 'bg-[#faf9fa] border-[#094cb2] text-[#094cb2]',  emoji: '✦' },
-    { id: 'royal',       name: 'Royal Elegance',  color: 'bg-[#f8f5ee] border-[#1e2c54] text-[#1e2c54]', emoji: '👑' },
-    { id: 'garden',      name: 'Garden Romance',  color: 'bg-[#f4f6ef] border-[#3f5e43] text-[#3f5e43]', emoji: '🌿' },
-    { id: 'indochine',   name: 'Indochine',       color: 'bg-[#f8f1e7] border-[#a8442a] text-[#a8442a]', emoji: '🪷' },
-];
-
-const PETAL_EFFECTS = [
-    { id: 'none',     label: 'Không có',     emoji: '✕' },
-    { id: 'petals',   label: 'Cánh hoa',     emoji: '✿' },
-    { id: 'hearts',   label: 'Trái tim',     emoji: '❤' },
-    { id: 'sparkles', label: 'Sao nhấp nháy', emoji: '✦' },
-] as const;
-
-const AVAILABLE_SONGS = [
-    { value: '/audio/canon-in-d.mp3', label: 'Canon in D – Pachelbel (Cổ điển)' },
-    { value: '/audio/wedding-march.mp3', label: 'Wedding March – Mendelssohn (Hành khúc)' },
-    { value: '/audio/a thousand years.mp3', label: 'A Thousand Years (Christina Perri)' },
-    { value: '/audio/Chăm Em Một Đời.mp3', label: 'Chăm Em Một Đời' },
-    { value: '/audio/Die With A Smile.mp3', label: 'Die With A Smile' },
-    { value: '/audio/Em Đồng Ý (I Do).mp3', label: 'Em Đồng Ý (I Do)' },
-    { value: '/audio/In Your Eyes.mp3', label: 'In Your Eyes' },
-    { value: '/audio/Lover (First Dance Remix).mp3', label: 'Lover (First Dance Remix)' },
-    { value: '/audio/Lễ Đường.mp3', label: 'Lễ Đường' },
-    { value: '/audio/Marry You.mp3', label: 'Marry You (Bruno Mars)' },
-    { value: '/audio/Ngày Này, Người Con Gái Này.mp3', label: 'Ngày Này, Người Con Gái Này' },
-    { value: '/audio/Ordinary (Wedding Version).mp3', label: 'Ordinary (Wedding Version)' },
-    { value: '/audio/Summertime (Imanbek Remix).mp3', label: 'Summertime (Imanbek Remix)' },
-    { value: '/audio/The Most Beautiful Bride In The World.mp3', label: 'The Most Beautiful Bride In The World' },
-    { value: '/audio/một đời.mp3', label: 'Một Đời' },
-    { value: '/audio/50 Năm Về Sau (Nghĩ Đến Ngày Chúng Ta Sẽ Già).mp3', label: '50 Năm Về Sau' },
-];
+const AVAILABLE_SONGS = MUSIC_OPTIONS.map(m => ({ value: m.url, label: m.label }));
 
 // ─── PHOTO POSITION EDITOR ───
 const PhotoPositionEditor: React.FC<{
@@ -1305,6 +1265,7 @@ const InvitationManager: React.FC = () => {
                 onClose={() => setShowTemplateGallery(false)}
                 currentTemplateId={invitation.templateId}
                 onSelectTemplate={(id) => handleChange('templateId', id)}
+                currentData={invitation}
             />
         </div>
     );

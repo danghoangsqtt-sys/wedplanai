@@ -5,62 +5,109 @@ import {
 import { InvitationData, WeddingEvent } from '../../../types';
 import { uploadInvitationImage } from '../../../services/cloudService';
 import { useStore } from '../../../store/useStore';
-
-const MUSIC_OPTIONS = [
-    { url: '/audio/canon-in-d.mp3', label: 'Canon in D – Pachelbel (Cổ điển)' },
-    { url: '/audio/wedding-march.mp3', label: 'Wedding March – Mendelssohn (Hành khúc)' },
-    { url: '/audio/a thousand years.mp3', label: 'A Thousand Years (Christina Perri)' },
-    { url: '/audio/Chăm Em Một Đời.mp3', label: 'Chăm Em Một Đời' },
-    { url: '/audio/Die With A Smile.mp3', label: 'Die With A Smile' },
-    { url: '/audio/Em Đồng Ý (I Do).mp3', label: 'Em Đồng Ý (I Do)' },
-    { url: '/audio/In Your Eyes.mp3', label: 'In Your Eyes' },
-    { url: '/audio/Lover (First Dance Remix).mp3', label: 'Lover (First Dance Remix)' },
-    { url: '/audio/Lễ Đường.mp3', label: 'Lễ Đường' },
-    { url: '/audio/Marry You.mp3', label: 'Marry You (Bruno Mars)' },
-    { url: '/audio/Ngày Này, Người Con Gái Này.mp3', label: 'Ngày Này, Người Con Gái Này' },
-    { url: '/audio/Ordinary (Wedding Version).mp3', label: 'Ordinary (Wedding Version)' },
-    { url: '/audio/Summertime (Imanbek Remix).mp3', label: 'Summertime (Imanbek Remix)' },
-    { url: '/audio/The Most Beautiful Bride In The World.mp3', label: 'The Most Beautiful Bride In The World' },
-    { url: '/audio/một đời.mp3', label: 'Một Đời' },
-    { url: '/audio/50 Năm Về Sau (Nghĩ Đến Ngày Chúng Ta Sẽ Già).mp3', label: '50 Năm Về Sau' },
-];
+import { MUSIC_OPTIONS } from '../../../lib/invitation-constants';
+import { compressImage } from '../../../lib/imageUtils';
+import { PhotoPositionEditor } from './PhotoPositionEditor';
 
 interface EditorFormPanelProps {
     data: InvitationData;
     onChange: (patch: Partial<InvitationData>) => void;
+    selectedSection?: string | null;
 }
 
-const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => {
+const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selectedSection }) => {
     const { user } = useStore();
     const [expandedSection, setExpandedSection] = useState<string | null>('basicInfo');
     const [uploadingField, setUploadingField] = useState<string | null>(null);
+    const heroInputRef = React.useRef<HTMLInputElement>(null);
+    const galleryLinkRef = React.useRef<HTMLInputElement>(null);
+
+    const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []) as File[];
+        e.target.value = '';
+        const file = files[0];
+        if (!file || !user?.uid) return;
+        if (file.size > 2 * 1048576) { alert('Ảnh quá lớn (tối đa 2MB)'); return; }
+        setUploadingField('hero');
+        try {
+            const url = await uploadInvitationImage(file, user.uid);
+            onChange({ couplePhoto: url, photoConfig: { scale: 1, x: 50, y: 50 } });
+        } catch (err) {
+            console.error('cover upload failed', err);
+            alert('Tải ảnh lên thất bại. Vui lòng thử lại.');
+        } finally { setUploadingField(null); }
+    };
+
+    React.useEffect(() => {
+        if (selectedSection) {
+            // Map preview section IDs to form accordion IDs
+            const sectionMap: Record<string, string> = {
+                'hero': 'basicInfo',
+                'family': 'familyInfo',
+                'venue': 'party',
+                'events': 'timeline',
+                'loveStory': 'opening', // Fallback
+                'gallery': 'gallery',
+                'bank': 'bank',
+                'rsvp': 'rsvp',
+                'guestbook': 'guestbook'
+            };
+            
+            const formSection = sectionMap[selectedSection] || selectedSection;
+            setExpandedSection(formSection);
+            
+            // Scroll the element into view if needed
+            setTimeout(() => {
+                const el = document.getElementById(`accordion-${formSection}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    // Optional visual highlight blink
+                    el.classList.add('bg-rose-50');
+                    setTimeout(() => el.classList.remove('bg-rose-50'), 600);
+                }
+            }, 100);
+        }
+    }, [selectedSection]);
 
     const toggleSection = (section: string) => {
         setExpandedSection(prev => prev === section ? null : section);
     };
 
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'groomPhoto' | 'bridePhoto') => {
-        const file = e.target.files?.[0];
-        if (!file) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-            alert('File quá lớn, vui lòng chọn ảnh < 2MB');
+
+    const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []) as File[];
+        if (files.length === 0) return;
+
+        if (!user) {
+            alert('Không tìm thấy thông tin người dùng. Vui lòng tải lại trang.');
             return;
         }
 
+        // Validate file types before starting (MIME type check — handles HEIC/HEIF etc.)
+        const invalidFiles = files.filter(f => !f.type.startsWith('image/'));
+        if (invalidFiles.length > 0) {
+            alert(`Tệp không hợp lệ: ${invalidFiles.map(f => f.name).join(', ')}\nChỉ chấp nhận định dạng ảnh.`);
+            e.target.value = '';
+            return;
+        }
+
+        setUploadingField('galleryImages');
         try {
-            if (!user) {
-                alert('Vui lòng đăng nhập để tải ảnh lên.');
-                return;
-            }
-            setUploadingField(field);
-            const url = await uploadInvitationImage(file, user.uid);
-            onChange({ [field]: url });
+            const newUrls = await Promise.all(
+                files.map(async (file) => {
+                    const compressedFile = await compressImage(file, 1.5, 1500);
+                    return uploadInvitationImage(compressedFile, user.uid);
+                })
+            );
+            onChange({ galleryImages: [...(data.galleryImages || []), ...newUrls] });
         } catch (error) {
-            console.error('Lỗi upload ảnh:', error);
-            alert('Lỗi tải ảnh. Hãy thử lại.');
+            console.error('Lỗi upload ảnh thư viện:', error);
+            const msg = error instanceof Error ? error.message : 'Lỗi không xác định';
+            alert(`Tải ảnh thất bại: ${msg}\n\nGợi ý: Thử thêm ảnh qua Link URL thay vì tải lên.`);
         } finally {
             setUploadingField(null);
+            e.target.value = '';
         }
     };
 
@@ -90,6 +137,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
 
     const AccordionHeader = ({ title, id, icon: Icon }: { title: string; id: string; icon?: any }) => (
         <button 
+            id={`accordion-${id}`}
             onClick={() => toggleSection(id)}
             className="flex items-center justify-between w-full px-4 py-3 bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors"
         >
@@ -114,6 +162,29 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                     <AccordionHeader title="Thông tin cơ bản" id="basicInfo" />
                     {expandedSection === 'basicInfo' && (
                         <div className="p-4 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-gray-600">Danh xưng chú rể</label>
+                                    <input 
+                                        type="text" 
+                                        value={data.groomTitle || ''} 
+                                        onChange={e => onChange({ groomTitle: e.target.value })}
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="Trưởng Nam"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-gray-600">Danh xưng cô dâu</label>
+                                    <input 
+                                        type="text" 
+                                        value={data.brideTitle || ''} 
+                                        onChange={e => onChange({ brideTitle: e.target.value })}
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="Út Nữ"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-gray-600">Họ tên chú rể</label>
@@ -160,29 +231,6 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-gray-600">Danh xưng chú rể</label>
-                                    <input 
-                                        type="text" 
-                                        value={data.groomTitle || ''} 
-                                        onChange={e => onChange({ groomTitle: e.target.value })}
-                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                        placeholder="Trưởng Nam"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-gray-600">Danh xưng cô dâu</label>
-                                    <input 
-                                        type="text" 
-                                        value={data.brideTitle || ''} 
-                                        onChange={e => onChange({ brideTitle: e.target.value })}
-                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                        placeholder="Út Nữ"
-                                    />
-                                </div>
-                            </div>
-
                             <div className="space-y-1">
                                 <label className="text-xs font-medium text-gray-600">Thứ tự hiển thị</label>
                                 <div className="flex bg-gray-100 rounded-lg p-1">
@@ -196,73 +244,130 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                                     >Nhà gái trước</button>
                                 </div>
                             </div>
+                            
+                            {/* Thời gian & Địa điểm (cơ bản) */}
+                            <div className="pt-4 mt-2 border-t border-gray-100 space-y-4">
+                                <div className="text-xs font-semibold text-gray-700">Thời gian & Địa điểm cưới</div>
+                                
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Calendar size={12}/> Ngày tổ chức</label>
+                                    <input 
+                                        type="date" 
+                                        value={data.date || ''} 
+                                        onChange={e => onChange({ date: e.target.value })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                    />
+                                </div>
 
-                            {/* Ảnh đôi */}
-                            <div className="pt-2 border-t border-gray-100">
-                                <label className="text-xs font-medium text-gray-600 block mb-2">Ảnh đôi</label>
                                 <div className="grid grid-cols-2 gap-4">
-                                    {/* Ảnh chú rể */}
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="text-[10px] text-gray-500">Ảnh chú rể</div>
-                                        <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden relative group">
-                                            {data.groomPhoto ? (
-                                                <>
-                                                    <img src={data.groomPhoto} className="w-full h-full object-cover" alt="Chú rể" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                                                        <label className="cursor-pointer bg-white/20 hover:bg-white/40 p-1 rounded-full text-white transition-colors">
-                                                            <Upload size={14} />
-                                                            <input type="file" className="hidden" accept="image/*" onChange={e => handleUpload(e, 'groomPhoto')} />
-                                                        </label>
-                                                        <button onClick={() => onChange({ groomPhoto: undefined })} className="bg-red-500/80 hover:bg-red-500 p-1 rounded-full text-white transition-colors">
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
-                                                    {uploadingField === 'groomPhoto' ? <span className="text-[10px]">Đang tải...</span> : (
-                                                        <>
-                                                            <ImageIcon size={20} className="mb-1" />
-                                                            <span className="text-[10px] text-rose-500 font-medium">Tải lên</span>
-                                                        </>
-                                                    )}
-                                                    <input type="file" className="hidden" accept="image/*" onChange={e => handleUpload(e, 'groomPhoto')} />
-                                                </label>
-                                            )}
-                                        </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Clock size={12}/> Đón khách</label>
+                                        <input 
+                                            type="time" 
+                                            value={data.receptionTime || ''} 
+                                            onChange={e => onChange({ receptionTime: e.target.value })}
+                                            className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        />
                                     </div>
-                                    {/* Ảnh cô dâu */}
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="text-[10px] text-gray-500">Ảnh cô dâu</div>
-                                        <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden relative group">
-                                            {data.bridePhoto ? (
-                                                <>
-                                                    <img src={data.bridePhoto} className="w-full h-full object-cover" alt="Cô dâu" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                                                        <label className="cursor-pointer bg-white/20 hover:bg-white/40 p-1 rounded-full text-white transition-colors">
-                                                            <Upload size={14} />
-                                                            <input type="file" className="hidden" accept="image/*" onChange={e => handleUpload(e, 'bridePhoto')} />
-                                                        </label>
-                                                        <button onClick={() => onChange({ bridePhoto: undefined })} className="bg-red-500/80 hover:bg-red-500 p-1 rounded-full text-white transition-colors">
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
-                                                    {uploadingField === 'bridePhoto' ? <span className="text-[10px]">Đang tải...</span> : (
-                                                        <>
-                                                            <ImageIcon size={20} className="mb-1" />
-                                                            <span className="text-[10px] text-rose-500 font-medium">Tải lên</span>
-                                                        </>
-                                                    )}
-                                                    <input type="file" className="hidden" accept="image/*" onChange={e => handleUpload(e, 'bridePhoto')} />
-                                                </label>
-                                            )}
-                                        </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Clock size={12}/> Khai tiệc</label>
+                                        <input 
+                                            type="time" 
+                                            value={data.time || ''} 
+                                            onChange={e => onChange({ time: e.target.value })}
+                                            className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        />
                                     </div>
                                 </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Tên Nhà Hàng / Địa điểm</label>
+                                    <input 
+                                        type="text" 
+                                        value={data.location || ''} 
+                                        onChange={e => onChange({ location: e.target.value })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="Ví dụ: Trống Đồng Palace"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Địa chỉ chi tiết</label>
+                                    <textarea 
+                                        value={data.address || ''} 
+                                        onChange={e => onChange({ address: e.target.value })}
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-16"
+                                        placeholder="Ví dụ: Số 123 Đường ABC..."
+                                    />
+                                </div>
                             </div>
+
+                            {/* Khối Ảnh Bìa */}
+                            <div className="pt-4 mt-2 border-t border-gray-100 space-y-4">
+                                <div className="text-xs font-semibold text-gray-700">Ảnh Bìa</div>
+                                {data.couplePhoto ? (
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-medium text-gray-600">Hoặc thay ảnh bằng URL (Link ảnh)</label>
+                                            <input 
+                                                type="text" 
+                                                value={data.couplePhoto} 
+                                                onChange={e => onChange({ couplePhoto: e.target.value })}
+                                                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                        <PhotoPositionEditor
+                                            src={data.couplePhoto}
+                                            config={data.photoConfig ?? { scale: 1, x: 50, y: 50 }}
+                                            onChange={c => onChange({ photoConfig: c })}
+                                            onRemove={() => onChange({ couplePhoto: undefined, photoConfig: undefined, heroOverlayOpacity: undefined })}
+                                        />
+                                        <div className="space-y-1 pt-2">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-[10px] font-medium text-gray-600">Độ mờ nền ảnh (Tự động mờ từ dưới lên)</label>
+                                                <span className="text-[10px] text-gray-400">{data.heroOverlayOpacity ?? 0}%</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" max="80" step="5"
+                                                value={data.heroOverlayOpacity ?? 0} 
+                                                onChange={e => onChange({ heroOverlayOpacity: parseInt(e.target.value) })}
+                                                className="w-full accent-rose-500"
+                                            />
+                                            <p className="text-[9px] text-gray-400 italic">Tăng độ mờ sẽ làm ảnh phủ thêm lớp sương mù trắng để làm nổi bật chữ nội dung (đặc biệt ở viền dưới của ảnh).</p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => heroInputRef.current?.click()}
+                                            disabled={uploadingField === 'hero'}
+                                            className="w-full py-6 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-400 hover:border-rose-300 hover:text-rose-400 transition-colors flex flex-col items-center gap-2"
+                                        >
+                                            <Upload size={20} />
+                                            {uploadingField === 'hero' ? 'Đang tải lên...' : 'Tải ảnh bìa lên'}
+                                        </button>
+                                        <input ref={heroInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeroUpload} />
+                                        
+                                        <div className="flex items-center gap-2 my-2">
+                                            <div className="flex-1 h-px bg-gray-200"></div>
+                                            <span className="text-[10px] text-gray-400 font-medium">HOẶC NHẬP URL</span>
+                                            <div className="flex-1 h-px bg-gray-200"></div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <input 
+                                                type="text" 
+                                                value={data.couplePhoto || ''} 
+                                                onChange={e => onChange({ couplePhoto: e.target.value })}
+                                                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                                placeholder="Nhập URL ảnh bìa (VD: https://...)"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
                         </div>
                     )}
                 </div>
@@ -371,10 +476,11 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                     {expandedSection === 'opening' && (
                         <div className="p-4 space-y-2">
                             <label className="text-[10px] font-medium text-gray-600">Câu mở đầu (để trống nếu không muốn hiện)</label>
-                            <textarea 
-                                value={data.openingMessage || 'TRÂN TRỌNG BÁO TIN\nLỄ THÀNH HÔN CỦA CON CHÚNG TÔI'} 
+                            <textarea
+                                value={data.openingMessage ?? ''}
                                 onChange={e => onChange({ openingMessage: e.target.value })}
                                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-20 text-center"
+                                placeholder="TRÂN TRỌNG BÁO TIN&#10;LỄ THÀNH HÔN CỦA CON CHÚNG TÔI"
                             />
                         </div>
                     )}
@@ -408,53 +514,12 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                                 </label>
                             </div>
 
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Calendar size={12}/> Ngày tổ chức</label>
-                                <input 
-                                    type="date" 
-                                    value={data.date || ''} 
-                                    onChange={e => onChange({ date: e.target.value })}
-                                    className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Clock size={12}/> Đón khách</label>
-                                    <input 
-                                        type="time" 
-                                        value={data.receptionTime || ''} 
-                                        onChange={e => onChange({ receptionTime: e.target.value })}
-                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Clock size={12}/> Khai tiệc</label>
-                                    <input 
-                                        type="time" 
-                                        value={data.time || ''} 
-                                        onChange={e => onChange({ time: e.target.value })}
-                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                    />
-                                </div>
-                            </div>
-
                             <div className="flex items-center justify-between py-2 border-b border-gray-100">
                                 <label className="text-sm font-medium text-gray-700">Đồng hồ đếm ngược</label>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" className="sr-only peer" checked={data.countdownEnabled !== false} onChange={e => onChange({ countdownEnabled: e.target.checked })} />
                                     <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
                                 </label>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Địa chỉ tiệc cưới</label>
-                                <textarea 
-                                    value={data.address || ''} 
-                                    onChange={e => onChange({ address: e.target.value })}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-16"
-                                    placeholder="Ví dụ: Nhà hàng tiệc cưới..."
-                                />
                             </div>
 
                             <div className="flex items-center justify-between py-2 border-t border-gray-100">
@@ -464,6 +529,25 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                                     <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
                                 </label>
                             </div>
+                            
+                            {data.mapEnabled !== false && (
+                                <div className="space-y-1 pb-2">
+                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Link / Mã nhúng Google Maps</label>
+                                    <textarea 
+                                        value={data.mapLink || ''} 
+                                        onChange={e => {
+                                            let val = e.target.value;
+                                            if (val.includes('<iframe') && val.includes('src="')) {
+                                                const match = val.match(/src="([^"]+)"/);
+                                                if (match) val = match[1];
+                                            }
+                                            onChange({ mapLink: val });
+                                        }}
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-16"
+                                        placeholder='Dán link hoặc thẻ <iframe> từ Google Maps...'
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -485,25 +569,48 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
-                                    <div className="flex gap-2 items-center">
-                                        <div className="w-1/3">
-                                            <label className="text-[10px] text-gray-500 mb-1 block">Giờ</label>
-                                            <input 
-                                                type="time" 
-                                                value={ev.time} 
-                                                onChange={e => handleEventChange(i, 'time', e.target.value)}
-                                                className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                            />
+                                    <div className="space-y-2">
+                                        <div className="flex gap-2 items-center">
+                                            <div className="w-1/3">
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Giờ</label>
+                                                <input 
+                                                    type="time" 
+                                                    value={ev.time} 
+                                                    onChange={e => handleEventChange(i, 'time', e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                                />
+                                            </div>
+                                            <div className="w-2/3">
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Nội dung</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={ev.title} 
+                                                    onChange={e => handleEventChange(i, 'title', e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                                    placeholder="VD: Đón khách"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="w-2/3">
-                                            <label className="text-[10px] text-gray-500 mb-1 block">Nội dung</label>
-                                            <input 
-                                                type="text" 
-                                                value={ev.title} 
-                                                onChange={e => handleEventChange(i, 'title', e.target.value)}
-                                                className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                                placeholder="VD: Đón khách"
-                                            />
+                                        <div className="flex gap-2 items-center">
+                                            <div className="w-1/2">
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Ngày</label>
+                                                <input 
+                                                    type="date" 
+                                                    value={ev.date || ''} 
+                                                    onChange={e => handleEventChange(i, 'date', e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                                />
+                                            </div>
+                                            <div className="w-1/2">
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Vị trí / Tầng sảnh</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={ev.location || ''} 
+                                                    onChange={e => handleEventChange(i, 'location', e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                                    placeholder="Sảnh Đón Khách..."
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -529,7 +636,95 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                                 <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryStyle === 'collage' ? 'bg-gray-100 text-gray-800' : 'text-gray-500'}`} onClick={() => onChange({ galleryStyle: 'collage' })}>Ghép ảnh</button>
                                 <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryStyle === '3d' ? 'bg-gray-100 text-gray-800' : 'text-gray-500'}`} onClick={() => onChange({ galleryStyle: '3d' })}>3D</button>
                             </div>
-                            <div className="text-xs text-gray-500">Thư viện ảnh {(data.galleryImages || []).length} ảnh</div>
+                            
+                            <div className="space-y-3">
+                                {/* Thêm bằng link */}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1">
+                                        <ImageIcon size={12} /> Thêm ảnh qua Link
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            ref={galleryLinkRef}
+                                            type="text"
+                                            className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                            placeholder="Dán link ảnh tại đây..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    const val = galleryLinkRef.current?.value.trim();
+                                                    if (val) {
+                                                        onChange({ galleryImages: [...(data.galleryImages || []), val] });
+                                                        if (galleryLinkRef.current) galleryLinkRef.current.value = '';
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                const val = galleryLinkRef.current?.value.trim();
+                                                if (val) {
+                                                    onChange({ galleryImages: [...(data.galleryImages || []), val] });
+                                                    if (galleryLinkRef.current) galleryLinkRef.current.value = '';
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm hover:bg-rose-600 transition-colors whitespace-nowrap"
+                                        >
+                                            Thêm
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Divider */}
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 h-px bg-gray-200"></div>
+                                    <span className="text-[10px] text-gray-400 uppercase">Hoặc</span>
+                                    <div className="flex-1 h-px bg-gray-200"></div>
+                                </div>
+
+                                {/* Tải ảnh lên */}
+                                <label className="flex items-center justify-center gap-2 w-full py-2 bg-white border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer">
+                                    {uploadingField === 'galleryImages' ? (
+                                        <span className="text-sm flex items-center gap-2"><Upload size={16} className="animate-bounce" /> Đang tải ảnh...</span>
+                                    ) : (
+                                        <>
+                                            <Upload size={16} />
+                                            <span className="text-sm font-medium">Tải ảnh từ thiết bị</span>
+                                            <input type="file" multiple accept="image/*" className="hidden" onChange={handleGalleryUpload} />
+                                        </>
+                                    )}
+                                </label>
+                            </div>
+
+                            <div className="text-xs font-medium text-gray-600 mt-4 flex items-center justify-between border-t border-gray-200 pt-3">
+                                <span>Đã chọn <strong className="text-rose-500">{(data.galleryImages || []).length}</strong> ảnh</span>
+                                {(data.galleryImages || []).length > 0 && (
+                                    <button 
+                                        onClick={() => onChange({ galleryImages: [] })}
+                                        className="text-red-500 hover:text-red-600 transition-colors text-[10px] uppercase font-bold"
+                                    >Xoá tất cả</button>
+                                )}
+                            </div>
+
+                            {/* Danh sách ảnh đã chọn */}
+                            {(data.galleryImages || []).length > 0 && (
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                                    {data.galleryImages!.map((img, i) => (
+                                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden group bg-gray-100 border border-gray-200">
+                                            <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
+                                            <button 
+                                                onClick={() => {
+                                                    const newArr = [...data.galleryImages!];
+                                                    newArr.splice(i, 1);
+                                                    onChange({ galleryImages: newArr });
+                                                }}
+                                                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                            >
+                                                <Trash2 size={16} className="text-white hover:text-red-400 transition-colors bg-black/30 p-1.5 rounded-full" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -539,10 +734,12 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                     <AccordionHeader title="Lời cảm ơn" id="thankyou" />
                     {expandedSection === 'thankyou' && (
                         <div className="p-4 space-y-2">
-                            <textarea 
-                                value={data.thankYouMessage || 'Sự hiện diện của quý khách là niềm vinh hạnh của gia đình chúng tôi!'} 
+                            <label className="text-[10px] font-medium text-gray-600">Lời cảm ơn (để trống nếu không muốn hiện)</label>
+                            <textarea
+                                value={data.thankYouMessage ?? ''}
                                 onChange={e => onChange({ thankYouMessage: e.target.value })}
                                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-20"
+                                placeholder="Sự hiện diện của quý khách là niềm vinh hạnh của gia đình chúng tôi!"
                             />
                         </div>
                     )}
@@ -578,12 +775,13 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                     <AccordionHeader title="Phong bì" id="envelope" />
                     {expandedSection === 'envelope' && (
                         <div className="p-4 space-y-2">
-                            <label className="text-[10px] font-medium text-gray-600">Lời mời</label>
-                            <input 
-                                type="text" 
-                                value={data.envelopeMessage || 'Thân Mời'} 
+                            <label className="text-[10px] font-medium text-gray-600">Lời mời (hiển thị trên phong bì)</label>
+                            <input
+                                type="text"
+                                value={data.envelopeMessage ?? ''}
                                 onChange={e => onChange({ envelopeMessage: e.target.value })}
                                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                placeholder="Thân Mời"
                             />
                         </div>
                     )}
@@ -629,11 +827,88 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                     <AccordionHeader title="Tài khoản ngân hàng" id="bank" />
                     {expandedSection === 'bank' && (
                         <div className="p-4 space-y-4">
-                            <div className="text-center text-xs text-gray-400 py-2">
-                                Tính năng quản lý QR ngân hàng
+                            <div className="text-center text-xs text-gray-400 py-1">
+                                Cài đặt tài khoản nhận mừng cưới (QR VietQR)
                             </div>
-                            <button className="w-full py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                + Thêm tài khoản ngân hàng
+                            
+                            {(data.bankAccounts || (data.bankInfo?.bankId ? [data.bankInfo] : [])).map((acc, index) => (
+                                <div key={index} className="p-3 border border-gray-200 rounded-lg space-y-3 relative group bg-gray-50">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase">Tài khoản {index + 1}</div>
+                                        <button 
+                                            onClick={() => {
+                                                const list = [...(data.bankAccounts || [data.bankInfo])];
+                                                list.splice(index, 1);
+                                                onChange({ bankAccounts: list });
+                                            }}
+                                            className="text-red-400 hover:text-red-600 transition-colors p-1"
+                                            title="Xóa"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                    <input 
+                                        className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-rose-400 focus:outline-none" 
+                                        placeholder="Tiêu đề (VD: Mừng cưới Chú Rể)" 
+                                        value={acc.title || ''} 
+                                        onChange={e => {
+                                            const list = [...(data.bankAccounts || [data.bankInfo])];
+                                            list[index] = { ...list[index], title: e.target.value };
+                                            onChange({ bankAccounts: list });
+                                        }}
+                                    />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="text-[10px] text-gray-500">Mã Ngân hàng (VD: VCB, MB)</label>
+                                            <input 
+                                                className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-rose-400 focus:outline-none uppercase mt-1" 
+                                                placeholder="VD: VCB" 
+                                                value={acc.bankId || ''} 
+                                                onChange={e => {
+                                                    const list = [...(data.bankAccounts || [data.bankInfo])];
+                                                    list[index] = { ...list[index], bankId: e.target.value };
+                                                    onChange({ bankAccounts: list });
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-gray-500">Số tài khoản</label>
+                                            <input 
+                                                className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-rose-400 focus:outline-none mt-1" 
+                                                placeholder="VD: 190365..." 
+                                                value={acc.accountNumber || ''} 
+                                                onChange={e => {
+                                                    const list = [...(data.bankAccounts || [data.bankInfo])];
+                                                    list[index] = { ...list[index], accountNumber: e.target.value };
+                                                    onChange({ bankAccounts: list });
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500">Tên chủ tài khoản</label>
+                                        <input 
+                                            className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-rose-400 focus:outline-none uppercase mt-1" 
+                                            placeholder="NGUYEN VAN A" 
+                                            value={acc.accountName || ''} 
+                                            onChange={e => {
+                                                const list = [...(data.bankAccounts || [data.bankInfo])];
+                                                list[index] = { ...list[index], accountName: e.target.value.toUpperCase() };
+                                                onChange({ bankAccounts: list });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            <button 
+                                onClick={() => {
+                                    const list = [...(data.bankAccounts || (data.bankInfo?.bankId ? [data.bankInfo] : []))];
+                                    list.push({ bankId: '', accountNumber: '', accountName: '', title: '' });
+                                    onChange({ bankAccounts: list });
+                                }}
+                                className="w-full py-2 border border-rose-300 text-rose-500 rounded-lg text-sm font-medium hover:bg-rose-50 transition-colors flex items-center justify-center gap-1"
+                            >
+                                <Plus size={16} /> Thêm tài khoản
                             </button>
                         </div>
                     )}
@@ -651,6 +926,54 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange }) => 
                                     <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
                                 </label>
                             </div>
+                            {data.dressCodeEnabled && (
+                                <>
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-600 mb-1 block">Lời nhắn</label>
+                                        <textarea
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-400 resize-none"
+                                            rows={2}
+                                            placeholder="Gợi ý trang phục cho khách mời..."
+                                            value={data.dressCodeMessage || ''}
+                                            onChange={e => onChange({ dressCodeMessage: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-600 mb-2 block">Màu sắc gợi ý</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(data.dressCodeColors || []).map((c, i) => (
+                                                <div key={i} className="relative group">
+                                                    <input
+                                                        type="color"
+                                                        value={c}
+                                                        onChange={e => {
+                                                            const colors = [...(data.dressCodeColors || [])];
+                                                            colors[i] = e.target.value;
+                                                            onChange({ dressCodeColors: colors });
+                                                        }}
+                                                        className="w-8 h-8 rounded-full border border-gray-200 cursor-pointer p-0"
+                                                    />
+                                                    <button
+                                                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-500 text-white rounded-full text-[9px] leading-none hidden group-hover:flex items-center justify-center"
+                                                        onClick={() => {
+                                                            const colors = [...(data.dressCodeColors || [])];
+                                                            colors.splice(i, 1);
+                                                            onChange({ dressCodeColors: colors });
+                                                        }}
+                                                    >×</button>
+                                                </div>
+                                            ))}
+                                            {(data.dressCodeColors || []).length < 8 && (
+                                                <button
+                                                    className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 text-gray-400 text-lg flex items-center justify-center hover:border-rose-400 hover:text-rose-400 transition-colors"
+                                                    onClick={() => onChange({ dressCodeColors: [...(data.dressCodeColors || []), '#cccccc'] })}
+                                                >+</button>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 mt-1">Để trống sẽ dùng bảng màu mặc định theo mẫu thiệp.</p>
+                                    </div>
+                                </>
+                            )}
                             <p className="text-[10px] text-gray-500">Bật để gợi ý trang phục cho khách mời theo màu sắc chủ đạo của tiệc cưới.</p>
                         </div>
                     )}

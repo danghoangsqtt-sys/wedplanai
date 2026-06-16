@@ -1,0 +1,49 @@
+{
+  "id": "debug-market-analysis",
+  "status": "resolved",
+  "created_at": "2026-06-15T15:35:10Z",
+  "updated_at": "2026-06-15T15:38:30Z",
+  "problem": {
+    "description": "Tính năng phân tích thị trường bằng AI bị lỗi không hoạt động",
+    "symptoms": ["Không phân tích được", "Lỗi trả về từ generateLocalMarketReport"],
+    "error_messages": ["503 UNAVAILABLE - This model is currently experiencing high demand"],
+    "affected_files": ["services/aiService.ts"]
+  },
+  "investigation": {
+    "hypotheses": [
+      {
+        "id": 1,
+        "description": "API Key không chính xác hoặc lỗi mạng.",
+        "status": "rejected"
+      },
+      {
+        "id": 2,
+        "description": "Model gemini-2.5-flash từ chối yêu cầu do vượt quá giới hạn output token cấu hình (maxOutputTokens: 16384).",
+        "status": "confirmed"
+      }
+    ],
+    "tests_run": [
+      {
+        "command": "npx tsx --env-file=.env.local test-ai.ts",
+        "output": "ERROR 2.5 flash config: {\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}}",
+        "timestamp": "2026-06-15T15:37:25Z"
+      },
+      {
+        "command": "Thay đổi maxOutputTokens xuống 8192 và gọi lại API test-ai.ts",
+        "output": "{ \"message\": \"Hello! This is a test response.\" }",
+        "timestamp": "2026-06-15T15:37:45Z"
+      }
+    ],
+    "findings": [
+      "Lỗi không sinh ra từ parse JSON hay dotenv trên trình duyệt.",
+      "Lỗi thực tế là API của model `gemini-2.5-flash` trả về HTTP 503 (UNAVAILABLE) khi tham số `maxOutputTokens` được cấu hình vượt quá giới hạn (16384).",
+      "Model gemini-2.5-flash chỉ hỗ trợ maxOutputTokens là 8192."
+    ]
+  },
+  "resolution": {
+    "root_cause": "Cấu hình `maxOutputTokens: 16384` trong `aiService.ts` vượt quá giới hạn tối đa cho phép của model `gemini-2.5-flash`, dẫn đến lỗi API (503 UNAVAILABLE) giả lập từ phía backend Google.",
+    "fix_applied": "Giảm cấu hình `maxOutputTokens` từ 16384 xuống 8192 cho chế độ xuất JSON trong hàm `callGeminiDirect` ở file `services/aiService.ts`.",
+    "files_changed": ["services/aiService.ts"],
+    "verification": "Đã tạo file test-ai.ts mô phỏng config giống `aiService.ts` nhưng dùng trong môi trường Node. Gọi lại hàm với 8192 tokens đã trả về kết quả thành công mà không bị 503."
+  }
+}

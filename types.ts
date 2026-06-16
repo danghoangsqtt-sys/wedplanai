@@ -154,6 +154,7 @@ export interface BankInfo {
   accountNumber: string;
   accountName: string;
   qrTemplate?: 'compact' | 'compact2' | 'qr_only' | 'print';
+  title?: string;
 }
 
 export interface WeddingEvent {
@@ -209,7 +210,9 @@ export interface InvitationData {
   wishes: string;
   themeColor: string;
   bankInfo: BankInfo;
+  bankAccounts?: BankInfo[];
   couplePhoto?: string; // URL or Base64 (legacy or shared)
+  heroOverlayOpacity?: number; // 0 to 100
   groomPhoto?: string;
   bridePhoto?: string;
   galleryImages?: string[]; // Array of URLs
@@ -218,6 +221,8 @@ export interface InvitationData {
   thankYouMessage?: string;
   envelopeMessage?: string;
   dressCodeEnabled?: boolean;
+  dressCodeColors?: string[];
+  dressCodeMessage?: string;
   photoConfig?: {
     scale: number;
     x: number;

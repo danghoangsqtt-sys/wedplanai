@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
     X, Upload, Trash2, Plus, RefreshCw, Music2,
-    ChevronDown, ChevronUp, Eye, Smile
+    ChevronDown, ChevronUp, Eye, Smile, MapPin, Lightbulb
 } from 'lucide-react';
 import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent, SectionId } from '../../../types';
 import { useStore } from '../../../store/useStore';
@@ -10,32 +10,7 @@ import { uploadLog } from '../../../lib/logger';
 
 const MAX_FILE_MB = 2;
 
-const BANKS = [
-    { id: 'MB', name: 'MBBank' }, { id: 'VCB', name: 'Vietcombank' },
-    { id: 'TCB', name: 'Techcombank' }, { id: 'ICB', name: 'VietinBank' },
-    { id: 'BIDV', name: 'BIDV' }, { id: 'ACB', name: 'ACB' },
-    { id: 'VPB', name: 'VPBank' }, { id: 'TPB', name: 'TPBank' },
-    { id: 'STB', name: 'Sacombank' }, { id: 'HDB', name: 'HDBank' },
-];
-
-const MUSIC_OPTIONS = [
-    { url: '/audio/canon-in-d.mp3', label: 'Canon in D – Pachelbel (Cổ điển)' },
-    { url: '/audio/wedding-march.mp3', label: 'Wedding March – Mendelssohn (Hành khúc)' },
-    { url: '/audio/a thousand years.mp3', label: 'A Thousand Years (Christina Perri)' },
-    { url: '/audio/Chăm Em Một Đời.mp3', label: 'Chăm Em Một Đời' },
-    { url: '/audio/Die With A Smile.mp3', label: 'Die With A Smile' },
-    { url: '/audio/Em Đồng Ý (I Do).mp3', label: 'Em Đồng Ý (I Do)' },
-    { url: '/audio/In Your Eyes.mp3', label: 'In Your Eyes' },
-    { url: '/audio/Lover (First Dance Remix).mp3', label: 'Lover (First Dance Remix)' },
-    { url: '/audio/Lễ Đường.mp3', label: 'Lễ Đường' },
-    { url: '/audio/Marry You.mp3', label: 'Marry You (Bruno Mars)' },
-    { url: '/audio/Ngày Này, Người Con Gái Này.mp3', label: 'Ngày Này, Người Con Gái Này' },
-    { url: '/audio/Ordinary (Wedding Version).mp3', label: 'Ordinary (Wedding Version)' },
-    { url: '/audio/Summertime (Imanbek Remix).mp3', label: 'Summertime (Imanbek Remix)' },
-    { url: '/audio/The Most Beautiful Bride In The World.mp3', label: 'The Most Beautiful Bride In The World' },
-    { url: '/audio/một đời.mp3', label: 'Một Đời' },
-    { url: '/audio/50 Năm Về Sau (Nghĩ Đến Ngày Chúng Ta Sẽ Già).mp3', label: '50 Năm Về Sau' },
-];
+import { BANKS, MUSIC_OPTIONS } from '../../../lib/invitation-constants';
 
 const STICKER_GROUPS = {
     'Cặp Đôi': ['💑', '👫', '💏', '🤵', '👰', '💍', '🥂', '🎊'],
@@ -44,86 +19,7 @@ const STICKER_GROUPS = {
     'Tiệc Cưới': ['✨', '🎉', '🥳', '🎀', '🎁', '🕊️', '🦋', '🌟'],
 };
 
-/* ── PHOTO POSITION EDITOR (reused from InvitationManager) ── */
-const PhotoPositionEditor: React.FC<{
-    src: string;
-    config: { scale: number; x: number; y: number };
-    onChange: (c: { scale: number; x: number; y: number }) => void;
-    onRemove: () => void;
-}> = ({ src, config, onChange, onRemove }) => {
-    const isDragging = useRef(false);
-    const lastPos = useRef({ x: 0, y: 0 });
-    const configRef = useRef(config);
-    configRef.current = config;
-    const onChangeRef = useRef(onChange);
-    onChangeRef.current = onChange;
-
-    useEffect(() => {
-        const move = (cx: number, cy: number) => {
-            if (!isDragging.current) return;
-            const dx = cx - lastPos.current.x;
-            const dy = cy - lastPos.current.y;
-            lastPos.current = { x: cx, y: cy };
-            const c = configRef.current;
-            onChangeRef.current({
-                ...c,
-                x: Math.max(0, Math.min(100, c.x - dx * 0.5)),
-                y: Math.max(0, Math.min(100, c.y - dy * 0.5)),
-            });
-        };
-        const onMM = (e: MouseEvent) => move(e.clientX, e.clientY);
-        const onTM = (e: TouchEvent) => { if (isDragging.current) e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); };
-        const onEnd = () => { isDragging.current = false; };
-        window.addEventListener('mousemove', onMM);
-        window.addEventListener('mouseup', onEnd);
-        window.addEventListener('touchmove', onTM, { passive: false });
-        window.addEventListener('touchend', onEnd);
-        return () => {
-            window.removeEventListener('mousemove', onMM);
-            window.removeEventListener('mouseup', onEnd);
-            window.removeEventListener('touchmove', onTM);
-            window.removeEventListener('touchend', onEnd);
-        };
-    }, []);
-
-    return (
-        <div className="space-y-2">
-            <div
-                className="relative w-full h-36 rounded-lg overflow-hidden border-2 border-rose-200 cursor-grab active:cursor-grabbing select-none group"
-                onMouseDown={e => { isDragging.current = true; lastPos.current = { x: e.clientX, y: e.clientY }; e.preventDefault(); }}
-                onTouchStart={e => { isDragging.current = true; lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
-            >
-                <img
-                    src={src} alt="Vị trí ảnh"
-                    className="w-full h-full object-cover pointer-events-none"
-                    style={{ objectPosition: `${config.x}% ${config.y}%`, transform: config.scale !== 1 ? `scale(${config.scale})` : undefined, transformOrigin: `${config.x}% ${config.y}%` }}
-                    draggable={false}
-                />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-8 h-8 border-2 border-white/50 rounded-full" />
-                    <div className="absolute w-px h-full bg-white/20" />
-                    <div className="absolute w-full h-px bg-white/20" />
-                </div>
-                <button onClick={e => { e.stopPropagation(); onRemove(); }}
-                    className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                ><X size={12} /></button>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">🔍</span>
-                <input type="range" min="1" max="2" step="0.05" value={config.scale}
-                    onChange={e => onChange({ ...config, scale: parseFloat(e.target.value) })}
-                    className="flex-1 h-1 accent-rose-500 cursor-pointer"
-                />
-                <span className="text-[10px] text-gray-500 font-mono w-8 text-right">{Math.round(config.scale * 100)}%</span>
-            </div>
-            {(config.x !== 50 || config.y !== 50 || config.scale !== 1) && (
-                <button onClick={() => onChange({ scale: 1, x: 50, y: 50 })}
-                    className="text-[11px] text-gray-400 hover:text-rose-500 flex items-center gap-1"
-                ><RefreshCw size={10} /> Reset vị trí</button>
-            )}
-        </div>
-    );
-};
+import { PhotoPositionEditor } from './PhotoPositionEditor';
 
 /* ── SECTION PANEL LABEL ── */
 const PanelLabel: React.FC<{ label: string }> = ({ label }) => (
@@ -200,12 +96,29 @@ const HeroPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invitati
             <div>
                 <PanelLabel label="Ảnh Bìa" />
                 {data.couplePhoto ? (
-                    <PhotoPositionEditor
-                        src={data.couplePhoto}
-                        config={data.photoConfig ?? { scale: 1, x: 50, y: 50 }}
-                        onChange={c => onChange({ photoConfig: c })}
-                        onRemove={() => onChange({ couplePhoto: undefined, photoConfig: undefined })}
-                    />
+                    <>
+                        <PhotoPositionEditor
+                            src={data.couplePhoto}
+                            config={data.photoConfig ?? { scale: 1, x: 50, y: 50 }}
+                            onChange={c => onChange({ photoConfig: c })}
+                            onRemove={() => onChange({ couplePhoto: undefined, photoConfig: undefined, heroOverlayOpacity: undefined })}
+                        />
+                        <div className="mt-4">
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="text-[10px] font-medium text-gray-600">Độ mờ nền (Giúp chữ dễ đọc hơn)</label>
+                                <span className="text-[10px] text-gray-400">{data.heroOverlayOpacity ?? 0}%</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="80" 
+                                step="5"
+                                value={data.heroOverlayOpacity ?? 0} 
+                                onChange={e => onChange({ heroOverlayOpacity: parseInt(e.target.value) })}
+                                className="w-full accent-rose-500"
+                            />
+                        </div>
+                    </>
                 ) : (
                     <>
                         <button
@@ -323,8 +236,31 @@ const VenuePanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invitat
             <PTextarea rows={2} placeholder="Số nhà, đường, quận/huyện..." value={data.address || ''} onChange={e => onChange({ address: e.target.value })} />
         </div>
         <div>
-            <PanelLabel label="Link Google Maps" />
-            <PInput placeholder="https://maps.google.com/..." value={data.mapLink || ''} onChange={e => onChange({ mapLink: e.target.value })} />
+            <div className="flex items-center justify-between mb-1.5">
+                <PanelLabel label="Hiển thị Bản đồ" />
+                <button
+                    onClick={() => onChange({ mapEnabled: !data.mapEnabled })}
+                    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${data.mapEnabled ? 'bg-rose-500' : 'bg-gray-200'}`}
+                >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${data.mapEnabled ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                </button>
+            </div>
+            {data.mapEnabled && (
+                <div className="mt-2 relative">
+                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-rose-400">
+                        <MapPin size={14} />
+                    </div>
+                    <input 
+                        className="w-full bg-white border border-gray-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300 transition-all pl-8"
+                        placeholder="https://maps.app.goo.gl/..." 
+                        value={data.mapLink || ''} 
+                        onChange={e => onChange({ mapLink: e.target.value })} 
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-amber-400">
+                        <Lightbulb size={14} />
+                    </div>
+                </div>
+            )}
         </div>
     </div>
 );

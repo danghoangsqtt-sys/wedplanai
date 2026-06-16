@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent } from '../../types';
-import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, X, Volume2, VolumeX, Navigation, Bold, Italic, Underline, Strikethrough } from 'lucide-react';
+import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, ChevronLeft, ChevronRight, X, Volume2, VolumeX, Navigation, Bold, Italic, Underline, Strikethrough, Palette, Type } from 'lucide-react';
+import { sanitizeMapUrl, sanitizeAudioUrl } from '../../lib/sanitize';
 
 export interface EditorConfig {
     selectedSection?: string;
@@ -18,6 +19,15 @@ interface InvitationPreviewProps {
 /* ============================================================
    THEME CONFIG — Each template maps to CSS custom properties
    ============================================================ */
+const DRESS_CODE_PALETTES: Record<string, string[]> = {
+    traditional: ['#7c1d00', '#c79a4b', '#f5e6d3', '#2c1810', '#ffffff'],
+    romantic:    ['#9b2948', '#e0a96d', '#fce4e8', '#6d4c55', '#ffffff'],
+    modern:      ['#094cb2', '#1b1c1d', '#eef1f6', '#7c8aa5', '#ffffff'],
+    royal:       ['#1e2c54', '#c2a14d', '#f8f5ee', '#2e4078', '#ffffff'],
+    garden:      ['#3f5e43', '#c08a5e', '#e7ece0', '#557a52', '#ffffff'],
+    indochine:   ['#a8442a', '#4e8d6e', '#efe4d3', '#5c4a3c', '#ffffff'],
+};
+
 const THEME_VARS: Record<string, Record<string, string>> = {
     traditional: {
         '--t-primary': '#7c1d00',
@@ -259,6 +269,7 @@ const bentoClass = (i: number, total: number): string => {
 const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivElement | null> }> = ({ containerRef }) => {
     const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
     const [active, setActive] = useState<Record<string, boolean>>({});
+    const [savedRange, setSavedRange] = useState<Range | null>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
 
     const updateToolbar = useCallback(() => {
@@ -270,6 +281,8 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
         if (!editable) { setPos(null); return; }
 
         const range = sel.getRangeAt(0);
+        setSavedRange(range);
+
         const rect = range.getBoundingClientRect();
         const containerRect = containerRef.current.getBoundingClientRect();
         setPos({
@@ -289,8 +302,13 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
         return () => document.removeEventListener('selectionchange', updateToolbar);
     }, [updateToolbar]);
 
-    const exec = (cmd: string) => {
-        document.execCommand(cmd, false);
+    const exec = (cmd: string, val: string = '') => {
+        const sel = window.getSelection();
+        if (sel && savedRange) {
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+        }
+        document.execCommand(cmd, false, val);
         updateToolbar();
     };
 
@@ -302,6 +320,10 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
         { cmd: 'strikeThrough', icon: <Strikethrough size={15} />, label: 'S' },
     ];
 
+    const colors = ['#000000', '#ffffff', '#e11d48', '#094cb2', '#1e2c54', '#3f5e43', '#a8442a', '#7c1d00', '#ec4899', '#f59e0b', '#10b981', '#6366f1', '#64748b', '#d97706', '#be123c', '#4338ca'];
+    const fonts = ['Arial', 'Times New Roman', 'Dancing Script', 'Playfair Display', 'Great Vibes', 'Montserrat', 'Inter', 'Cormorant Garamond'];
+    const sizes = [1, 2, 3, 4, 5, 6, 7];
+
     return (
         <div
             ref={toolbarRef}
@@ -309,8 +331,9 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
             style={{ left: pos.x, top: pos.y }}
             onMouseDown={e => e.preventDefault()}
         >
-            <span className="iv-toolbar-label">Sửa văn bản</span>
-            <div className="iv-toolbar-sep" />
+            <span className="iv-toolbar-label hidden sm:inline">Sửa</span>
+            <div className="iv-toolbar-sep hidden sm:block" />
+            
             {btns.map(b => (
                 <button
                     key={b.cmd}
@@ -321,6 +344,141 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
                     {b.icon}
                 </button>
             ))}
+
+            <div className="iv-toolbar-sep" />
+
+            {/* Màu chữ */}
+            <div className="relative group flex">
+                <button className="iv-toolbar-btn" title="Màu chữ">
+                    <Palette size={15} />
+                </button>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-[#1f2937] shadow-xl rounded-lg p-2 hidden group-hover:grid grid-cols-4 gap-1.5 w-36 z-[100] before:content-[''] before:absolute before:-top-2 before:left-0 before:w-full before:h-2">
+                    {colors.map(c => (
+                        <button 
+                            key={c}
+                            className="w-6 h-6 rounded-full border border-gray-500 hover:scale-110 transition-transform"
+                            style={{ backgroundColor: c }}
+                            onMouseDown={e => { e.preventDefault(); exec('foreColor', c); }}
+                            title={c}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Phông chữ */}
+            <div className="relative group flex">
+                <button className="iv-toolbar-btn" title="Phông chữ">
+                    <Type size={15} />
+                </button>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-[#1f2937] shadow-xl rounded-lg py-2 hidden group-hover:flex flex-col w-40 z-[100] before:content-[''] before:absolute before:-top-2 before:left-0 before:w-full before:h-2">
+                    {fonts.map(f => (
+                        <button 
+                            key={f}
+                            className="px-3 py-1.5 text-sm text-left hover:bg-gray-700 truncate text-white"
+                            style={{ fontFamily: f }}
+                            onMouseDown={e => { e.preventDefault(); exec('fontName', f); }}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Kích cỡ */}
+            <div className="relative group flex">
+                <button className="iv-toolbar-btn font-serif font-bold text-sm flex items-center justify-center gap-0.5" title="Kích cỡ chữ">
+                    <span>A</span><span className="text-[10px]">a</span>
+                </button>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-[#1f2937] shadow-xl rounded-lg py-2 hidden group-hover:flex flex-col w-28 z-[100] before:content-[''] before:absolute before:-top-2 before:left-0 before:w-full before:h-2">
+                    {sizes.map(s => (
+                        <button 
+                            key={s}
+                            className="px-3 py-1 text-sm text-center hover:bg-gray-700 text-white"
+                            onMouseDown={e => { e.preventDefault(); exec('fontSize', s.toString()); }}
+                        >
+                            Cỡ {s}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── 3D CAROUSEL GALLERY ───
+const Gallery3DCarousel: React.FC<{ images: string[]; onImageClick: (idx: number) => void }> = ({ images, onImageClick }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    const next = () => setActiveIndex(prev => Math.min(prev + 1, images.length - 1));
+    const prev = () => setActiveIndex(p => Math.max(p - 1, 0));
+
+    return (
+        <div className="relative w-full h-[320px] sm:h-[420px] flex items-center justify-center overflow-visible mb-8" style={{ perspective: '1000px' }}>
+            <button 
+                onClick={(e) => { e.stopPropagation(); prev(); }} 
+                disabled={activeIndex === 0}
+                className="absolute left-2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous image"
+            >
+                <ChevronLeft size={20} />
+            </button>
+
+            <div className="relative w-48 h-72 sm:w-64 sm:h-96" style={{ transformStyle: 'preserve-3d' }}>
+                {images.map((img, i) => {
+                    const offset = i - activeIndex;
+                    const absOffset = Math.abs(offset);
+                    const isActive = offset === 0;
+                    
+                    let transform = '';
+                    let opacity = 1;
+                    let zIndex = 10 - absOffset;
+
+                    if (isActive) {
+                        transform = 'translateX(0) scale(1) translateZ(0)';
+                    } else if (offset < 0) {
+                        transform = `translateX(-${40 + absOffset * 30}%) scale(${1 - absOffset * 0.15}) translateZ(-${absOffset * 80}px) rotateY(25deg)`;
+                        opacity = Math.max(0, 1 - absOffset * 0.3);
+                    } else {
+                        transform = `translateX(${40 + absOffset * 30}%) scale(${1 - absOffset * 0.15}) translateZ(-${absOffset * 80}px) rotateY(-25deg)`;
+                        opacity = Math.max(0, 1 - absOffset * 0.3);
+                    }
+
+                    if (absOffset > 2) opacity = 0; // hide others
+
+                    return (
+                        <div 
+                            key={i} 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (isActive) onImageClick(i);
+                                else setActiveIndex(i);
+                            }}
+                            className="absolute inset-0 transition-all duration-500 ease-out cursor-pointer rounded-xl overflow-hidden shadow-2xl bg-[var(--t-surface-dim)]"
+                            style={{ 
+                                transform,
+                                opacity,
+                                zIndex,
+                                visibility: opacity === 0 ? 'hidden' : 'visible'
+                            }}
+                        >
+                            <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
+                        </div>
+                    );
+                })}
+            </div>
+
+            <button 
+                onClick={(e) => { e.stopPropagation(); next(); }} 
+                disabled={activeIndex === images.length - 1}
+                className="absolute right-2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next image"
+            >
+                <ChevronRight size={20} />
+            </button>
+            
+            <div className="absolute -bottom-6 text-center text-xs opacity-60 w-full font-medium tracking-widest text-[var(--t-on-surface)]">
+                {activeIndex + 1} / {images.length}
+            </div>
         </div>
     );
 };
@@ -377,9 +535,12 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     const [audioPlaying, setAudioPlaying] = useState(false);
     const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
+    const safeMapLink = sanitizeMapUrl(data.mapLink);
+    const safeMusicUrl = sanitizeAudioUrl(data.musicUrl);
+
     const toggleAudio = useCallback(() => {
-        if (!audioRef.current && data.musicUrl) {
-            audioRef.current = new Audio(data.musicUrl);
+        if (!audioRef.current && safeMusicUrl) {
+            audioRef.current = new Audio(safeMusicUrl);
             audioRef.current.loop = true;
         }
         if (audioRef.current) {
@@ -387,20 +548,25 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             else { audioRef.current.play().catch(() => { }); }
             setAudioPlaying(!audioPlaying);
         }
-    }, [audioPlaying, data.musicUrl]);
+    }, [audioPlaying, safeMusicUrl]);
 
     const groomName = data.groomName || 'Chú Rể';
     const brideName = data.brideName || 'Cô Dâu';
+    const brideFirst = data.displayOrder === 'bride_first';
     const tid = data.templateId || 'traditional';
     const isRomantic = tid === 'romantic';
     const isModern = tid === 'modern';
     const isGarden = tid === 'garden';
+    const isRoyal = tid === 'royal';
+    const isIndochine = tid === 'indochine';
+    const isTraditional = tid === 'traditional';
 
     // Feature flags
     const hasCountdown = data.countdownEnabled !== false && data.date;
     const hasEvents = data.events && data.events.length > 0;
     const hasGallery = data.galleryImages && data.galleryImages.length > 0;
-    const hasBank = data.bankInfo?.bankId && data.bankInfo?.accountNumber;
+    const bankList = data.bankAccounts || (data.bankInfo?.bankId ? [data.bankInfo] : []);
+    const hasBank = bankList.length > 0 && bankList.some(b => b.bankId && b.accountNumber);
     const hasLoveStory = data.loveStory && data.loveStory.length > 0;
     const hasRSVP = data.rsvpEnabled;
     const gp = data.groomParents;
@@ -456,92 +622,195 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             )}
 
             <div ref={rootRef} className={`iv-root iv-theme-${tid}`} style={themeStyle}>
-                {/* Floral Overlays */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.85] mix-blend-multiply" aria-hidden>
-                    <img src="/floral-top-left.png" alt="" className="absolute top-0 left-0 w-[85%] max-w-[420px] object-contain opacity-95 -translate-x-4 -translate-y-4" />
-                    <img src="/floral-bottom-right.png" alt="" className="absolute bottom-0 right-0 w-[90%] max-w-[460px] object-contain opacity-95 translate-x-4 translate-y-4" />
-                </div>
+                {/* Floral Overlays — hidden for modern (minimalist), reduced for royal */}
+                {!isModern && (
+                    <div className={`absolute inset-0 pointer-events-none overflow-hidden z-0 mix-blend-multiply ${isRoyal ? 'opacity-[0.45]' : isIndochine ? 'opacity-[0.6]' : 'opacity-[0.85]'}`} aria-hidden>
+                        <img src="/floral-top-left.png" alt="" className="absolute top-0 left-0 w-[85%] max-w-[420px] object-contain opacity-95 -translate-x-4 -translate-y-4" />
+                        <img src="/floral-bottom-right.png" alt="" className="absolute bottom-0 right-0 w-[90%] max-w-[460px] object-contain opacity-95 translate-x-4 translate-y-4" />
+                    </div>
+                )}
 
                 {ec && <FloatingTextToolbar containerRef={rootRef} />}
 
                 {/* ── FLOATING MUSIC BUTTON ── */}
-                {data.musicUrl && (
+                {safeMusicUrl && (
                     <button onClick={toggleAudio} className="iv-music-btn" title={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'} aria-label={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'}>
                         {audioPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
                     </button>
                 )}
 
                 {/* ══════ HERO ══════ */}
-                <section className="iv-hero" {...secProps('hero')}>
+                <section className={`iv-hero ${isTraditional || isIndochine || isRoyal ? 'iv-hero-horizontal' : ''}`} {...secProps('hero')}>
                     {effectType && <FloatingEffect type={effectType} />}
-                    {data.couplePhoto && (
-                        <img src={data.couplePhoto} alt="Ảnh cưới" className="iv-hero-photo"
-                            style={data.photoConfig ? {
-                                objectPosition: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
-                                transform: data.photoConfig.scale !== 1 ? `scale(${data.photoConfig.scale})` : undefined,
-                                transformOrigin: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
-                            } : undefined}
-                        />
-                    )}
-                    <div className="iv-hero-gradient" />
-                    <div className="iv-hero-body rv">
-                        {headerSticker && <div className="iv-hero-sticker" aria-hidden>{headerSticker}</div>}
-
-                        {isRomantic ? (
-                            <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Happy Wedding</p>
-                        ) : isGarden ? (
-                            <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Save the Date</p>
-                        ) : isModern ? (
-                            <p className="iv-hero-pre">WE ARE GETTING MARRIED</p>
-                        ) : (
-                            <p className="iv-hero-pre">Lễ Thành Hôn</p>
-                        )}
-
-                        <h1 className="iv-couple">
-                            <span className="iv-name" {...editProps('groomName', 'Chú Rể')}>{groomName}</span>
-                            <span className="iv-amp">&</span>
-                            <span className="iv-name" {...editProps('brideName', 'Cô Dâu')}>{brideName}</span>
-                        </h1>
-
-                        {/* Date badge */}
-                        {data.date && (
-                            isRomantic || isModern || isGarden ? (
-                                <div className="iv-date-badge">
-                                    <span>{shortDate}</span>
-                                    {(data.location || data.address) && <><span className="iv-badge-dot" /><span>{data.location || data.address.split(',').pop()?.trim()}</span></>}
+                    
+                    {/* BỐ CỤC NGANG VÀ VÒM ẢNH (Traditional, Indochine, Royal) */}
+                    {(isTraditional || isIndochine || isRoyal) ? (
+                        <div className="iv-hero-body rv flex flex-col items-center justify-start h-full pt-16 md:pt-20 relative z-10">
+                            {headerSticker && (
+                                <div className="iv-hero-sticker absolute top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-80 overflow-hidden flex items-start" aria-hidden>
+                                    <div className="transform scale-125 origin-top-left opacity-60 mix-blend-multiply">
+                                        {headerSticker}
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="iv-date-line">
-                                    <Calendar size={14} /> {fmtDate}
-                                    {data.time && <> · <Clock size={14} /> {data.time}</>}
+                            )}
+                            
+                            <p className="iv-hero-pre mb-6 uppercase tracking-[0.4em] text-[10px] md:text-xs font-semibold opacity-70">
+                                {isRoyal ? "THE WEDDING CELEBRATION OF" : "WELCOME TO OUR WEDDING"}
+                            </p>
+
+                            <div className="iv-couple-row w-full flex items-center justify-center gap-2 md:gap-8 px-2 mb-2 z-10">
+                                {/* First Person */}
+                                <div className="flex flex-col items-center text-center min-w-0 flex-1">
+                                    <span className="iv-title mb-2 text-[9px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-70 font-sans" {...editProps(brideFirst ? 'brideTitle' : 'groomTitle', 'Danh xưng')}>
+                                        {brideFirst ? data.brideTitle : data.groomTitle}
+                                    </span>
+                                    <span className="iv-name text-[clamp(1.2rem,5.5vw,3rem)] leading-tight text-center break-words" style={{ fontFamily: "'Playfair Display', serif" }} {...editProps(brideFirst ? 'brideShortName' : 'groomShortName', brideFirst ? 'Tên Cô Dâu' : 'Tên Chú Rể')}>
+                                        {brideFirst ? (data.brideShortName || brideName) : (data.groomShortName || groomName)}
+                                    </span>
                                 </div>
-                            )
-                        )}
 
-                        {data.lunarDate && <p className="iv-lunar">(Âm lịch: {data.lunarDate})</p>}
-                        {(data.wishes || ec) && <p className="iv-wishes-text" {...editProps('wishes', 'Lời mời...')}>{data.wishes || (ec ? '' : '')}</p>}
+                                {/* Divider (Hỷ / &) */}
+                                <div className="iv-hero-divider text-4xl md:text-6xl opacity-90 mx-1 md:mx-2 translate-y-1 md:translate-y-2 drop-shadow-sm flex-shrink-0" style={{ color: 'var(--t-accent)' }}>
+                                    {isRoyal ? '&' : '囍'}
+                                </div>
 
-                        {/* Countdown */}
-                        {hasCountdown && (
-                            <div className="iv-cd-row">
-                                {[
-                                    { n: countdown.d, l: 'Ngày' },
-                                    { n: countdown.h, l: 'Giờ' },
-                                    { n: countdown.m, l: 'Phút' },
-                                    { n: countdown.s, l: 'Giây' },
-                                ].map((u, i) => (
-                                    <React.Fragment key={u.l}>
-                                        {i > 0 && <div className="iv-cd-sep" />}
-                                        <div className="iv-cd-unit">
-                                            <span className="iv-cd-num">{u.n}</span>
-                                            <span className="iv-cd-lbl">{u.l}</span>
-                                        </div>
-                                    </React.Fragment>
-                                ))}
+                                {/* Second Person */}
+                                <div className="flex flex-col items-center text-center min-w-0 flex-1">
+                                    <span className="iv-title mb-2 text-[9px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-70 font-sans" {...editProps(brideFirst ? 'groomTitle' : 'brideTitle', 'Danh xưng')}>
+                                        {brideFirst ? data.groomTitle : data.brideTitle}
+                                    </span>
+                                    <span className="iv-name text-[clamp(1.2rem,5.5vw,3rem)] leading-tight text-center break-words" style={{ fontFamily: "'Playfair Display', serif" }} {...editProps(brideFirst ? 'groomShortName' : 'brideShortName', brideFirst ? 'Tên Chú Rể' : 'Tên Cô Dâu')}>
+                                        {brideFirst ? (data.groomShortName || groomName) : (data.brideShortName || brideName)}
+                                    </span>
+                                </div>
                             </div>
-                        )}
-                        <ChevronDown size={24} className="mx-auto mt-4 animate-bounce" style={{ color: 'var(--t-accent)', opacity: 0.6 }} />
-                    </div>
+
+                            {/* Arched Text */}
+                            <svg viewBox="0 0 320 160" className="w-full max-w-[320px] mx-auto mt-4 mb-[-40px] opacity-80 drop-shadow-sm z-10" style={{ overflow: 'visible' }}>
+                                <path id="archCurve" d="M 20,150 A 140,140 0 0,1 300,150" fill="transparent" />
+                                <text fill="currentColor" fontSize="11" letterSpacing="0.4em" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                                    <textPath href="#archCurve" startOffset="50%" textAnchor="middle">
+                                        ✦ LOVE NEVER FAILS ✦
+                                    </textPath>
+                                </text>
+                            </svg>
+
+                            {/* Arch Photo Mask */}
+                            <div className="iv-arch-container w-full max-w-[320px] mx-auto flex-1 relative mb-12 z-10">
+                                <div className="iv-arch-mask w-full h-full absolute inset-0 overflow-hidden shadow-2xl" 
+                                     style={{ 
+                                         borderRadius: '160px 160px 0 0', 
+                                         border: '4px solid color-mix(in srgb, var(--t-accent) 40%, transparent)',
+                                         boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)'
+                                     }}>
+                                    {data.couplePhoto && (
+                                        <img src={data.couplePhoto} alt="Ảnh cưới" className="iv-hero-photo w-full h-full object-cover transition-transform duration-1000 hover:scale-105"
+                                            style={data.photoConfig ? {
+                                                objectPosition: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
+                                                transform: data.photoConfig.scale !== 1 ? `scale(${data.photoConfig.scale})` : undefined,
+                                            } : undefined}
+                                        />
+                                    )}
+                                    {/* Delicate Gradient Overlay instead of dark multiply */}
+                                    {data.couplePhoto && (
+                                        <div className="absolute inset-0 z-[1] pointer-events-none" 
+                                             style={{ 
+                                                 background: `linear-gradient(to top, rgba(0, 0, 0, ${(data.heroOverlayOpacity || 0) / 100}) 0%, transparent 50%)`
+                                             }} 
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Floating chevron at bottom */}
+                            <ChevronDown size={24} className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce z-20 drop-shadow-md" style={{ color: 'var(--t-accent)', opacity: 0.8 }} />
+                        </div>
+                    ) : (
+                        /* BỐ CỤC PHỦ ẢNH NỀN (Romantic, Modern, Garden) */
+                        <>
+                            {data.couplePhoto && (
+                                <img src={data.couplePhoto} alt="Ảnh cưới" className="iv-hero-photo"
+                                    style={data.photoConfig ? {
+                                        objectPosition: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
+                                        transform: data.photoConfig.scale !== 1 ? `scale(${data.photoConfig.scale})` : undefined,
+                                        transformOrigin: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
+                                    } : undefined}
+                                />
+                            )}
+                            {data.couplePhoto && (
+                                <div 
+                                    className="absolute inset-0 z-[1] pointer-events-none transition-colors duration-300" 
+                                    style={{ backgroundColor: `rgba(255, 255, 255, ${(data.heroOverlayOpacity || 0) / 100})` }} 
+                                />
+                            )}
+                            <div className="iv-hero-gradient" />
+                            <div className="iv-hero-body rv">
+                                {headerSticker && <div className="iv-hero-sticker" aria-hidden>{headerSticker}</div>}
+
+                                {isRomantic ? (
+                                    <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Happy Wedding</p>
+                                ) : isGarden ? (
+                                    <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Save the Date</p>
+                                ) : isModern ? (
+                                    <p className="iv-hero-pre">WE ARE GETTING MARRIED</p>
+                                ) : (
+                                    <p className="iv-hero-pre">Lễ Thành Hôn</p>
+                                )}
+
+                                <h1 className="iv-couple">
+                                    <div className="flex flex-col items-center">
+                                        {(brideFirst ? data.brideTitle : data.groomTitle) && (
+                                            <span className="iv-title mb-1 text-[0.35em] tracking-widest uppercase opacity-80" {...editProps(brideFirst ? 'brideTitle' : 'groomTitle', 'Danh xưng')}>
+                                                {brideFirst ? data.brideTitle : data.groomTitle}
+                                            </span>
+                                        )}
+                                        <span className="iv-name" {...editProps(brideFirst ? 'brideName' : 'groomName', brideFirst ? 'Cô Dâu' : 'Chú Rể')}>{brideFirst ? brideName : groomName}</span>
+                                    </div>
+                                    <span className="iv-amp">&</span>
+                                    <div className="flex flex-col items-center">
+                                        {(!brideFirst ? data.brideTitle : data.groomTitle) && (
+                                            <span className="iv-title mb-1 text-[0.35em] tracking-widest uppercase opacity-80" {...editProps(brideFirst ? 'groomTitle' : 'brideTitle', 'Danh xưng')}>
+                                                {brideFirst ? data.groomTitle : data.brideTitle}
+                                            </span>
+                                        )}
+                                        <span className="iv-name" {...editProps(brideFirst ? 'groomName' : 'brideName', brideFirst ? 'Chú Rể' : 'Cô Dâu')}>{brideFirst ? groomName : brideName}</span>
+                                    </div>
+                                </h1>
+
+                                {/* Date badge */}
+                                {data.date && (
+                                    <div className="iv-date-badge">
+                                        <span>{shortDate}</span>
+                                        {(data.location || data.address) && <><span className="iv-badge-dot" /><span>{data.location || data.address.split(',').pop()?.trim()}</span></>}
+                                    </div>
+                                )}
+
+                                {data.lunarDate && <p className="iv-lunar">(Âm lịch: {data.lunarDate})</p>}
+                                {(data.wishes || ec) && <p className="iv-wishes-text" {...editProps('wishes', 'Lời mời...')}>{data.wishes || (ec ? '' : '')}</p>}
+
+                                {/* Countdown */}
+                                {hasCountdown && (
+                                    <div className="iv-cd-row">
+                                        {[
+                                            { n: countdown.d, l: 'Ngày' },
+                                            { n: countdown.h, l: 'Giờ' },
+                                            { n: countdown.m, l: 'Phút' },
+                                            { n: countdown.s, l: 'Giây' },
+                                        ].map((u, i) => (
+                                            <React.Fragment key={u.l}>
+                                                {i > 0 && <div className="iv-cd-sep" />}
+                                                <div className="iv-cd-unit">
+                                                    <span className="iv-cd-num">{u.n}</span>
+                                                    <span className="iv-cd-lbl">{u.l}</span>
+                                                </div>
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                )}
+                                <ChevronDown size={24} className="mx-auto mt-4 animate-bounce" style={{ color: 'var(--t-accent)', opacity: 0.6 }} />
+                            </div>
+                        </>
+                    )}
                 </section>
 
                 {/* ══════ THƯ MỜI — CHA MẸ HAI BÊN ══════ */}
@@ -549,33 +818,40 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     <section className="iv-sec iv-invite rv" {...secProps('family')}>
                         <p className="iv-invite-pre">Trân Trọng Kính Mời</p>
                         <Divider glyph={dividerSticker} />
-                        <div className="iv-parents">
-                            <div className="iv-parent-col">
-                                <span className="iv-parent-side">Nhà Trai</span>
-                                {gp?.father && <span className="iv-parent-name">{gp.father}</span>}
-                                {gp?.mother && <span className="iv-parent-name">{gp.mother}</span>}
-                            </div>
-                            <div className="iv-parent-divider" aria-hidden>
-                                <Heart size={16} />
-                            </div>
-                            <div className="iv-parent-col">
-                                <span className="iv-parent-side">Nhà Gái</span>
-                                {bp?.father && <span className="iv-parent-name">{bp.father}</span>}
-                                {bp?.mother && <span className="iv-parent-name">{bp.mother}</span>}
-                            </div>
-                        </div>
+                        {(() => {
+                            const firstParent = brideFirst ? bp : gp;
+                            const secondParent = brideFirst ? gp : bp;
+                            const firstLabel = brideFirst ? 'Nhà Gái' : 'Nhà Trai';
+                            const secondLabel = brideFirst ? 'Nhà Trai' : 'Nhà Gái';
+                            return (
+                                <div className="iv-parents">
+                                    <div className="iv-parent-col">
+                                        <span className="iv-parent-side">{firstLabel}</span>
+                                        {firstParent?.father && <span className="iv-parent-name">{firstParent.father}</span>}
+                                        {firstParent?.mother && <span className="iv-parent-name">{firstParent.mother}</span>}
+                                    </div>
+                                    <div className="iv-parent-divider" aria-hidden>
+                                        <Heart size={16} />
+                                    </div>
+                                    <div className="iv-parent-col">
+                                        <span className="iv-parent-side">{secondLabel}</span>
+                                        {secondParent?.father && <span className="iv-parent-name">{secondParent.father}</span>}
+                                        {secondParent?.mother && <span className="iv-parent-name">{secondParent.mother}</span>}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                         <p className="iv-invite-line">
-                            Trân trọng kính mời quý khách tới dự buổi tiệc chung vui cùng gia đình chúng tôi,
-                            nhân lễ thành hôn của hai con
+                            {data.openingMessage || 'Trân trọng kính mời quý khách tới dự buổi tiệc chung vui cùng gia đình chúng tôi, nhân lễ thành hôn của hai con'}
                         </p>
-                        <p className="iv-invite-couple">{groomName} &amp; {brideName}</p>
+                        <p className="iv-invite-couple">{brideFirst ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`}</p>
                     </section>
                 )}
 
                 {/* ══════ ĐỊA ĐIỂM & THỜI GIAN ══════ */}
                 {hasVenue && (
                     <section className="iv-sec iv-sec-alt iv-venue rv" {...secProps('venue')}>
-                        <h2 className="iv-sec-title">{isModern ? 'Venue' : 'Địa Điểm Tổ Chức'}</h2>
+                        <h2 className="iv-sec-title">{isModern ? 'Venue' : isRoyal ? 'THE VENUE' : 'Địa Điểm Tổ Chức'}</h2>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-venue-card">
                             <div className="iv-venue-icon"><MapPin size={22} /></div>
@@ -583,38 +859,85 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                             {(data.address || ec) && <p className="iv-venue-addr" {...editProps('address', 'Địa chỉ...')}>{data.address}</p>}
                             <div className="iv-venue-meta">
                                 {data.date && <span><Calendar size={14} /> {fmtDate}</span>}
-                                {data.time && <span><Clock size={14} /> {data.time}</span>}
+                                {data.receptionTime && <span><Clock size={14} /> Đón khách: {data.receptionTime}</span>}
+                                {data.time && <span><Clock size={14} /> Khai tiệc: {data.time}</span>}
                             </div>
                             
-                            {data.mapLink && (
-                                <div className="mt-5 rounded-xl overflow-hidden border border-[var(--t-outline)] shadow-inner group">
-                                    {data.mapLink.includes('pb=') || data.mapLink.includes('embed') ? (
-                                        <iframe 
-                                            src={data.mapLink} 
-                                            width="100%" 
-                                            height="220" 
-                                            style={{ border: 0 }} 
-                                            allowFullScreen 
-                                            loading="lazy" 
-                                            referrerPolicy="no-referrer-when-downgrade"
-                                            className="w-full grayscale group-hover:grayscale-0 transition-all duration-500"
-                                            title="Google Maps"
-                                        />
-                                    ) : (
-                                        <a href={data.mapLink} target="_blank" rel="noopener noreferrer" className="relative block h-[180px] w-full flex items-center justify-center overflow-hidden" style={{ background: 'var(--t-surface-dim)' }}>
-                                            {/* Stylized map placeholder */}
-                                            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(var(--t-accent) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--t-surface)] to-transparent opacity-80" />
-                                            <div className="relative z-10 flex flex-col items-center gap-2 text-[var(--t-primary)] transform group-hover:scale-110 transition-transform">
-                                                <div className="w-12 h-12 bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] flex items-center justify-center animate-bounce">
-                                                    <MapPin size={24} className="text-rose-500 fill-rose-100" />
-                                                </div>
-                                                <span className="font-bold text-xs uppercase tracking-widest bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm">{isModern ? 'Open Google Maps' : 'Mở Bản Đồ Google'}</span>
+                            {data.mapEnabled && (
+                                (() => {
+                                    const rawLink = data.mapLink || '';
+                                    let embedUrl = '';
+                                    const isUrl = (str: string) => str.trim().startsWith('http');
+                                    
+                                    if (rawLink.includes('pb=') || rawLink.includes('embed')) {
+                                        embedUrl = rawLink;
+                                    } else if (data.address && !isUrl(data.address)) {
+                                        embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(data.address)}&output=embed`;
+                                    } else if (rawLink && !isUrl(rawLink)) {
+                                        embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(rawLink)}&output=embed`;
+                                    }
+                                    
+                                    if (embedUrl) {
+                                        return (
+                                            <div className="mt-6 rounded-2xl overflow-hidden shadow-md border-2 border-white/40 ring-1 ring-black/5 bg-white relative z-10">
+                                                <iframe
+                                                    src={embedUrl}
+                                                    width="100%"
+                                                    height="380"
+                                                    style={{ border: 0, display: 'block' }}
+                                                    allowFullScreen
+                                                    loading="lazy"
+                                                    referrerPolicy="no-referrer-when-downgrade"
+                                                    className="w-full"
+                                                    title="Google Maps"
+                                                />
                                             </div>
-                                        </a>
-                                    )}
-                                </div>
+                                        );
+                                    }
+
+                                    // Fallback to button if we have a rawLink but couldn't make it an embed
+                                    if (rawLink && isUrl(rawLink)) {
+                                        return (
+                                            <div className="mt-6 rounded-2xl overflow-hidden shadow-md border-2 border-white/40 ring-1 ring-black/5 bg-white relative z-10">
+                                                <a href={rawLink} target="_blank" rel="noopener noreferrer" className="relative block h-[180px] w-full flex items-center justify-center overflow-hidden" style={{ background: 'var(--t-surface-dim)' }}>
+                                                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(var(--t-accent) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--t-surface)] to-transparent opacity-80" />
+                                                    <div className="relative z-10 flex flex-col items-center gap-2 text-[var(--t-primary)] transform group-hover:scale-110 transition-transform">
+                                                        <div className="w-12 h-12 bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] flex items-center justify-center animate-bounce">
+                                                            <MapPin size={24} className="text-rose-500 fill-rose-100" />
+                                                        </div>
+                                                        <span className="font-bold text-xs uppercase tracking-widest bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm">
+                                                            {isModern ? 'Open Google Maps' : 'Mở Bản Đồ Google'}
+                                                        </span>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        );
+                                    }
+
+                                    return null;
+                                })()
                             )}
+                        </div>
+                    </section>
+                )}
+
+                {/* ══════ DRESS CODE ══════ */}
+                {data.dressCodeEnabled && (
+                    <section className="iv-sec rv">
+                        <h2 className="iv-sec-title">{isModern ? 'Dress Code' : isRoyal ? 'ATTIRE' : 'Trang Phục'}</h2>
+                        <Divider glyph={dividerSticker} />
+                        <div className="iv-dresscode">
+                            <p className="iv-gift-desc">
+                                {data.dressCodeMessage || (isModern
+                                    ? 'We kindly request our guests to wear formal attire in warm, elegant tones to complement the celebration.'
+                                    : 'Gia đình xin phép gợi ý quý khách trang phục lịch sự, tông màu ấm áp để tạo nên không gian lễ cưới thật hài hòa và trọn vẹn.')}
+                            </p>
+                            <div className="iv-dresscode-palette">
+                                {(data.dressCodeColors || DRESS_CODE_PALETTES[tid] || DRESS_CODE_PALETTES.traditional).map(c => (
+                                    <div key={c} className="iv-dresscode-swatch" style={{ background: c, border: c.toLowerCase() === '#ffffff' || c.toLowerCase() === '#fff' ? '1px solid var(--t-outline)' : 'none' }} />
+                                ))}
+                            </div>
                         </div>
                     </section>
                 )}
@@ -622,7 +945,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ CHƯƠNG TRÌNH (Events) ══════ */}
                 {hasEvents && (
                     <section className="iv-sec rv" {...secProps('events')}>
-                        <h2 className="iv-sec-title">{isModern ? 'Schedule' : 'Chương Trình'}</h2>
+                        <h2 className="iv-sec-title">{isModern ? 'Schedule' : isRoyal ? 'THE PROGRAMME' : 'Chương Trình'}</h2>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-events">
                             {data.events!.map((ev, i) => (
@@ -659,52 +982,84 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     </section>
                 )}
 
-                {/* ══════ LOVE STORY ══════ */}
-                {hasLoveStory && (
-                    <section className="iv-sec iv-sec-alt rv" {...secProps('loveStory')}>
-                        <h2 className="iv-sec-title">{isRomantic ? 'Our Story' : isModern ? 'Our Story' : 'Chuyện Tình Yêu'}</h2>
-                        <Divider glyph={dividerSticker} />
-                        <div className="iv-timeline">
-                            {data.loveStory!.map((ev, i) => (
-                                <div key={ev.id || i} className="iv-tl-item rv" style={{ animationDelay: `${i * 0.1}s` }}>
-                                    <div className="iv-tl-dot" />
-                                    <div className="iv-tl-card">
-                                        {ev.photo && (
-                                            <div className="iv-tl-photo">
-                                                <img src={ev.photo} alt={ev.title} loading="lazy" />
-                                            </div>
-                                        )}
-                                        <span className="iv-tl-year">{ev.date}</span>
-                                        <h4 className="iv-tl-heading">{ev.title}</h4>
-                                        <p className="iv-tl-text">{ev.description}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                )}
+
 
                 {/* ══════ GALLERY ══════ */}
                 {hasGallery && (
                     <section className="iv-sec rv" {...secProps('gallery')}>
-                        <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" />{isRomantic ? 'Album Ảnh Cưới' : isModern ? 'Gallery' : 'Khoảnh Khắc'}</h2>
+                        <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" />{isModern ? 'Gallery' : isRoyal ? 'MOMENTS' : isRomantic ? 'Album Ảnh Cưới' : 'Khoảnh Khắc'}</h2>
                         <Divider glyph={dividerSticker} />
                         
-                        <div className="iv-gallery-slider">
-                            {data.galleryImages!.map((img, i) => (
-                                <div key={i} className="iv-gal-slide" onClick={() => setLbIndex(i)}>
-                                    <img src={img} alt={`Ảnh ${i + 1}`} loading="lazy"
-                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('iv-gal-broken'); }} />
-                                    <div className="iv-gal-hover"><Camera size={24} /></div>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        <div className="flex justify-center gap-1.5 mt-4">
-                            {data.galleryImages!.map((_, i) => (
-                                <div key={i} className="w-1.5 h-1.5 rounded-full bg-[var(--t-outline)] opacity-50" />
-                            ))}
-                        </div>
+                        {data.galleryStyle === '3d' ? (
+                            <Gallery3DCarousel images={data.galleryImages!} onImageClick={setLbIndex} />
+                        ) : data.galleryStyle === 'collage' ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full auto-rows-[160px] sm:auto-rows-[200px]">
+                                {data.galleryImages!.slice(0, 5).map((img, i) => {
+                                    const isLast = i === 4;
+                                    const remaining = data.galleryImages!.length - 5;
+                                    
+                                    let spanClass = 'col-span-1 row-span-1';
+                                    if (i === 0) spanClass = 'col-span-2 row-span-2 sm:col-span-2 sm:row-span-2';
+                                    
+                                    return (
+                                        <div 
+                                            key={i} 
+                                            className={`relative overflow-hidden rounded-xl cursor-pointer group shadow-sm ${spanClass}`} 
+                                            onClick={() => setLbIndex(i)}
+                                        >
+                                            <img 
+                                                src={img} 
+                                                alt={`Ảnh ${i + 1}`} 
+                                                loading="lazy"
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('bg-[var(--t-surface-dim)]'); }} 
+                                            />
+                                            {isLast && remaining > 0 ? (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center transition-colors group-hover:bg-black/60">
+                                                    <span className="text-white text-xl sm:text-2xl font-medium tracking-wider">+{remaining}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                    <Camera size={28} className="text-white opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100 duration-300" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
+                                {data.galleryImages!.slice(0, 4).map((img, i) => {
+                                    const isLast = i === 3;
+                                    const remaining = data.galleryImages!.length - 4;
+                                    
+                                    return (
+                                        <div 
+                                            key={i} 
+                                            className="relative overflow-hidden rounded-xl cursor-pointer group shadow-sm aspect-[4/5]" 
+                                            onClick={() => setLbIndex(i)}
+                                        >
+                                            <img 
+                                                src={img} 
+                                                alt={`Ảnh ${i + 1}`} 
+                                                loading="lazy"
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('bg-[var(--t-surface-dim)]'); }} 
+                                            />
+                                            {isLast && remaining > 0 ? (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center transition-colors group-hover:bg-black/60">
+                                                    <span className="text-white text-xl sm:text-2xl font-medium tracking-wider">+{remaining}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                    <Camera size={28} className="text-white opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100 duration-300" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </section>
                 )}
 
@@ -714,15 +1069,30 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                         <h2 className="iv-sec-title"><Gift size={20} className="inline -mt-1 mr-2" />Mừng Cưới</h2>
                         <Divider glyph={dividerSticker} />
                         <p className="iv-gift-desc">
-                            Sự hiện diện của quý khách là món quà ý nghĩa nhất. Nếu muốn gửi lời chúc phúc, xin vui lòng quét mã QR dưới đây.
+                            {data.envelopeMessage || 'Sự hiện diện của quý khách là món quà ý nghĩa nhất. Nếu muốn gửi lời chúc phúc, xin vui lòng quét mã QR dưới đây.'}
                         </p>
-                        <div className="iv-qr-card">
-                            <QRCodeImage bankId={data.bankInfo.bankId} accountNumber={data.bankInfo.accountNumber} accountName={data.bankInfo.accountName} />
-                            <div className="iv-bank-info">
-                                <span className="iv-bank-name">{data.bankInfo.bankId.toUpperCase()}</span>
-                                <span className="iv-bank-number">{data.bankInfo.accountNumber}</span>
-                                <span className="iv-bank-holder">{data.bankInfo.accountName}</span>
-                            </div>
+                        
+                        <div className={`grid gap-4 ${bankList.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 max-w-sm mx-auto'}`}>
+                            {bankList.map((bank, index) => {
+                                if (!bank.bankId || !bank.accountNumber) return null;
+                                return (
+                                    <div key={index} className="iv-qr-card flex flex-col items-center">
+                                        {bank.title && (
+                                            <div className="text-center font-bold text-sm mb-4 uppercase tracking-widest text-[var(--t-primary)] border-b border-[var(--t-outline)] pb-2 w-full">
+                                                {bank.title}
+                                            </div>
+                                        )}
+                                        <div className="w-[180px] h-[180px] sm:w-[200px] sm:h-[200px] flex-shrink-0">
+                                            <QRCodeImage bankId={bank.bankId} accountNumber={bank.accountNumber} accountName={bank.accountName} />
+                                        </div>
+                                        <div className="iv-bank-info mt-4 text-center w-full">
+                                            <span className="iv-bank-name block font-semibold text-[var(--t-on-surface)] text-sm">{bank.bankId.toUpperCase()}</span>
+                                            <span className="iv-bank-number block text-lg font-medium tracking-widest text-[var(--t-on-surface-variant)] my-1">{bank.accountNumber}</span>
+                                            <span className="iv-bank-holder block text-xs font-bold uppercase tracking-wider">{bank.accountName}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
                 )}
@@ -762,7 +1132,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ FOOTER ══════ */}
                 <footer className="iv-footer rv">
                     {footerSticker && <div className="iv-footer-sticker" aria-hidden>{footerSticker}</div>}
-                    <p className="iv-footer-names">{groomName} & {brideName}</p>
+                    {data.thankYouMessage && <p className="iv-thank-you">{data.thankYouMessage}</p>}
+                    <p className="iv-footer-names">{brideFirst ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`}</p>
                     <Divider glyph={dividerSticker} />
                     <p className="iv-footer-credit">Built with love · WedPlan AI</p>
                 </footer>
@@ -777,7 +1148,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
 /* ── ROOT CONTAINER ── */
 .iv-root {
-    max-width: 680px;
+    max-width: 100%;
     margin: 0 auto;
     background: var(--t-surface);
     color: var(--t-on-surface);
@@ -977,12 +1348,46 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 .iv-name {
     display: block;
 }
+.iv-title {
+    display: block;
+    font-family: sans-serif;
+}
 .iv-amp {
     font-style: italic;
     color: var(--t-accent);
     font-size: 0.6em;
     margin: 0.15em 0;
     display: block;
+}
+
+/* Horizontal Layout Specifics */
+.iv-hero.iv-hero-horizontal {
+    background-color: var(--t-bg) !important;
+    min-height: 100dvh !important;
+    padding: 0 !important;
+}
+.iv-hero-horizontal .iv-couple-row {
+    font-family: var(--t-font-display);
+    font-size: clamp(2rem, 8vw, 3.2rem);
+    color: var(--t-primary);
+    line-height: 1;
+}
+.iv-hero-horizontal .iv-hero-divider {
+    font-family: serif;
+    color: var(--t-accent);
+}
+.iv-hero-horizontal .iv-hero-body {
+    background: none !important;
+    padding: 4rem 1rem 0 1rem;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.iv-hero-horizontal .iv-arch-container {
+    min-height: 400px;
+    width: 100%;
+    margin-top: 1rem;
 }
 
 /* Date variants */
@@ -1514,6 +1919,37 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     font-weight: 500;
 }
 
+/* ── DRESS CODE ── */
+.iv-dresscode {
+    text-align: center;
+}
+.iv-dresscode-palette {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 1.25rem;
+}
+.iv-dresscode-swatch {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+.iv-dresscode-swatch:hover { transform: scale(1.15); }
+
+/* ── THANK YOU ── */
+.iv-thank-you {
+    font-family: var(--t-font-body);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--t-on-surface-variant);
+    text-align: center;
+    max-width: 380px;
+    margin: 0 auto 1rem;
+    font-style: italic;
+}
+
 /* ── FOOTER ── */
 .iv-footer {
     padding: 2.5rem 2rem;
@@ -1742,6 +2178,53 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     pointer-events: none; z-index: 0;
     color: var(--t-primary); line-height: 1;
     transform: rotate(-15deg);
+}
+
+/* P3C — Royal: monogram-style ampersand in hero */
+.iv-theme-royal .iv-amp {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid var(--t-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.5em;
+    margin: 0.3em auto;
+    background: color-mix(in srgb, var(--t-accent) 8%, transparent);
+}
+
+/* P3D — Indochine: geometric art-deco border on venue card */
+.iv-theme-indochine .iv-venue-card {
+    position: relative;
+}
+.iv-theme-indochine .iv-venue-card::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid color-mix(in srgb, var(--t-accent) 25%, transparent);
+    pointer-events: none;
+}
+
+/* P3E — Modern: geometric accent line on hero */
+.iv-theme-modern .iv-hero-body::before {
+    content: '';
+    display: block;
+    width: 40px; height: 3px;
+    background: var(--t-primary);
+    margin: 0 auto 1.5rem;
+}
+
+/* P3F — Romantic: soft glow behind couple names */
+.iv-theme-romantic .iv-couple {
+    text-shadow: 0 0 40px color-mix(in srgb, var(--t-primary) 20%, transparent),
+                 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* P3G — Dress code swatch labels on hover */
+.iv-dresscode-swatch {
+    position: relative;
+    cursor: default;
+}
+.iv-dresscode-palette {
+    flex-wrap: wrap;
 }
 
 /* ── MOBILE POLISH ── */

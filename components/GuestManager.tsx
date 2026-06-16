@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Guest, GuestGroup, AttendanceProbability } from '../types';
 import { Plus, Trash2, FileSpreadsheet, Users, Baby, Banknote, CheckCircle, Search, ChevronUp, MapPin, Pencil, Check, X } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { sanitizeGuestInput, isValidAttendanceProbability } from '../lib/sanitize';
 
 const generateId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -34,16 +35,21 @@ const GuestManager: React.FC = () => {
   }, []);
 
   const handleAddGuest = () => {
-    if (!newName.trim()) return;
-    if (Number(newChildren) < 0 || Number(newRedEnvelope) < 0) return;
+    const sanitizedName = sanitizeGuestInput(newName);
+    if (!sanitizedName) return;
+    const children = Number(newChildren);
+    const envelope = Number(newRedEnvelope);
+    if (isNaN(children) || children < 0 || isNaN(envelope) || envelope < 0) return;
+    const prob = Number(newProb);
+    if (!isValidAttendanceProbability(prob)) return;
     const newGuest: Guest = {
       id: generateId(),
-      name: newName.trim(),
+      name: sanitizedName,
       group: newGroup,
-      address: newAddress.trim() || undefined,
-      probability: Number(newProb) as AttendanceProbability,
-      childrenCount: Number(newChildren),
-      redEnvelope: Number(newRedEnvelope)
+      address: newAddress.trim().slice(0, 200) || undefined,
+      probability: prob as AttendanceProbability,
+      childrenCount: Math.min(children, 20),
+      redEnvelope: envelope,
     };
     addGuest(newGuest);
     setNewName("");
@@ -136,11 +142,15 @@ const GuestManager: React.FC = () => {
     }
   };
 
-  const filteredGuests = guests.filter(g =>
-    g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    g.group.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (g.address && g.address.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredGuests = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    if (!term) return guests;
+    return guests.filter(g =>
+      g.name.toLowerCase().includes(term) ||
+      g.group.toLowerCase().includes(term) ||
+      (g.address?.toLowerCase().includes(term) ?? false)
+    );
+  }, [guests, searchTerm]);
 
   // --- INLINE EDIT ROW (Desktop) ---
   const EditRow: React.FC<{ guest: Guest }> = ({ guest }) => (

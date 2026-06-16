@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Undo2, Redo2, ChevronLeft, Monitor, Smartphone, RotateCcw, Music, Minus, Plus } from 'lucide-react';
+import { Undo2, Redo2, ChevronLeft, Monitor, Smartphone, RotateCcw, Music, Minus, Plus, QrCode } from 'lucide-react';
 import { InvitationData } from '../../../types';
+import ShareModal from './ShareModal';
 
 const COLOR_GROUPS: { label: string; colors: string[] }[] = [
     { label: 'Cổ điển', colors: ['#7c1d00', '#9b2948', '#8b0000', '#800020', '#a52a2a', '#c41e3a'] },
@@ -253,6 +254,7 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
     const currentBodyFont = data.fontBody || 'Be Vietnam Pro';
     const titleSize = data.titleSize ?? TITLE_SIZE_DEFAULT;
     const bodySize = data.bodySize ?? BODY_SIZE_DEFAULT;
+    const [showShare, setShowShare] = useState(false);
 
     return (
         <div className="shrink-0 bg-white border-b border-gray-100 z-20 select-none">
@@ -326,11 +328,18 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
                     Mẫu Thiệp ✨
                 </button>
 
+                <button onClick={() => setShowShare(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-rose-600 hover:bg-rose-50 transition-colors border border-rose-200 ml-1">
+                    <QrCode size={16} /> Chia sẻ
+                </button>
+
                 <button onClick={onSave}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-sm ml-1">
-                    Lưu Trang
+                    Lưu Thiết Kế
                 </button>
             </div>
+            
+            <ShareModal isOpen={showShare} onClose={() => setShowShare(false)} />
         </div>
     );
 };
