@@ -271,7 +271,7 @@ export const uploadInvitationImage = async (file: File, uid: string): Promise<st
 
   uploadLog.time('upload');
   const { error } = await supabase.storage
-    .from('invitation_assets')
+    .from('wedkho')
     .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
   if (error) {
@@ -282,7 +282,7 @@ export const uploadInvitationImage = async (file: File, uid: string): Promise<st
 
   uploadLog.timeEnd('upload');
   const { data } = supabase.storage
-    .from('invitation_assets')
+    .from('wedkho')
     .getPublicUrl(filePath);
 
   const url = data.publicUrl;
@@ -293,7 +293,7 @@ export const uploadInvitationImage = async (file: File, uid: string): Promise<st
     if (!check.ok) {
       uploadLog.warn('public URL not accessible, falling back to signed URL', { status: check.status, url });
       const { data: signed, error: signErr } = await supabase.storage
-        .from('invitation_assets')
+        .from('wedkho')
         .createSignedUrl(filePath, 60 * 60 * 24 * 365);
       if (signErr || !signed?.signedUrl) {
         uploadLog.error('signed URL fallback failed', signErr);
@@ -306,7 +306,7 @@ export const uploadInvitationImage = async (file: File, uid: string): Promise<st
     // HEAD check failed (e.g. CORS) — try signed URL as fallback
     uploadLog.warn('HEAD check failed, trying signed URL', fetchErr);
     const { data: signed } = await supabase.storage
-      .from('invitation_assets')
+      .from('wedkho')
       .createSignedUrl(filePath, 60 * 60 * 24 * 365);
     if (signed?.signedUrl) return signed.signedUrl;
   }

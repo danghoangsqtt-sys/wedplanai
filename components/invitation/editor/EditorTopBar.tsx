@@ -52,6 +52,7 @@ interface EditorTopBarProps {
     canUndo: boolean;
     canRedo: boolean;
     previewMode: 'desktop' | 'mobile' | false;
+    selectedSection?: string | null;
     onUndo: () => void;
     onRedo: () => void;
     onSetPreview: (mode: 'desktop' | 'mobile' | false) => void;
@@ -247,14 +248,30 @@ const SizeStepper: React.FC<{
 
 // ─── Main Top Bar ───
 const EditorTopBar: React.FC<EditorTopBarProps> = ({
-    data, canUndo, canRedo, previewMode,
+    data, canUndo, canRedo, previewMode, selectedSection,
     onUndo, onRedo, onSetPreview, onSave, onBack, onReset, onShowTemplates, onChange,
 }) => {
-    const currentTitleFont = data.fontTitle || 'Playfair Display';
-    const currentBodyFont = data.fontBody || 'Be Vietnam Pro';
-    const titleSize = data.titleSize ?? TITLE_SIZE_DEFAULT;
-    const bodySize = data.bodySize ?? BODY_SIZE_DEFAULT;
+    const secStyle = selectedSection && data.sectionStyles ? data.sectionStyles[selectedSection as any] : undefined;
+
+    const currentTitleFont = secStyle?.fontTitle || data.fontTitle || 'Playfair Display';
+    const currentBodyFont = secStyle?.fontBody || data.fontBody || 'Be Vietnam Pro';
+    const titleSize = secStyle?.titleSize ?? data.titleSize ?? TITLE_SIZE_DEFAULT;
+    const bodySize = secStyle?.bodySize ?? data.bodySize ?? BODY_SIZE_DEFAULT;
+    const titleColor = secStyle?.titleColor || data.titleColor || (data.themeColor || '#7c1d00');
+    const bodyColor = secStyle?.bodyColor || data.bodyColor || '#1c1b1b';
+    
     const [showShare, setShowShare] = useState(false);
+
+    const handleStyleChange = (key: string, value: any) => {
+        if (selectedSection) {
+            const newStyles = { ...(data.sectionStyles || {}) };
+            const sec = newStyles[selectedSection as any] || {};
+            newStyles[selectedSection as any] = { ...sec, [key]: value };
+            onChange({ sectionStyles: newStyles });
+        } else {
+            onChange({ [key]: value });
+        }
+    };
 
     return (
         <div className="shrink-0 bg-white border-b border-gray-100 z-20 select-none">
@@ -278,24 +295,6 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
                 </div>
 
                 <div className="w-px h-7 bg-gray-200 mx-1" />
-
-                {/* Title group: Font + Size + Color */}
-                <FontDropdown label="Font tiêu đề" value={currentTitleFont} options={TITLE_FONTS}
-                    onSelect={id => onChange({ fontTitle: id })} />
-                <SizeStepper label="Cỡ tiêu đề" value={titleSize} min={TITLE_SIZE_MIN} max={TITLE_SIZE_MAX}
-                    step={TITLE_SIZE_STEP} unit="rem" onChange={v => onChange({ titleSize: v })} />
-                <ColorPicker label="Màu tiêu đề" value={data.titleColor}
-                    defaultColor={data.themeColor || '#7c1d00'} onSelect={c => onChange({ titleColor: c })} />
-
-                <div className="w-px h-7 bg-gray-200 mx-1" />
-
-                {/* Body group: Font + Size + Color */}
-                <FontDropdown label="Font nội dung" value={currentBodyFont} options={BODY_FONTS}
-                    onSelect={id => onChange({ fontBody: id })} />
-                <SizeStepper label="Cỡ nội dung" value={bodySize} min={BODY_SIZE_MIN} max={BODY_SIZE_MAX}
-                    step={BODY_SIZE_STEP} unit="px" onChange={v => onChange({ bodySize: v })} />
-                <ColorPicker label="Màu nội dung" value={data.bodyColor}
-                    defaultColor="#1c1b1b" onSelect={c => onChange({ bodyColor: c })} />
 
                 <div className="flex-1" />
 

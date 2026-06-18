@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-    ChevronDown, ChevronUp, Upload, Trash2, Plus, GripVertical, Image as ImageIcon, MapPin, Clock, Calendar, Music2 
+    ChevronDown, ChevronUp, Upload, Trash2, Plus, GripVertical, Image as ImageIcon, MapPin, Clock, Calendar, Music2, Pencil 
 } from 'lucide-react';
 import { InvitationData, WeddingEvent } from '../../../types';
 import { uploadInvitationImage } from '../../../services/cloudService';
@@ -9,16 +9,26 @@ import { MUSIC_OPTIONS } from '../../../lib/invitation-constants';
 import { compressImage } from '../../../lib/imageUtils';
 import { PhotoPositionEditor } from './PhotoPositionEditor';
 
+const resolveImageUrl = (url: string | undefined): string | undefined => {
+    if (!url) return url;
+    const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match?.[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    return url;
+};
+
 interface EditorFormPanelProps {
     data: InvitationData;
     onChange: (patch: Partial<InvitationData>) => void;
     selectedSection?: string | null;
 }
 
-const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selectedSection }) => {
+const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, '') : '';
+
+export const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selectedSection }) => {
     const { user } = useStore();
     const [expandedSection, setExpandedSection] = useState<string | null>('basicInfo');
     const [uploadingField, setUploadingField] = useState<string | null>(null);
+    const [croppingImageIndex, setCroppingImageIndex] = useState<number | null>(null);
     const heroInputRef = React.useRef<HTMLInputElement>(null);
     const galleryLinkRef = React.useRef<HTMLInputElement>(null);
 
@@ -167,7 +177,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     <label className="text-xs font-medium text-gray-600">Danh xưng chú rể</label>
                                     <input 
                                         type="text" 
-                                        value={data.groomTitle || ''} 
+                                        value={stripHtml(data.groomTitle || '')}
                                         onChange={e => onChange({ groomTitle: e.target.value })}
                                         className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                         placeholder="Trưởng Nam"
@@ -177,7 +187,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     <label className="text-xs font-medium text-gray-600">Danh xưng cô dâu</label>
                                     <input 
                                         type="text" 
-                                        value={data.brideTitle || ''} 
+                                        value={stripHtml(data.brideTitle || '')}
                                         onChange={e => onChange({ brideTitle: e.target.value })}
                                         className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                         placeholder="Út Nữ"
@@ -190,7 +200,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     <label className="text-xs font-medium text-gray-600">Họ tên chú rể</label>
                                     <input 
                                         type="text" 
-                                        value={data.groomName || ''} 
+                                        value={stripHtml(data.groomName || '')}
                                         onChange={e => onChange({ groomName: e.target.value })}
                                         className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                         placeholder="VD: Nguyễn Thế Bảo"
@@ -200,7 +210,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     <label className="text-xs font-medium text-gray-600">Họ tên cô dâu</label>
                                     <input 
                                         type="text" 
-                                        value={data.brideName || ''} 
+                                        value={stripHtml(data.brideName || '')}
                                         onChange={e => onChange({ brideName: e.target.value })}
                                         className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                         placeholder="VD: Trần Ngọc Ánh"
@@ -253,7 +263,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Calendar size={12}/> Ngày tổ chức</label>
                                     <input 
                                         type="date" 
-                                        value={data.date || ''} 
+                                        value={stripHtml(data.date || '')} 
                                         onChange={e => onChange({ date: e.target.value })}
                                         className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                     />
@@ -264,7 +274,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                         <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Clock size={12}/> Đón khách</label>
                                         <input 
                                             type="time" 
-                                            value={data.receptionTime || ''} 
+                                            value={stripHtml(data.receptionTime || '')} 
                                             onChange={e => onChange({ receptionTime: e.target.value })}
                                             className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                         />
@@ -273,32 +283,13 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                         <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><Clock size={12}/> Khai tiệc</label>
                                         <input 
                                             type="time" 
-                                            value={data.time || ''} 
+                                            value={stripHtml(data.time || '')} 
                                             onChange={e => onChange({ time: e.target.value })}
                                             className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Tên Nhà Hàng / Địa điểm</label>
-                                    <input 
-                                        type="text" 
-                                        value={data.location || ''} 
-                                        onChange={e => onChange({ location: e.target.value })}
-                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
-                                        placeholder="Ví dụ: Trống Đồng Palace"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Địa chỉ chi tiết</label>
-                                    <textarea 
-                                        value={data.address || ''} 
-                                        onChange={e => onChange({ address: e.target.value })}
-                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-16"
-                                        placeholder="Ví dụ: Số 123 Đường ABC..."
-                                    />
-                                </div>
                             </div>
 
                             {/* Khối Ảnh Bìa */}
@@ -308,16 +299,21 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     <>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-medium text-gray-600">Hoặc thay ảnh bằng URL (Link ảnh)</label>
-                                            <input 
-                                                type="text" 
-                                                value={data.couplePhoto} 
-                                                onChange={e => onChange({ couplePhoto: e.target.value })}
+                                            <input
+                                                type="text"
+                                                value={data.couplePhoto}
+                                                onChange={e => {
+                                                    let val = e.target.value;
+                                                    const m = val.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+                                                    if (m && m[1]) val = `https://lh3.googleusercontent.com/d/${m[1]}`;
+                                                    onChange({ couplePhoto: val });
+                                                }}
                                                 className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
                                                 placeholder="https://..."
                                             />
                                         </div>
                                         <PhotoPositionEditor
-                                            src={data.couplePhoto}
+                                            src={resolveImageUrl(data.couplePhoto) ?? ''}
                                             config={data.photoConfig ?? { scale: 1, x: 50, y: 50 }}
                                             onChange={c => onChange({ photoConfig: c })}
                                             onRemove={() => onChange({ couplePhoto: undefined, photoConfig: undefined, heroOverlayOpacity: undefined })}
@@ -356,10 +352,15 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                         </div>
 
                                         <div className="space-y-1">
-                                            <input 
-                                                type="text" 
-                                                value={data.couplePhoto || ''} 
-                                                onChange={e => onChange({ couplePhoto: e.target.value })}
+                                            <input
+                                                type="text"
+                                                value={data.couplePhoto || ''}
+                                                onChange={e => {
+                                                    let val = e.target.value;
+                                                    const m = val.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+                                                    if (m && m[1]) val = `https://lh3.googleusercontent.com/d/${m[1]}`;
+                                                    onChange({ couplePhoto: val });
+                                                }}
                                                 className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
                                                 placeholder="Nhập URL ảnh bìa (VD: https://...)"
                                             />
@@ -372,19 +373,52 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                     )}
                 </div>
 
-                {/* 2. Thông tin gia đình */}
+                {/* 2. Thông tin lễ cưới */}
                 <div className="bg-white mb-2 border-b border-gray-200">
-                    <AccordionHeader title="Thông tin gia đình" id="familyInfo" />
+                    <AccordionHeader title="Thông tin lễ cưới" id="familyInfo" />
                     {expandedSection === 'familyInfo' && (
                         <div className="p-4 space-y-6">
+                            {/* Tiêu đề & lời mở đầu */}
+                            <div className="space-y-3 border-b border-gray-100 pb-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600">Tiêu đề kính mời</label>
+                                    <input
+                                        type="text"
+                                        value={stripHtml(data.inviteSectionTitle ?? '')}
+                                        onChange={e => onChange({ inviteSectionTitle: e.target.value })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="TRÂN TRỌNG KÍNH MỜI"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600">Câu mở đầu (để trống nếu không muốn hiện)</label>
+                                    <textarea
+                                        value={stripHtml(data.openingMessage ?? '')}
+                                        onChange={e => onChange({ openingMessage: e.target.value })}
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-20 text-center"
+                                        placeholder="TRÂN TRỌNG BÁO TIN&#10;LỄ THÀNH HÔN CỦA CON CHÚNG TÔI"
+                                    />
+                                </div>
+                            </div>
+
                             {/* Nhà trai */}
                             <div className="space-y-4">
                                 <div className="text-xs font-semibold text-gray-500 border-b border-gray-100 pb-1">Nhà trai</div>
                                 <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600">Nhãn cột (hiển thị trên thiệp)</label>
+                                    <input
+                                        type="text"
+                                        value={data.familySideGroom ?? ''}
+                                        onChange={e => onChange({ familySideGroom: e.target.value })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="NHÀ TRAI"
+                                    />
+                                </div>
+                                <div className="space-y-1">
                                     <label className="text-[10px] font-medium text-gray-600">Danh xưng</label>
-                                    <input 
-                                        type="text" 
-                                        value={data.groomParents?.title || 'Ông Bà'} 
+                                    <input
+                                        type="text"
+                                        value={data.groomParents?.title || 'Ông Bà'}
                                         onChange={e => onChange({ groomParents: { ...data.groomParents, title: e.target.value, father: data.groomParents?.father||'', mother: data.groomParents?.mother||'' } })}
                                         className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                     />
@@ -392,9 +426,9 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-medium text-gray-600">Ông</label>
-                                        <input 
-                                            type="text" 
-                                            value={data.groomParents?.father || ''} 
+                                        <input
+                                            type="text"
+                                            value={data.groomParents?.father || ''}
                                             onChange={e => onChange({ groomParents: { ...data.groomParents, father: e.target.value, mother: data.groomParents?.mother||'' } })}
                                             className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                             placeholder="Tên bố"
@@ -402,9 +436,9 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-medium text-gray-600">Bà</label>
-                                        <input 
-                                            type="text" 
-                                            value={data.groomParents?.mother || ''} 
+                                        <input
+                                            type="text"
+                                            value={data.groomParents?.mother || ''}
                                             onChange={e => onChange({ groomParents: { ...data.groomParents, mother: e.target.value, father: data.groomParents?.father||'' } })}
                                             className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                             placeholder="Tên mẹ"
@@ -412,12 +446,13 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-gray-600">Địa chỉ nhà trai</label>
-                                    <textarea 
-                                        value={data.groomParents?.address || ''} 
-                                        onChange={e => onChange({ groomParents: { ...data.groomParents, address: e.target.value, father: data.groomParents?.father||'', mother: data.groomParents?.mother||'' } })}
-                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-16"
-                                        placeholder="Địa chỉ nhà trai..."
+                                    <label className="text-[10px] font-medium text-gray-600">Địa chỉ</label>
+                                    <input
+                                        type="text"
+                                        value={data.groomParents?.address ?? ''}
+                                        onChange={e => onChange({ groomParents: { ...data.groomParents, father: data.groomParents?.father||'', mother: data.groomParents?.mother||'', address: e.target.value } })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="Số nhà, phường/xã, quận/huyện, tỉnh/thành"
                                     />
                                 </div>
                             </div>
@@ -426,10 +461,20 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                             <div className="space-y-4">
                                 <div className="text-xs font-semibold text-gray-500 border-b border-gray-100 pb-1">Nhà gái</div>
                                 <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600">Nhãn cột (hiển thị trên thiệp)</label>
+                                    <input
+                                        type="text"
+                                        value={data.familySideBride ?? ''}
+                                        onChange={e => onChange({ familySideBride: e.target.value })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="NHÀ GÁI"
+                                    />
+                                </div>
+                                <div className="space-y-1">
                                     <label className="text-[10px] font-medium text-gray-600">Danh xưng</label>
-                                    <input 
-                                        type="text" 
-                                        value={data.brideParents?.title || 'Ông Bà'} 
+                                    <input
+                                        type="text"
+                                        value={data.brideParents?.title || 'Ông Bà'}
                                         onChange={e => onChange({ brideParents: { ...data.brideParents, title: e.target.value, father: data.brideParents?.father||'', mother: data.brideParents?.mother||'' } })}
                                         className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                     />
@@ -437,9 +482,9 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-medium text-gray-600">Ông</label>
-                                        <input 
-                                            type="text" 
-                                            value={data.brideParents?.father || ''} 
+                                        <input
+                                            type="text"
+                                            value={data.brideParents?.father || ''}
                                             onChange={e => onChange({ brideParents: { ...data.brideParents, father: e.target.value, mother: data.brideParents?.mother||'' } })}
                                             className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                             placeholder="Tên bố"
@@ -447,9 +492,9 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-medium text-gray-600">Bà</label>
-                                        <input 
-                                            type="text" 
-                                            value={data.brideParents?.mother || ''} 
+                                        <input
+                                            type="text"
+                                            value={data.brideParents?.mother || ''}
                                             onChange={e => onChange({ brideParents: { ...data.brideParents, mother: e.target.value, father: data.brideParents?.father||'' } })}
                                             className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                             placeholder="Tên mẹ"
@@ -457,12 +502,13 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-gray-600">Địa chỉ nhà gái</label>
-                                    <textarea 
-                                        value={data.brideParents?.address || ''} 
-                                        onChange={e => onChange({ brideParents: { ...data.brideParents, address: e.target.value, father: data.brideParents?.father||'', mother: data.brideParents?.mother||'' } })}
-                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-16"
-                                        placeholder="Địa chỉ nhà gái..."
+                                    <label className="text-[10px] font-medium text-gray-600">Địa chỉ</label>
+                                    <input
+                                        type="text"
+                                        value={data.brideParents?.address ?? ''}
+                                        onChange={e => onChange({ brideParents: { ...data.brideParents, father: data.brideParents?.father||'', mother: data.brideParents?.mother||'', address: e.target.value } })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="Số nhà, phường/xã, quận/huyện, tỉnh/thành"
                                     />
                                 </div>
                             </div>
@@ -470,48 +516,33 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                     )}
                 </div>
 
-                {/* 3. Lời mở đầu thiệp */}
-                <div className="bg-white mb-2 border-b border-gray-200">
-                    <AccordionHeader title="Lời mở đầu thiệp" id="opening" />
-                    {expandedSection === 'opening' && (
-                        <div className="p-4 space-y-2">
-                            <label className="text-[10px] font-medium text-gray-600">Câu mở đầu (để trống nếu không muốn hiện)</label>
-                            <textarea
-                                value={data.openingMessage ?? ''}
-                                onChange={e => onChange({ openingMessage: e.target.value })}
-                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-20 text-center"
-                                placeholder="TRÂN TRỌNG BÁO TIN&#10;LỄ THÀNH HÔN CỦA CON CHÚNG TÔI"
-                            />
-                        </div>
-                    )}
-                </div>
+
 
                 {/* 4. Tiệc cưới */}
                 <div className="bg-white mb-2 border-b border-gray-200">
                     <AccordionHeader title="Tiệc cưới" id="party" />
                     {expandedSection === 'party' && (
                         <div className="p-4 space-y-4">
-                            <div className="flex gap-4 mb-2">
-                                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <div className="space-y-4 mb-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Tên Nhà Hàng / Địa điểm</label>
                                     <input 
-                                        type="radio" 
-                                        name="partyType" 
-                                        checked={data.partyType !== 'announcement'} 
-                                        onChange={() => onChange({ partyType: 'wedding' })}
-                                        className="text-rose-500 focus:ring-rose-500" 
+                                        type="text" 
+                                        value={stripHtml(data.location || '')} 
+                                        onChange={e => onChange({ location: e.target.value })}
+                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                        placeholder="Ví dụ: Trống Đồng Palace"
                                     />
-                                    Tiệc cưới
-                                </label>
-                                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                                    <input 
-                                        type="radio" 
-                                        name="partyType" 
-                                        checked={data.partyType === 'announcement'} 
-                                        onChange={() => onChange({ partyType: 'announcement' })}
-                                        className="text-rose-500 focus:ring-rose-500" 
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-gray-600 flex items-center gap-1"><MapPin size={12}/> Địa chỉ chi tiết</label>
+                                    <textarea 
+                                        value={stripHtml(data.address || '')} 
+                                        onChange={e => onChange({ address: e.target.value })}
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none h-16"
+                                        placeholder="Ví dụ: Số 123 Đường ABC..."
                                     />
-                                    Tiệc báo hỷ
-                                </label>
+                                </div>
                             </div>
 
                             <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -575,7 +606,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Giờ</label>
                                                 <input 
                                                     type="time" 
-                                                    value={ev.time} 
+                                                    value={stripHtml(ev.time)} 
                                                     onChange={e => handleEventChange(i, 'time', e.target.value)}
                                                     className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                                 />
@@ -584,7 +615,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Nội dung</label>
                                                 <input 
                                                     type="text" 
-                                                    value={ev.title} 
+                                                    value={stripHtml(ev.title)} 
                                                     onChange={e => handleEventChange(i, 'title', e.target.value)}
                                                     className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                                     placeholder="VD: Đón khách"
@@ -596,7 +627,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Ngày</label>
                                                 <input 
                                                     type="date" 
-                                                    value={ev.date || ''} 
+                                                    value={stripHtml(ev.date || '')} 
                                                     onChange={e => handleEventChange(i, 'date', e.target.value)}
                                                     className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                                 />
@@ -605,7 +636,7 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Vị trí / Tầng sảnh</label>
                                                 <input 
                                                     type="text" 
-                                                    value={ev.location || ''} 
+                                                    value={stripHtml(ev.location || '')} 
                                                     onChange={e => handleEventChange(i, 'location', e.target.value)}
                                                     className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                                                     placeholder="Sảnh Đón Khách..."
@@ -637,6 +668,11 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                 <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryStyle === '3d' ? 'bg-gray-100 text-gray-800' : 'text-gray-500'}`} onClick={() => onChange({ galleryStyle: '3d' })}>3D</button>
                             </div>
                             
+                            <div className="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                                <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryFit !== 'contain' ? 'bg-gray-100 text-gray-800' : 'text-gray-500'}`} onClick={() => onChange({ galleryFit: 'cover' })}>Lấp đầy (Cắt ảnh)</button>
+                                <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryFit === 'contain' ? 'bg-gray-100 text-gray-800' : 'text-gray-500'}`} onClick={() => onChange({ galleryFit: 'contain' })}>Toàn cảnh (Giữ tỷ lệ)</button>
+                            </div>
+                            
                             <div className="space-y-3">
                                 {/* Thêm bằng link */}
                                 <div className="space-y-1">
@@ -651,8 +687,12 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                             placeholder="Dán link ảnh tại đây..."
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
-                                                    const val = galleryLinkRef.current?.value.trim();
+                                                    let val = galleryLinkRef.current?.value.trim();
                                                     if (val) {
+                                                        if (val.includes('drive.google.com/file/d/')) {
+                                                            const match = val.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                                                            if (match && match[1]) val = `https://lh3.googleusercontent.com/d/${match[1]}`;
+                                                        }
                                                         onChange({ galleryImages: [...(data.galleryImages || []), val] });
                                                         if (galleryLinkRef.current) galleryLinkRef.current.value = '';
                                                     }
@@ -661,8 +701,12 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                         />
                                         <button
                                             onClick={() => {
-                                                const val = galleryLinkRef.current?.value.trim();
+                                                let val = galleryLinkRef.current?.value.trim();
                                                 if (val) {
+                                                    if (val.includes('drive.google.com/file/d/')) {
+                                                        const match = val.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                                                        if (match && match[1]) val = `https://lh3.googleusercontent.com/d/${match[1]}`;
+                                                    }
                                                     onChange({ galleryImages: [...(data.galleryImages || []), val] });
                                                     if (galleryLinkRef.current) galleryLinkRef.current.value = '';
                                                 }
@@ -708,21 +752,71 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                             {/* Danh sách ảnh đã chọn */}
                             {(data.galleryImages || []).length > 0 && (
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                                    {data.galleryImages!.map((img, i) => (
-                                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden group bg-gray-100 border border-gray-200">
-                                            <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
-                                            <button 
-                                                onClick={() => {
-                                                    const newArr = [...data.galleryImages!];
-                                                    newArr.splice(i, 1);
-                                                    onChange({ galleryImages: newArr });
-                                                }}
-                                                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                            >
-                                                <Trash2 size={16} className="text-white hover:text-red-400 transition-colors bg-black/30 p-1.5 rounded-full" />
+                                    {data.galleryImages!.map((img, i) => {
+                                        const cfg = (data.galleryConfigs && data.galleryConfigs[i]) || { scale: 1, x: 50, y: 50 };
+                                        return (
+                                            <div key={i} className="relative aspect-square rounded-lg overflow-hidden group bg-gray-100 border border-gray-200">
+                                                <img 
+                                                    src={img} 
+                                                    alt={`Gallery ${i}`} 
+                                                    className="w-full h-full object-cover" 
+                                                    style={{ objectPosition: `${cfg.x}% ${cfg.y}%`, transform: cfg.scale !== 1 ? `scale(${cfg.scale})` : undefined }}
+                                                />
+                                                
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity p-1 gap-2">
+                                                    <button 
+                                                        onClick={() => setCroppingImageIndex(i)}
+                                                        className="text-white hover:text-blue-400 transition-colors bg-black/40 p-2 rounded-full"
+                                                        title="Căn chỉnh ảnh"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            const newArr = [...data.galleryImages!];
+                                                            const cfgArr = [...(data.galleryConfigs || [])];
+                                                            newArr.splice(i, 1);
+                                                            cfgArr.splice(i, 1);
+                                                            onChange({ galleryImages: newArr, galleryConfigs: cfgArr });
+                                                        }}
+                                                        className="text-white hover:text-red-400 transition-colors bg-black/40 p-2 rounded-full"
+                                                        title="Xóa ảnh"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {croppingImageIndex !== null && data.galleryImages && data.galleryImages[croppingImageIndex] && (
+                                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+                                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+                                            <h3 className="font-semibold text-gray-800 text-sm">Căn chỉnh vị trí</h3>
+                                            <button onClick={() => setCroppingImageIndex(null)} className="text-gray-400 hover:text-gray-600 bg-white shadow-sm p-1.5 rounded-full transition-colors">
+                                                <ChevronDown size={16} />
                                             </button>
                                         </div>
-                                    ))}
+                                        <div className="p-4">
+                                            <PhotoPositionEditor 
+                                                src={data.galleryImages[croppingImageIndex]}
+                                                config={(data.galleryConfigs && data.galleryConfigs[croppingImageIndex]) || { scale: 1, x: 50, y: 50 }}
+                                                onChange={(c) => {
+                                                    const cfgArr = [...(data.galleryConfigs || Array(data.galleryImages!.length).fill(null))];
+                                                    cfgArr[croppingImageIndex] = c;
+                                                    onChange({ galleryConfigs: cfgArr });
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+                                            <button onClick={() => setCroppingImageIndex(null)} className="px-5 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors shadow-sm">
+                                                Xong
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -934,8 +1028,8 @@ const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange, selec
                                             className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-400 resize-none"
                                             rows={2}
                                             placeholder="Gợi ý trang phục cho khách mời..."
-                                            value={data.dressCodeMessage || ''}
-                                            onChange={e => onChange({ dressCodeMessage: e.target.value })}
+                                            value={stripHtml(data.dressCodeMessage || '')}
+                                            onChange={(e) => onChange({ dressCodeMessage: e.target.value })}
                                         />
                                     </div>
                                     <div>

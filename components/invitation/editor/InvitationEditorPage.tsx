@@ -74,7 +74,15 @@ const InvitationEditorPage: React.FC = () => {
     }, []);
 
     const handleFieldEdit = useCallback((field: string, value: string) => {
-        push(draft => { (draft as Record<string, unknown>)[field] = value; });
+        push(draft => {
+            const keys = field.replace(/\[(\d+)\]/g, '.$1').split('.');
+            let curr: any = draft;
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (!curr[keys[i]]) curr[keys[i]] = isNaN(Number(keys[i+1])) ? {} : [];
+                curr = curr[keys[i]];
+            }
+            curr[keys[keys.length - 1]] = value;
+        });
     }, [push]);
 
     const handleSave = () => {
@@ -106,6 +114,7 @@ const InvitationEditorPage: React.FC = () => {
                 canUndo={canUndo}
                 canRedo={canRedo}
                 previewMode={previewMode}
+                selectedSection={selectedSection}
                 onUndo={undo}
                 onRedo={redo}
                 onSetPreview={setPreviewMode}

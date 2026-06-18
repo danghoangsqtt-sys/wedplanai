@@ -5,7 +5,7 @@ export const PhotoPositionEditor: React.FC<{
     src: string;
     config: { scale: number; x: number; y: number };
     onChange: (c: { scale: number; x: number; y: number }) => void;
-    onRemove: () => void;
+    onRemove?: () => void;
 }> = ({ src, config, onChange, onRemove }) => {
     const isDragging = useRef(false);
     const lastPos = useRef({ x: 0, y: 0 });
@@ -60,9 +60,11 @@ export const PhotoPositionEditor: React.FC<{
                     <div className="absolute w-px h-full bg-white/20" />
                     <div className="absolute w-full h-px bg-white/20" />
                 </div>
-                <button onClick={e => { e.stopPropagation(); onRemove(); }}
-                    className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                ><X size={12} /></button>
+                {onRemove && (
+                    <button onClick={e => { e.stopPropagation(); onRemove(); }}
+                        className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                    ><X size={12} /></button>
+                )}
             </div>
             <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">🔍</span>

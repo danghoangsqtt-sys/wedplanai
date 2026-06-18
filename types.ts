@@ -198,6 +198,18 @@ export interface InvitationData {
   groomParents?: { title?: string; father: string; mother: string; address?: string };
   brideParents?: { title?: string; father: string; mother: string; address?: string };
   openingMessage?: string;
+  inviteSectionTitle?: string;
+  inviteMessage?: string;
+  venueSectionTitle?: string;
+  familySideGroom?: string;
+  familySideBride?: string;
+  eventsSectionTitle?: string;
+  gallerySectionTitle?: string;
+  giftSectionTitle?: string;
+  dressCodeSectionTitle?: string;
+  rsvpSectionTitle?: string;
+  rsvpMessage?: string;
+  guestbookSectionTitle?: string;
   date: string;
   lunarDate?: string;
   time: string; // Khai tiệc
@@ -216,7 +228,10 @@ export interface InvitationData {
   groomPhoto?: string;
   bridePhoto?: string;
   galleryImages?: string[]; // Array of URLs
+  galleryPositions?: string[]; // Corresponding object-position classes
+  galleryConfigs?: Array<{ scale: number; x: number; y: number } | null>;
   galleryStyle?: 'grid' | 'collage' | '3d';
+  galleryFit?: 'cover' | 'contain';
   musicUrl?: string; // Background music URL
   thankYouMessage?: string;
   envelopeMessage?: string;
@@ -250,6 +265,14 @@ export interface InvitationData {
   bodySize?: number;
   sectionOrder?: SectionId[];
   sectionVisibility?: Partial<Record<SectionId, boolean>>;
+  sectionStyles?: Partial<Record<SectionId, {
+    fontTitle?: string;
+    fontBody?: string;
+    titleColor?: string;
+    bodyColor?: string;
+    titleSize?: number;
+    bodySize?: number;
+  }>>;
 }
 
 // --- Local Market Intelligence Types ---

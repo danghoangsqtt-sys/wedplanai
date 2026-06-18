@@ -1,5 +1,6 @@
+import { InlineRichText } from './InlineRichText';
 import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
-import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent } from '../../types';
+import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent, SectionId } from '../../types';
 import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, ChevronLeft, ChevronRight, X, Volume2, VolumeX, Navigation, Bold, Italic, Underline, Strikethrough, Palette, Type } from 'lucide-react';
 import { sanitizeMapUrl, sanitizeAudioUrl } from '../../lib/sanitize';
 
@@ -8,6 +9,8 @@ export interface EditorConfig {
     onSectionClick?: (sectionId: string) => void;
     onFieldEdit?: (field: string, value: string) => void;
 }
+
+const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, '') : '';
 
 interface InvitationPreviewProps {
     data: InvitationData;
@@ -151,6 +154,14 @@ const THEME_VARS: Record<string, Record<string, string>> = {
     },
 };
 
+// ─── GOOGLE DRIVE URL RESOLVER ───
+const resolveImageUrl = (url: string | undefined): string | undefined => {
+    if (!url) return url;
+    const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    return url;
+};
+
 // ─── SCROLL REVEAL HOOK ───
 // Re-observes only when the SET of sections changes (lightweight key),
 // not on every keystroke into the invitation data.
@@ -178,7 +189,7 @@ const FloatingEffect: React.FC<{ type: 'petals' | 'hearts' | 'sparkles' }> = ({ 
     const emoji = type === 'hearts' ? '❤' : type === 'sparkles' ? '✦' : '✿';
     const color = type === 'hearts' ? '#e11d48' : type === 'sparkles' ? 'var(--t-accent)' : '#f9a8d4';
     return (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-[30]" aria-hidden>
             {items.map(p => (
                 <span key={p.id} className="iv-float" style={{
                     position: 'absolute', top: '-24px', left: p.left, fontSize: p.size, color,
@@ -275,13 +286,13 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
     const updateToolbar = useCallback(() => {
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || !sel.rangeCount) { setPos(null); return; }
-        const anchor = sel.anchorNode?.parentElement;
+        const anchor = sel.anchorNode?.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode as HTMLElement;
         if (!anchor || !containerRef.current?.contains(anchor)) { setPos(null); return; }
-        const editable = anchor.closest('[contenteditable="true"]');
+        const editable = anchor.closest('[contenteditable]');
         if (!editable) { setPos(null); return; }
 
         const range = sel.getRangeAt(0);
-        setSavedRange(range);
+        setSavedRange(range.cloneRange());
 
         const rect = range.getBoundingClientRect();
         const containerRect = containerRef.current.getBoundingClientRect();
@@ -308,7 +319,47 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
             sel.removeAllRanges();
             sel.addRange(savedRange);
         }
+        document.execCommand('styleWithCSS', false, 'true');
         document.execCommand(cmd, false, val);
+        updateToolbar();
+    };
+
+    const applyFontSize = (sizePx: number) => {
+        const sel = window.getSelection();
+        if (sel && savedRange) {
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+        }
+        if (!sel || !sel.rangeCount) return;
+
+        let range = sel.getRangeAt(0);
+        if (range.collapsed) {
+            // No text selected — select all content in the focused contenteditable
+            const anchor = sel.anchorNode?.nodeType === 3
+                ? (sel.anchorNode as Text).parentElement
+                : sel.anchorNode as HTMLElement | null;
+            const editable = anchor?.closest?.('[contenteditable]');
+            if (!editable) return;
+            sel.removeAllRanges();
+            const allRange = document.createRange();
+            allRange.selectNodeContents(editable);
+            sel.addRange(allRange);
+            if (!sel.rangeCount) return;
+            range = sel.getRangeAt(0);
+            if (range.collapsed) return;
+        }
+
+        const content = range.extractContents();
+        const elements = content.querySelectorAll('*');
+        elements.forEach(el => {
+            if (el instanceof HTMLElement) el.style.fontSize = '';
+            if (el.tagName === 'FONT') el.removeAttribute('size');
+        });
+
+        const span = document.createElement('span');
+        span.style.fontSize = `${sizePx}px`;
+        span.appendChild(content);
+        range.insertNode(span);
         updateToolbar();
     };
 
@@ -322,7 +373,7 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
 
     const colors = ['#000000', '#ffffff', '#e11d48', '#094cb2', '#1e2c54', '#3f5e43', '#a8442a', '#7c1d00', '#ec4899', '#f59e0b', '#10b981', '#6366f1', '#64748b', '#d97706', '#be123c', '#4338ca'];
     const fonts = ['Arial', 'Times New Roman', 'Dancing Script', 'Playfair Display', 'Great Vibes', 'Montserrat', 'Inter', 'Cormorant Garamond'];
-    const sizes = [1, 2, 3, 4, 5, 6, 7];
+    const sizes = [10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72];
 
     return (
         <div
@@ -389,12 +440,12 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
                 <button className="iv-toolbar-btn font-serif font-bold text-sm flex items-center justify-center gap-0.5" title="Kích cỡ chữ">
                     <span>A</span><span className="text-[10px]">a</span>
                 </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-[#1f2937] shadow-xl rounded-lg py-2 hidden group-hover:flex flex-col w-28 z-[100] before:content-[''] before:absolute before:-top-2 before:left-0 before:w-full before:h-2">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-[#1f2937] shadow-xl rounded-lg py-2 hidden group-hover:grid grid-cols-3 gap-1 w-48 z-[100] before:content-[''] before:absolute before:-top-2 before:left-0 before:w-full before:h-2 max-h-[250px] overflow-y-auto">
                     {sizes.map(s => (
                         <button 
                             key={s}
-                            className="px-3 py-1 text-sm text-center hover:bg-gray-700 text-white"
-                            onMouseDown={e => { e.preventDefault(); exec('fontSize', s.toString()); }}
+                            className="px-2 py-1.5 text-sm text-center hover:bg-gray-700 text-white rounded"
+                            onMouseDown={e => { e.preventDefault(); applyFontSize(s); }}
                         >
                             Cỡ {s}
                         </button>
@@ -406,7 +457,7 @@ const FloatingTextToolbar: React.FC<{ containerRef: React.RefObject<HTMLDivEleme
 };
 
 // ─── 3D CAROUSEL GALLERY ───
-const Gallery3DCarousel: React.FC<{ images: string[]; onImageClick: (idx: number) => void }> = ({ images, onImageClick }) => {
+const Gallery3DCarousel: React.FC<{ images: string[]; positions?: string[]; configs?: Array<{ scale: number; x: number; y: number } | null>; onImageClick: (idx: number) => void; fit?: 'cover' | 'contain' }> = ({ images, positions, configs, onImageClick, fit = 'cover' }) => {
     const [activeIndex, setActiveIndex] = useState(0);
 
     const next = () => setActiveIndex(prev => Math.min(prev + 1, images.length - 1));
@@ -461,7 +512,25 @@ const Gallery3DCarousel: React.FC<{ images: string[]; onImageClick: (idx: number
                                 visibility: opacity === 0 ? 'hidden' : 'visible'
                             }}
                         >
-                            <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
+                            {(() => {
+                                const cfg = configs?.[i];
+                                const posClass = (!cfg && positions?.[i]) || 'object-center';
+                                const style = cfg ? {
+                                    objectPosition: `${cfg.x}% ${cfg.y}%`,
+                                    transform: cfg.scale !== 1 ? `scale(${cfg.scale})` : undefined,
+                                    transformOrigin: `${cfg.x}% ${cfg.y}%`
+                                } : undefined;
+                                
+                                return (
+                                    <img 
+                                        src={img} 
+                                        alt={`Gallery ${i}`} 
+                                        className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-black/5' : `object-cover ${cfg ? '' : posClass}`}`} 
+                                        style={style}
+                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-[var(--t-surface-dim)]'); }} 
+                                    />
+                                );
+                            })()}
                         </div>
                     );
                 })}
@@ -489,16 +558,38 @@ const Gallery3DCarousel: React.FC<{ images: string[]; onImageClick: (idx: number
 const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook, editorConfig }) => {
     const ec = editorConfig;
     const rootRef = useRef<HTMLDivElement>(null);
-    const secProps = (id: string) => ec ? {
-        'data-sec': id,
-        onClick: (e: React.MouseEvent) => {
-            if ((e.target as HTMLElement).isContentEditable) return;
-            e.stopPropagation(); ec.onSectionClick?.(id);
-        },
-        style: { position: 'relative' as const, cursor: 'pointer',
-            outline: ec.selectedSection === id ? '2px solid #ec4899' : undefined,
-            outlineOffset: ec.selectedSection === id ? '-2px' : undefined },
-    } : {};
+    const secProps = (id: string, extraStyle?: React.CSSProperties) => {
+        const secStyleVars: any = {};
+        if (data.sectionStyles && data.sectionStyles[id as SectionId]) {
+            const st = data.sectionStyles[id as SectionId]!;
+            if (st.fontTitle) secStyleVars['--t-font-display'] = `'${st.fontTitle}', serif`;
+            if (st.fontBody) secStyleVars['--t-font-body'] = `'${st.fontBody}', sans-serif`;
+            if (st.titleColor) secStyleVars['--t-primary'] = st.titleColor;
+            if (st.bodyColor) {
+                secStyleVars['--t-on-surface'] = st.bodyColor;
+                secStyleVars['--t-on-surface-variant'] = st.bodyColor;
+            }
+            if (st.titleSize) secStyleVars['--t-title-scale'] = `${st.titleSize}rem`;
+            if (st.bodySize) secStyleVars['--t-body-size'] = `${st.bodySize}px`;
+        }
+
+        if (!ec) return { style: { ...secStyleVars, ...extraStyle } };
+
+        return {
+            'data-sec': id,
+            onClick: (e: React.MouseEvent) => {
+                if ((e.target as HTMLElement).isContentEditable) return;
+                e.stopPropagation(); ec.onSectionClick?.(id);
+            },
+            style: { 
+                ...secStyleVars,
+                position: 'relative' as const, cursor: 'pointer',
+                outline: ec.selectedSection === id ? '2px solid #ec4899' : undefined,
+                outlineOffset: ec.selectedSection === id ? '-2px' : undefined,
+                ...extraStyle
+            },
+        };
+    };
 
     // Inline editable text props — makes text contentEditable in editor mode
     const editProps = (field: string, placeholder?: string) => ec?.onFieldEdit ? {
@@ -516,6 +607,31 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 e.preventDefault();
                 (e.target as HTMLElement).blur();
             }
+        },
+        style: {
+            outline: 'none',
+            cursor: 'text',
+            borderBottom: '2px solid transparent',
+            transition: 'border-color 0.2s',
+        },
+        onFocus: (e: React.FocusEvent<HTMLElement>) => {
+            e.currentTarget.style.borderBottomColor = '#3b82f6';
+        },
+        onBlurCapture: (e: React.FocusEvent<HTMLElement>) => {
+            e.currentTarget.style.borderBottomColor = 'transparent';
+        },
+    } as Record<string, unknown> : {};
+
+    // Inline editable text props (RICH TEXT) — saves HTML content
+    const richEditProps = (field: string, placeholder?: string) => ec?.onFieldEdit ? {
+        contentEditable: true,
+        suppressContentEditableWarning: true,
+        'data-field': field,
+        'data-placeholder': placeholder,
+        onClick: (e: React.MouseEvent) => e.stopPropagation(),
+        onBlur: (e: React.FocusEvent<HTMLElement>) => {
+            const html = e.currentTarget.innerHTML || '';
+            ec.onFieldEdit!(field, html);
         },
         style: {
             outline: 'none',
@@ -622,13 +738,6 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             )}
 
             <div ref={rootRef} className={`iv-root iv-theme-${tid}`} style={themeStyle}>
-                {/* Floral Overlays — hidden for modern (minimalist), reduced for royal */}
-                {!isModern && (
-                    <div className={`absolute inset-0 pointer-events-none overflow-hidden z-0 mix-blend-multiply ${isRoyal ? 'opacity-[0.45]' : isIndochine ? 'opacity-[0.6]' : 'opacity-[0.85]'}`} aria-hidden>
-                        <img src="/floral-top-left.png" alt="" className="absolute top-0 left-0 w-[85%] max-w-[420px] object-contain opacity-95 -translate-x-4 -translate-y-4" />
-                        <img src="/floral-bottom-right.png" alt="" className="absolute bottom-0 right-0 w-[90%] max-w-[460px] object-contain opacity-95 translate-x-4 translate-y-4" />
-                    </div>
-                )}
 
                 {ec && <FloatingTextToolbar containerRef={rootRef} />}
 
@@ -661,12 +770,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                             <div className="iv-couple-row w-full flex items-center justify-center gap-2 md:gap-8 px-2 mb-2 z-10">
                                 {/* First Person */}
                                 <div className="flex flex-col items-center text-center min-w-0 flex-1">
-                                    <span className="iv-title mb-2 text-[9px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-70 font-sans" {...editProps(brideFirst ? 'brideTitle' : 'groomTitle', 'Danh xưng')}>
-                                        {brideFirst ? data.brideTitle : data.groomTitle}
-                                    </span>
-                                    <span className="iv-name text-[clamp(1.2rem,5.5vw,3rem)] leading-tight text-center break-words" style={{ fontFamily: "'Playfair Display', serif" }} {...editProps(brideFirst ? 'brideShortName' : 'groomShortName', brideFirst ? 'Tên Cô Dâu' : 'Tên Chú Rể')}>
-                                        {brideFirst ? (data.brideShortName || brideName) : (data.groomShortName || groomName)}
-                                    </span>
+                                    <InlineRichText tagName="span" field={brideFirst ? 'brideTitle' : 'groomTitle'} placeholder={'Danh xưng'} value={brideFirst ? data.brideTitle : data.groomTitle} ec={ec} className="iv-title mb-2 text-[9px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-70 font-sans" />
+                                    <InlineRichText tagName="span" field={brideFirst ? 'brideShortName' : 'groomShortName'} placeholder={brideFirst ? 'Tên Cô Dâu' : 'Tên Chú Rể'} value={brideFirst ? (data.brideShortName || brideName) : (data.groomShortName || groomName)} ec={ec} className="iv-name text-[clamp(1.2rem,5.5vw,3rem)] leading-tight text-center break-words" style={{ fontFamily: "var(--t-font-display)" }} />
                                 </div>
 
                                 {/* Divider (Hỷ / &) */}
@@ -676,19 +781,15 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                                 {/* Second Person */}
                                 <div className="flex flex-col items-center text-center min-w-0 flex-1">
-                                    <span className="iv-title mb-2 text-[9px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-70 font-sans" {...editProps(brideFirst ? 'groomTitle' : 'brideTitle', 'Danh xưng')}>
-                                        {brideFirst ? data.groomTitle : data.brideTitle}
-                                    </span>
-                                    <span className="iv-name text-[clamp(1.2rem,5.5vw,3rem)] leading-tight text-center break-words" style={{ fontFamily: "'Playfair Display', serif" }} {...editProps(brideFirst ? 'groomShortName' : 'brideShortName', brideFirst ? 'Tên Chú Rể' : 'Tên Cô Dâu')}>
-                                        {brideFirst ? (data.groomShortName || groomName) : (data.brideShortName || brideName)}
-                                    </span>
+                                    <InlineRichText tagName="span" field={brideFirst ? 'groomTitle' : 'brideTitle'} placeholder={'Danh xưng'} value={brideFirst ? data.groomTitle : data.brideTitle} ec={ec} className="iv-title mb-2 text-[9px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-70 font-sans" />
+                                    <InlineRichText tagName="span" field={brideFirst ? 'groomShortName' : 'brideShortName'} placeholder={brideFirst ? 'Tên Chú Rể' : 'Tên Cô Dâu'} value={brideFirst ? (data.groomShortName || groomName) : (data.brideShortName || brideName)} ec={ec} className="iv-name text-[clamp(1.2rem,5.5vw,3rem)] leading-tight text-center break-words" style={{ fontFamily: "var(--t-font-display)" }} />
                                 </div>
                             </div>
 
                             {/* Arched Text */}
                             <svg viewBox="0 0 320 160" className="w-full max-w-[320px] mx-auto mt-4 mb-[-40px] opacity-80 drop-shadow-sm z-10" style={{ overflow: 'visible' }}>
                                 <path id="archCurve" d="M 20,150 A 140,140 0 0,1 300,150" fill="transparent" />
-                                <text fill="currentColor" fontSize="11" letterSpacing="0.4em" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                                <text fill="currentColor" fontSize="11" letterSpacing="0.4em" style={{ fontFamily: "var(--t-font-display)", fontWeight: 600 }}>
                                     <textPath href="#archCurve" startOffset="50%" textAnchor="middle">
                                         ✦ LOVE NEVER FAILS ✦
                                     </textPath>
@@ -703,8 +804,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                          border: '4px solid color-mix(in srgb, var(--t-accent) 40%, transparent)',
                                          boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)'
                                      }}>
-                                    {data.couplePhoto && (
-                                        <img src={data.couplePhoto} alt="Ảnh cưới" className="iv-hero-photo w-full h-full object-cover transition-transform duration-1000 hover:scale-105"
+                                    {resolveImageUrl(data.couplePhoto) && (
+                                        <img src={resolveImageUrl(data.couplePhoto)} alt="Ảnh cưới" className="iv-hero-photo w-full h-full object-cover transition-transform duration-1000 hover:scale-105"
                                             style={data.photoConfig ? {
                                                 objectPosition: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
                                                 transform: data.photoConfig.scale !== 1 ? `scale(${data.photoConfig.scale})` : undefined,
@@ -728,8 +829,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     ) : (
                         /* BỐ CỤC PHỦ ẢNH NỀN (Romantic, Modern, Garden) */
                         <>
-                            {data.couplePhoto && (
-                                <img src={data.couplePhoto} alt="Ảnh cưới" className="iv-hero-photo"
+                            {resolveImageUrl(data.couplePhoto) && (
+                                <img src={resolveImageUrl(data.couplePhoto)} alt="Ảnh cưới" className="iv-hero-photo"
                                     style={data.photoConfig ? {
                                         objectPosition: `${data.photoConfig.x}% ${data.photoConfig.y}%`,
                                         transform: data.photoConfig.scale !== 1 ? `scale(${data.photoConfig.scale})` : undefined,
@@ -737,7 +838,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                     } : undefined}
                                 />
                             )}
-                            {data.couplePhoto && (
+                            {resolveImageUrl(data.couplePhoto) && (
                                 <div 
                                     className="absolute inset-0 z-[1] pointer-events-none transition-colors duration-300" 
                                     style={{ backgroundColor: `rgba(255, 255, 255, ${(data.heroOverlayOpacity || 0) / 100})` }} 
@@ -747,46 +848,34 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                             <div className="iv-hero-body rv">
                                 {headerSticker && <div className="iv-hero-sticker" aria-hidden>{headerSticker}</div>}
 
-                                {isRomantic ? (
-                                    <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Happy Wedding</p>
-                                ) : isGarden ? (
-                                    <p className="iv-hero-pre" style={{ fontFamily: 'var(--t-font-script)', fontSize: '28px', textTransform: 'none', letterSpacing: 'normal' }}>Save the Date</p>
-                                ) : isModern ? (
-                                    <p className="iv-hero-pre">WE ARE GETTING MARRIED</p>
-                                ) : (
-                                    <p className="iv-hero-pre">Lễ Thành Hôn</p>
-                                )}
+                                <InlineRichText tagName="p" field="openingMessage" placeholder="Lời mở đầu" value={data.openingMessage ?? (isRomantic ? 'Happy Wedding' : isGarden ? 'Save the Date' : isModern ? 'WE ARE GETTING MARRIED' : 'LỄ THÀNH HÔN')} ec={ec} className="iv-hero-pre" style={isRomantic || isGarden ? { fontFamily: 'var(--t-font-script)', fontSize: '28px' } : undefined} />
 
                                 <h1 className="iv-couple">
                                     <div className="flex flex-col items-center">
                                         {(brideFirst ? data.brideTitle : data.groomTitle) && (
-                                            <span className="iv-title mb-1 text-[0.35em] tracking-widest uppercase opacity-80" {...editProps(brideFirst ? 'brideTitle' : 'groomTitle', 'Danh xưng')}>
-                                                {brideFirst ? data.brideTitle : data.groomTitle}
-                                            </span>
+                                            <InlineRichText tagName="span" field={brideFirst ? 'brideTitle' : 'groomTitle'} placeholder={'Danh xưng'} value={brideFirst ? data.brideTitle! : data.groomTitle!} ec={ec} className="iv-title mb-1 text-[0.35em] opacity-80" />
                                         )}
-                                        <span className="iv-name" {...editProps(brideFirst ? 'brideName' : 'groomName', brideFirst ? 'Cô Dâu' : 'Chú Rể')}>{brideFirst ? brideName : groomName}</span>
+                                        <InlineRichText tagName="span" field={brideFirst ? 'brideName' : 'groomName'} placeholder={brideFirst ? 'Cô Dâu' : 'Chú Rể'} value={brideFirst ? brideName : groomName} ec={ec} className="iv-name" />
                                     </div>
                                     <span className="iv-amp">&</span>
                                     <div className="flex flex-col items-center">
                                         {(!brideFirst ? data.brideTitle : data.groomTitle) && (
-                                            <span className="iv-title mb-1 text-[0.35em] tracking-widest uppercase opacity-80" {...editProps(brideFirst ? 'groomTitle' : 'brideTitle', 'Danh xưng')}>
-                                                {brideFirst ? data.groomTitle : data.brideTitle}
-                                            </span>
+                                            <InlineRichText tagName="span" field={brideFirst ? 'groomTitle' : 'brideTitle'} placeholder={'Danh xưng'} value={brideFirst ? data.groomTitle! : data.brideTitle!} ec={ec} className="iv-title mb-1 text-[0.35em] opacity-80" />
                                         )}
-                                        <span className="iv-name" {...editProps(brideFirst ? 'groomName' : 'brideName', brideFirst ? 'Chú Rể' : 'Cô Dâu')}>{brideFirst ? groomName : brideName}</span>
+                                        <InlineRichText tagName="span" field={brideFirst ? 'groomName' : 'brideName'} placeholder={brideFirst ? 'Chú Rể' : 'Cô Dâu'} value={brideFirst ? groomName : brideName} ec={ec} className="iv-name" />
                                     </div>
                                 </h1>
 
                                 {/* Date badge */}
                                 {data.date && (
                                     <div className="iv-date-badge">
-                                        <span>{shortDate}</span>
-                                        {(data.location || data.address) && <><span className="iv-badge-dot" /><span>{data.location || data.address.split(',').pop()?.trim()}</span></>}
+                                        <InlineRichText tagName="span" field={'date'} placeholder={'Ngày'} value={data.date} ec={ec}  />
+                                        {(data.location || data.address) && <><span className="iv-badge-dot" /><InlineRichText tagName="span" field={'location'} placeholder={'Địa điểm'} value={data.location || data.address.split(',').pop()?.trim() || ''} ec={ec}  /></>}
                                     </div>
                                 )}
 
                                 {data.lunarDate && <p className="iv-lunar">(Âm lịch: {data.lunarDate})</p>}
-                                {(data.wishes || ec) && <p className="iv-wishes-text" {...editProps('wishes', 'Lời mời...')}>{data.wishes || (ec ? '' : '')}</p>}
+                                {(data.wishes || ec) && <InlineRichText tagName="p" field={'wishes'} placeholder={'Lời mời...'} value={data.wishes || (ec ? '' : '')} ec={ec} className="iv-wishes-text" />}
 
                                 {/* Countdown */}
                                 {hasCountdown && (
@@ -816,48 +905,97 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ THƯ MỜI — CHA MẸ HAI BÊN ══════ */}
                 {hasParents && (
                     <section className="iv-sec iv-invite rv" {...secProps('family')}>
-                        <p className="iv-invite-pre">Trân Trọng Kính Mời</p>
-                        <Divider glyph={dividerSticker} />
+                        {/* Tiêu đề với layer nền */}
+                        <div className="iv-invite-header">
+                            <InlineRichText tagName="p" field="inviteSectionTitle" value={data.inviteSectionTitle || 'Trân Trọng Kính Mời'} ec={ec} className="iv-invite-header-text" />
+                        </div>
+                        {/* Cha mẹ hai bên */}
                         {(() => {
                             const firstParent = brideFirst ? bp : gp;
                             const secondParent = brideFirst ? gp : bp;
-                            const firstLabel = brideFirst ? 'Nhà Gái' : 'Nhà Trai';
-                            const secondLabel = brideFirst ? 'Nhà Trai' : 'Nhà Gái';
+                            const firstKey = brideFirst ? 'brideParents' : 'groomParents';
+                            const secondKey = brideFirst ? 'groomParents' : 'brideParents';
+                            const firstSideField = brideFirst ? 'familySideBride' : 'familySideGroom';
+                            const secondSideField = brideFirst ? 'familySideGroom' : 'familySideBride';
+                            const firstSideDefault = brideFirst ? 'Nhà Gái' : 'Nhà Trai';
+                            const secondSideDefault = brideFirst ? 'Nhà Trai' : 'Nhà Gái';
                             return (
                                 <div className="iv-parents">
                                     <div className="iv-parent-col">
-                                        <span className="iv-parent-side">{firstLabel}</span>
-                                        {firstParent?.father && <span className="iv-parent-name">{firstParent.father}</span>}
-                                        {firstParent?.mother && <span className="iv-parent-name">{firstParent.mother}</span>}
+                                        <InlineRichText tagName="span" field={firstSideField} value={data[firstSideField as keyof typeof data] as string || firstSideDefault} ec={ec} className="iv-parent-side" />
+                                        {(firstParent?.title || ec) && <InlineRichText tagName="span" field={`${firstKey}.title`} value={firstParent?.title || ''} ec={ec} className="text-[11px] uppercase tracking-widest opacity-80 mb-1.5" />}
+                                        {(firstParent?.father || ec) && <InlineRichText tagName="span" field={`${firstKey}.father`} value={firstParent?.father || ''} ec={ec} className="iv-parent-name" />}
+                                        {(firstParent?.mother || ec) && <InlineRichText tagName="span" field={`${firstKey}.mother`} value={firstParent?.mother || ''} ec={ec} className="iv-parent-name" />}
+                                        {(firstParent?.address || ec) && <InlineRichText tagName="span" field={`${firstKey}.address`} value={firstParent?.address || ''} ec={ec} className="iv-parent-address" />}
                                     </div>
                                     <div className="iv-parent-divider" aria-hidden>
                                         <Heart size={16} />
                                     </div>
                                     <div className="iv-parent-col">
-                                        <span className="iv-parent-side">{secondLabel}</span>
-                                        {secondParent?.father && <span className="iv-parent-name">{secondParent.father}</span>}
-                                        {secondParent?.mother && <span className="iv-parent-name">{secondParent.mother}</span>}
+                                        <InlineRichText tagName="span" field={secondSideField} value={data[secondSideField as keyof typeof data] as string || secondSideDefault} ec={ec} className="iv-parent-side" />
+                                        {(secondParent?.title || ec) && <InlineRichText tagName="span" field={`${secondKey}.title`} value={secondParent?.title || ''} ec={ec} className="text-[11px] uppercase tracking-widest opacity-80 mb-1.5" />}
+                                        {(secondParent?.father || ec) && <InlineRichText tagName="span" field={`${secondKey}.father`} value={secondParent?.father || ''} ec={ec} className="iv-parent-name" />}
+                                        {(secondParent?.mother || ec) && <InlineRichText tagName="span" field={`${secondKey}.mother`} value={secondParent?.mother || ''} ec={ec} className="iv-parent-name" />}
+                                        {(secondParent?.address || ec) && <InlineRichText tagName="span" field={`${secondKey}.address`} value={secondParent?.address || ''} ec={ec} className="iv-parent-address" />}
                                     </div>
                                 </div>
                             );
                         })()}
-                        <p className="iv-invite-line">
-                            {data.openingMessage || 'Trân trọng kính mời quý khách tới dự buổi tiệc chung vui cùng gia đình chúng tôi, nhân lễ thành hôn của hai con'}
-                        </p>
-                        <p className="iv-invite-couple">{brideFirst ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`}</p>
+                        {/* Tên cô dâu & chú rể */}
+                        <div className="iv-invite-couple-block">
+                            {brideFirst ? (<>
+                                <InlineRichText tagName="p" field="brideName" value={data.brideName || ''} ec={ec} className="iv-invite-couple" />
+                                {(data.brideTitle || ec) && <InlineRichText tagName="span" field="brideTitle" value={data.brideTitle || ''} ec={ec} className="iv-invite-title" />}
+                                <p className="iv-invite-amp">&</p>
+                                <InlineRichText tagName="p" field="groomName" value={data.groomName || ''} ec={ec} className="iv-invite-couple" />
+                                {(data.groomTitle || ec) && <InlineRichText tagName="span" field="groomTitle" value={data.groomTitle || ''} ec={ec} className="iv-invite-title" />}
+                            </>) : (<>
+                                <InlineRichText tagName="p" field="groomName" value={data.groomName || ''} ec={ec} className="iv-invite-couple" />
+                                {(data.groomTitle || ec) && <InlineRichText tagName="span" field="groomTitle" value={data.groomTitle || ''} ec={ec} className="iv-invite-title" />}
+                                <p className="iv-invite-amp">&</p>
+                                <InlineRichText tagName="p" field="brideName" value={data.brideName || ''} ec={ec} className="iv-invite-couple" />
+                                {(data.brideTitle || ec) && <InlineRichText tagName="span" field="brideTitle" value={data.brideTitle || ''} ec={ec} className="iv-invite-title" />}
+                            </>)}
+                        </div>
+                        {/* Separator giữa tên và lời mời */}
+                        <div className="iv-invite-sep" />
+                        {/* Lời kính mời + thời gian + ngày tháng — khối thống nhất */}
+                        <div className="iv-invite-datetime-block">
+                            <InlineRichText tagName="p" field="inviteMessage" value={(data.inviteMessage && data.inviteMessage !== '<br>' ? data.inviteMessage : null) || 'Trân trọng kính mời quý khách tới dự buổi tiệc chung vui cùng gia đình chúng tôi, nhân lễ thành hôn của hai con'} ec={ec} className="iv-invite-line" />
+                            {data.time && <p className="iv-invite-time">Vào lúc {data.time}</p>}
+                            {data.date && (() => {
+                                try {
+                                    const d = new Date(data.date);
+                                    const dayNames = ['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+                                    const monthStr = `Tháng ${String(d.getMonth() + 1).padStart(2, '0')}`;
+                                    return (<>
+                                        <div className="iv-invite-date">
+                                            <span>{dayNames[d.getDay()]}</span>
+                                            <span className="iv-invite-date-sep">|</span>
+                                            <span className="iv-invite-date-num">{d.getDate()}</span>
+                                            <span className="iv-invite-date-sep">|</span>
+                                            <span>{monthStr}</span>
+                                        </div>
+                                        <p className="iv-invite-year">{d.getFullYear()}</p>
+                                    </>);
+                                } catch { return null; }
+                            })()}
+                            {data.lunarDate && <p className="iv-invite-lunar">(Tức ngày {data.lunarDate})</p>}
+                        </div>
                     </section>
                 )}
 
                 {/* ══════ ĐỊA ĐIỂM & THỜI GIAN ══════ */}
                 {hasVenue && (
-                    <section className="iv-sec iv-sec-alt iv-venue rv" {...secProps('venue')}>
-                        <h2 className="iv-sec-title">{isModern ? 'Venue' : isRoyal ? 'THE VENUE' : 'Địa Điểm Tổ Chức'}</h2>
-                        <Divider glyph={dividerSticker} />
-                        <div className="iv-venue-card">
-                            <div className="iv-venue-icon"><MapPin size={22} /></div>
-                            {(data.location || ec) && <p className="iv-venue-name" {...editProps('location', 'Tên địa điểm...')}>{data.location}</p>}
-                            {(data.address || ec) && <p className="iv-venue-addr" {...editProps('address', 'Địa chỉ...')}>{data.address}</p>}
-                            <div className="iv-venue-meta">
+                    <section className="iv-sec iv-sec-alt iv-venue rv" {...secProps('venue', { padding: 0 })}>
+                        <div style={{ backgroundColor: 'var(--t-primary)', color: 'white', padding: '15px 20px', textAlign: 'center' }}>
+                            <InlineRichText tagName="h2" field="venueSectionTitle" value={data.venueSectionTitle || 'Tiệc cưới được tổ chức tại'} ec={ec} style={{ margin: 0, fontFamily: 'var(--t-font-display)', color: 'white', textTransform: 'uppercase', fontSize: '1.3rem', letterSpacing: '1px', fontWeight: 'bold' }} />
+                        </div>
+                        <div style={{ padding: '30px 20px', textAlign: 'center' }}>
+                            {(data.location || data.address || ec) && (
+                                <InlineRichText tagName="p" field="location" value={data.location || data.address || ''} ec={ec} style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--t-primary)', marginBottom: '8px' }} />
+                            )}
+                            <div className="iv-venue-meta" style={{ justifyContent: 'center', marginTop: '16px' }}>
                                 {data.date && <span><Calendar size={14} /> {fmtDate}</span>}
                                 {data.receptionTime && <span><Clock size={14} /> Đón khách: {data.receptionTime}</span>}
                                 {data.time && <span><Clock size={14} /> Khai tiệc: {data.time}</span>}
@@ -871,31 +1009,37 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                     
                                     if (rawLink.includes('pb=') || rawLink.includes('embed')) {
                                         embedUrl = rawLink;
-                                    } else if (data.address && !isUrl(data.address)) {
-                                        embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(data.address)}&output=embed`;
-                                    } else if (rawLink && !isUrl(rawLink)) {
-                                        embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(rawLink)}&output=embed`;
+                                    } else {
+                                        // Use just location for the search query to trigger the Google Maps Place Card
+                                        // Appending a malformed address often breaks the Place Card and results in a generic map.
+                                        const query = stripHtml(data.location || data.address || '');
+                                        if (query) {
+                                            // Use z=16 to zoom in (phóng to ra)
+                                            embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=m&z=16&output=embed&iwloc=Near`;
+                                        }
                                     }
                                     
                                     if (embedUrl) {
                                         return (
-                                            <div className="mt-6 rounded-2xl overflow-hidden shadow-md border-2 border-white/40 ring-1 ring-black/5 bg-white relative z-10">
-                                                <iframe
-                                                    src={embedUrl}
-                                                    width="100%"
-                                                    height="380"
-                                                    style={{ border: 0, display: 'block' }}
-                                                    allowFullScreen
-                                                    loading="lazy"
-                                                    referrerPolicy="no-referrer-when-downgrade"
-                                                    className="w-full"
-                                                    title="Google Maps"
-                                                />
+                                            <div className="mt-8 flex flex-col items-center w-full max-w-4xl mx-auto">
+                                                <div className="rounded-xl overflow-hidden shadow-md bg-white relative z-10 w-full">
+                                                    <iframe
+                                                        src={embedUrl}
+                                                        width="100%"
+                                                        height="400"
+                                                        style={{ border: 0, display: 'block' }}
+                                                        allowFullScreen
+                                                        loading="lazy"
+                                                        referrerPolicy="no-referrer-when-downgrade"
+                                                        className="w-full"
+                                                        title="Google Maps"
+                                                    />
+                                                </div>
                                             </div>
                                         );
                                     }
 
-                                    // Fallback to button if we have a rawLink but couldn't make it an embed
+                                    // Fallback to button if we have a rawLink but no address/location to embed
                                     if (rawLink && isUrl(rawLink)) {
                                         return (
                                             <div className="mt-6 rounded-2xl overflow-hidden shadow-md border-2 border-white/40 ring-1 ring-black/5 bg-white relative z-10">
@@ -907,7 +1051,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                                             <MapPin size={24} className="text-rose-500 fill-rose-100" />
                                                         </div>
                                                         <span className="font-bold text-xs uppercase tracking-widest bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm">
-                                                            {isModern ? 'Open Google Maps' : 'Mở Bản Đồ Google'}
+                                                            Mở Bản Đồ Google
                                                         </span>
                                                     </div>
                                                 </a>
@@ -925,14 +1069,10 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ DRESS CODE ══════ */}
                 {data.dressCodeEnabled && (
                     <section className="iv-sec rv">
-                        <h2 className="iv-sec-title">{isModern ? 'Dress Code' : isRoyal ? 'ATTIRE' : 'Trang Phục'}</h2>
+                        <h2 className="iv-sec-title"><InlineRichText tagName="span" field="dressCodeSectionTitle" value={data.dressCodeSectionTitle || (isModern ? 'Dress Code' : isRoyal ? 'ATTIRE' : 'Trang Phục')} ec={ec} /></h2>
                         <Divider glyph={dividerSticker} />
                         <div className="iv-dresscode">
-                            <p className="iv-gift-desc">
-                                {data.dressCodeMessage || (isModern
-                                    ? 'We kindly request our guests to wear formal attire in warm, elegant tones to complement the celebration.'
-                                    : 'Gia đình xin phép gợi ý quý khách trang phục lịch sự, tông màu ấm áp để tạo nên không gian lễ cưới thật hài hòa và trọn vẹn.')}
-                            </p>
+                            <InlineRichText tagName="p" field="dressCodeMessage" value={data.dressCodeMessage || (isModern ? 'We kindly request our guests to wear formal attire in warm, elegant tones to complement the celebration.' : 'Gia đình xin phép gợi ý quý khách trang phục lịch sự, tông màu ấm áp để tạo nên không gian lễ cưới thật hài hòa và trọn vẹn.')} ec={ec} className="iv-gift-desc" />
                             <div className="iv-dresscode-palette">
                                 {(data.dressCodeColors || DRESS_CODE_PALETTES[tid] || DRESS_CODE_PALETTES.traditional).map(c => (
                                     <div key={c} className="iv-dresscode-swatch" style={{ background: c, border: c.toLowerCase() === '#ffffff' || c.toLowerCase() === '#fff' ? '1px solid var(--t-outline)' : 'none' }} />
@@ -944,39 +1084,27 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ CHƯƠNG TRÌNH (Events) ══════ */}
                 {hasEvents && (
-                    <section className="iv-sec rv" {...secProps('events')}>
-                        <h2 className="iv-sec-title">{isModern ? 'Schedule' : isRoyal ? 'THE PROGRAMME' : 'Chương Trình'}</h2>
-                        <Divider glyph={dividerSticker} />
-                        <div className="iv-events">
+                    <section className="iv-sec rv" {...secProps('timeline', { paddingBottom: '40px' })}>
+                        <InlineRichText tagName="h2" field="eventsSectionTitle" value={data.eventsSectionTitle || 'Lịch trình ngày cưới'} ec={ec} style={{ textAlign: 'center', color: 'var(--t-primary)', fontFamily: 'var(--t-font-display)', fontSize: 'calc(var(--t-title-scale, 1.75rem) * 0.8)', fontWeight: 'bold', margin: '0 0 40px 0', textTransform: 'uppercase', letterSpacing: '1px' }} />
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '400px', margin: '0 auto' }}>
                             {data.events!.map((ev, i) => (
-                                <React.Fragment key={ev.id || i}>
-                                    {i > 0 && (
-                                        <div className="flex justify-center py-1">
-                                            <div className="w-px h-10" style={{ background: 'linear-gradient(to bottom, transparent, var(--t-accent), transparent)' }} />
-                                        </div>
-                                    )}
-                                    <div className="iv-event-card rv" style={{ animationDelay: `${i * 0.12}s` }}>
-                                        <div className="iv-event-icon">
-                                            {i === 0 ? <Heart size={20} /> : <Gift size={20} />}
-                                        </div>
-                                        <h4 className="iv-event-name">{ev.title}</h4>
-                                        {ev.description && <p className="iv-event-desc">{ev.description}</p>}
-                                        <div className="iv-event-meta">
-                                            {ev.time && <span><Clock size={13} /> {ev.time}</span>}
-                                            {ev.date && <span><Calendar size={13} /> {ev.date}</span>}
-                                        </div>
-                                        {ev.location && (
-                                            <div className="iv-event-meta">
-                                                <span><MapPin size={13} /> {ev.location}</span>
-                                            </div>
-                                        )}
-                                        {ev.mapLink && (
-                                            <a href={ev.mapLink} target="_blank" rel="noopener noreferrer" className="iv-map-link">
-                                                {isModern ? 'View Map →' : 'Xem Bản Đồ →'}
-                                            </a>
+                                <div key={ev.id || i} style={{ display: 'flex', width: '100%', position: 'relative' }}>
+                                    <div style={{ width: '40%', textAlign: 'right', paddingRight: '20px', paddingTop: '1px' }}>
+                                        <InlineRichText tagName="div" field={`events[${i}].time`} placeholder={'Giờ'} value={ev.time} ec={ec} style={{ color: 'var(--t-primary)', fontSize: '1.05rem', fontWeight: 'bold' }} />
+                                        {ev.date && <InlineRichText tagName="div" field={`events[${i}].date`} placeholder={'Ngày'} value={ev.date} ec={ec} style={{ fontSize: '0.8rem', color: 'var(--t-primary)', opacity: 0.8, marginTop: '2px' }} />}
+                                    </div>
+                                    <div style={{ width: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--t-primary)', zIndex: 2 }} />
+                                        {i < data.events!.length - 1 && (
+                                            <div style={{ width: '1px', flex: 1, backgroundColor: 'var(--t-primary)', minHeight: '40px', opacity: 0.6, margin: '-2px 0' }} />
                                         )}
                                     </div>
-                                </React.Fragment>
+                                    <div style={{ width: '60%', paddingLeft: '20px', paddingBottom: i < data.events!.length - 1 ? '30px' : '0' }}>
+                                        <InlineRichText tagName="div" field={`events[${i}].title`} placeholder={'Tên sự kiện'} value={ev.title} ec={ec} style={{ color: 'var(--t-primary)', fontSize: '1.05rem', fontWeight: 500 }} />
+                                        {ev.location && <InlineRichText tagName="div" field={`events[${i}].location`} placeholder={'Địa điểm'} value={ev.location} ec={ec} style={{ fontSize: '0.85rem', color: 'var(--t-primary)', opacity: 0.7, marginTop: '4px' }} />}
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </section>
@@ -987,16 +1115,23 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ GALLERY ══════ */}
                 {hasGallery && (
                     <section className="iv-sec rv" {...secProps('gallery')}>
-                        <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" />{isModern ? 'Gallery' : isRoyal ? 'MOMENTS' : isRomantic ? 'Album Ảnh Cưới' : 'Khoảnh Khắc'}</h2>
+                        <h2 className="iv-sec-title"><Camera size={20} className="inline -mt-1 mr-2" /><InlineRichText tagName="span" field="gallerySectionTitle" value={data.gallerySectionTitle || (isModern ? 'Gallery' : isRoyal ? 'MOMENTS' : isRomantic ? 'Album Ảnh Cưới' : 'Khoảnh Khắc')} ec={ec} /></h2>
                         <Divider glyph={dividerSticker} />
                         
                         {data.galleryStyle === '3d' ? (
-                            <Gallery3DCarousel images={data.galleryImages!} onImageClick={setLbIndex} />
+                            <Gallery3DCarousel images={data.galleryImages!} positions={data.galleryPositions} configs={data.galleryConfigs} onImageClick={setLbIndex} fit={data.galleryFit} />
                         ) : data.galleryStyle === 'collage' ? (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full auto-rows-[160px] sm:auto-rows-[200px]">
                                 {data.galleryImages!.slice(0, 5).map((img, i) => {
                                     const isLast = i === 4;
                                     const remaining = data.galleryImages!.length - 5;
+                                    const cfg = data.galleryConfigs?.[i];
+                                    const pos = (!cfg && data.galleryPositions?.[i]) || 'object-center';
+                                    const style = cfg ? {
+                                        objectPosition: `${cfg.x}% ${cfg.y}%`,
+                                        transform: cfg.scale !== 1 ? `scale(${cfg.scale})` : undefined,
+                                        transformOrigin: `${cfg.x}% ${cfg.y}%`
+                                    } : undefined;
                                     
                                     let spanClass = 'col-span-1 row-span-1';
                                     if (i === 0) spanClass = 'col-span-2 row-span-2 sm:col-span-2 sm:row-span-2';
@@ -1007,19 +1142,22 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                             className={`relative overflow-hidden rounded-xl cursor-pointer group shadow-sm ${spanClass}`} 
                                             onClick={() => setLbIndex(i)}
                                         >
-                                            <img 
-                                                src={img} 
-                                                alt={`Ảnh ${i + 1}`} 
-                                                loading="lazy"
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('bg-[var(--t-surface-dim)]'); }} 
-                                            />
+                                            <div className="w-full h-full overflow-hidden">
+                                                <img 
+                                                    src={img} 
+                                                    alt={`Ảnh ${i + 1}`} 
+                                                    loading="lazy"
+                                                    className={`w-full h-full transition-transform duration-700 group-hover:scale-110 ${data.galleryFit === 'contain' ? 'object-contain bg-black/5' : `object-cover ${cfg ? '' : pos}`}`}
+                                                    style={style}
+                                                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('bg-[var(--t-surface-dim)]'); }} 
+                                                />
+                                            </div>
                                             {isLast && remaining > 0 ? (
-                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center transition-colors group-hover:bg-black/60">
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center transition-colors group-hover:bg-black/60 pointer-events-none">
                                                     <span className="text-white text-xl sm:text-2xl font-medium tracking-wider">+{remaining}</span>
                                                 </div>
                                             ) : (
-                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
                                                     <Camera size={28} className="text-white opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100 duration-300" />
                                                 </div>
                                             )}
@@ -1032,6 +1170,13 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                 {data.galleryImages!.slice(0, 4).map((img, i) => {
                                     const isLast = i === 3;
                                     const remaining = data.galleryImages!.length - 4;
+                                    const cfg = data.galleryConfigs?.[i];
+                                    const pos = (!cfg && data.galleryPositions?.[i]) || 'object-center';
+                                    const style = cfg ? {
+                                        objectPosition: `${cfg.x}% ${cfg.y}%`,
+                                        transform: cfg.scale !== 1 ? `scale(${cfg.scale})` : undefined,
+                                        transformOrigin: `${cfg.x}% ${cfg.y}%`
+                                    } : undefined;
                                     
                                     return (
                                         <div 
@@ -1039,13 +1184,16 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                             className="relative overflow-hidden rounded-xl cursor-pointer group shadow-sm aspect-[4/5]" 
                                             onClick={() => setLbIndex(i)}
                                         >
-                                            <img 
-                                                src={img} 
-                                                alt={`Ảnh ${i + 1}`} 
-                                                loading="lazy"
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('bg-[var(--t-surface-dim)]'); }} 
-                                            />
+                                            <div className="w-full h-full overflow-hidden">
+                                                <img 
+                                                    src={img} 
+                                                    alt={`Ảnh ${i + 1}`} 
+                                                    loading="lazy"
+                                                    className={`w-full h-full transition-transform duration-700 group-hover:scale-110 ${data.galleryFit === 'contain' ? 'object-contain bg-black/5' : `object-cover ${cfg ? '' : pos}`}`}
+                                                    style={style}
+                                                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; e.currentTarget.classList.add('bg-[var(--t-surface-dim)]'); }} 
+                                                />
+                                            </div>
                                             {isLast && remaining > 0 ? (
                                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center transition-colors group-hover:bg-black/60">
                                                     <span className="text-white text-xl sm:text-2xl font-medium tracking-wider">+{remaining}</span>
@@ -1066,11 +1214,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ MỪNG CƯỚI (Gift) ══════ */}
                 {hasBank && (
                     <section className="iv-sec iv-sec-alt rv" {...secProps('bank')}>
-                        <h2 className="iv-sec-title"><Gift size={20} className="inline -mt-1 mr-2" />Mừng Cưới</h2>
+                        <h2 className="iv-sec-title"><Gift size={20} className="inline -mt-1 mr-2" /><InlineRichText tagName="span" field="giftSectionTitle" value={data.giftSectionTitle || 'Mừng Cưới'} ec={ec} /></h2>
                         <Divider glyph={dividerSticker} />
-                        <p className="iv-gift-desc">
-                            {data.envelopeMessage || 'Sự hiện diện của quý khách là món quà ý nghĩa nhất. Nếu muốn gửi lời chúc phúc, xin vui lòng quét mã QR dưới đây.'}
-                        </p>
+                        <InlineRichText tagName="p" field="envelopeMessage" value={data.envelopeMessage || 'Sự hiện diện của quý khách là món quà ý nghĩa nhất. Nếu muốn gửi lời chúc phúc, xin vui lòng quét mã QR dưới đây.'} ec={ec} className="iv-gift-desc" />
                         
                         <div className={`grid gap-4 ${bankList.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 max-w-sm mx-auto'}`}>
                             {bankList.map((bank, index) => {
@@ -1100,9 +1246,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ RSVP ══════ */}
                 {hasRSVP && (
                     <section className="iv-sec rv" {...secProps('rsvp')}>
-                        <h2 className="iv-sec-title">{isModern ? 'RSVP' : 'Xác Nhận Tham Dự'}</h2>
+                        <InlineRichText tagName="h2" field="rsvpSectionTitle" value={data.rsvpSectionTitle || (isModern ? 'RSVP' : 'Xác Nhận Tham Dự')} ec={ec} className="iv-sec-title" />
                         <Divider glyph={dividerSticker} />
-                        <p className="iv-gift-desc">Sự góp mặt của bạn là niềm vinh hạnh của chúng tôi. Vui lòng xác nhận để chúng tôi chuẩn bị chu đáo.</p>
+                        <InlineRichText tagName="p" field="rsvpMessage" value={data.rsvpMessage || 'Sự góp mặt của bạn là niềm vinh hạnh của chúng tôi. Vui lòng xác nhận để chúng tôi chuẩn bị chu đáo.'} ec={ec} className="iv-gift-desc" />
                         {data.rsvpDeadline && <p className="iv-rsvp-deadline">Vui lòng phản hồi trước {data.rsvpDeadline}</p>}
                         <button className="iv-rsvp-btn" onClick={() => onRSVP?.()}><Send size={16} /> Gửi Phản Hồi (RSVP)</button>
                     </section>
@@ -1111,7 +1257,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ GUESTBOOK ══════ */}
                 {data.guestbookEnabled && (
                     <section className="iv-sec iv-sec-alt rv" {...secProps('guestbook')}>
-                        <h2 className="iv-sec-title"><MessageCircle size={20} className="inline -mt-1 mr-2" />Sổ Lưu Bút</h2>
+                        <h2 className="iv-sec-title"><MessageCircle size={20} className="inline -mt-1 mr-2" /><InlineRichText tagName="span" field="guestbookSectionTitle" value={data.guestbookSectionTitle || 'Sổ Lưu Bút'} ec={ec} /></h2>
                         <Divider glyph={dividerSticker} />
                         {data.guestWishes && data.guestWishes.length > 0 ? (
                             <div className="iv-wish-list">
@@ -1132,8 +1278,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {/* ══════ FOOTER ══════ */}
                 <footer className="iv-footer rv">
                     {footerSticker && <div className="iv-footer-sticker" aria-hidden>{footerSticker}</div>}
-                    {data.thankYouMessage && <p className="iv-thank-you">{data.thankYouMessage}</p>}
-                    <p className="iv-footer-names">{brideFirst ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`}</p>
+                    {(data.thankYouMessage || ec) && <InlineRichText tagName="p" field="thankYouMessage" value={data.thankYouMessage || ''} ec={ec} className="iv-thank-you" />}
+                    <p className="iv-footer-names">{brideFirst ? `${stripHtml(brideName)} & ${stripHtml(groomName)}` : `${stripHtml(groomName)} & ${stripHtml(brideName)}`}</p>
                     <Divider glyph={dividerSticker} />
                     <p className="iv-footer-credit">Built with love · WedPlan AI</p>
                 </footer>
@@ -1287,11 +1433,14 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
     align-items: center;
     padding: 4rem 0 2.5rem;
     overflow: hidden;
     border-radius: var(--t-hero-rounded);
+    font-family: var(--t-font-body);
+    font-size: var(--t-body-size, 14px);
+    color: var(--t-on-surface);
 }
 /* When no cover photo, reduce hero height */
 .iv-hero:not(:has(.iv-hero-photo)) {
@@ -1328,8 +1477,6 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     font-family: var(--t-font-label);
     font-size: 11px;
     font-weight: 500;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
     color: var(--t-primary);
     margin-bottom: 0.75rem;
 }
@@ -1486,6 +1633,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
    ════════════════════════ */
 .iv-sec {
     padding: 3.5rem 2rem;
+    font-family: var(--t-font-body);
+    font-size: var(--t-body-size, 14px);
+    color: var(--t-on-surface);
 }
 .iv-sec-alt {
     background: var(--t-surface-dim);
@@ -1571,12 +1721,121 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     margin: 0 auto 0.75rem;
     font-style: italic;
 }
+.iv-invite-header {
+    background: var(--t-primary);
+    padding: 14px 2rem;
+    margin: -3.5rem -2rem 1.5rem;
+    text-align: center;
+}
+.iv-invite-header-text {
+    font-family: var(--t-font-label);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: white;
+    margin: 0;
+}
+.iv-parent-address {
+    font-family: var(--t-font-body);
+    font-size: 11px;
+    color: var(--t-on-surface-variant);
+    opacity: 0.85;
+    font-style: italic;
+    text-align: center;
+    margin-top: 3px;
+    line-height: 1.4;
+}
+.iv-invite-couple-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 1rem 0 0.5rem;
+}
 .iv-invite-couple {
     font-family: var(--t-font-display);
     font-size: clamp(1.3rem, 6vw, 1.6rem);
     font-weight: 600;
     color: var(--t-primary);
     letter-spacing: 0.02em;
+    margin: 0;
+}
+.iv-invite-title {
+    font-family: var(--t-font-label);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--t-accent);
+    margin: 2px 0 6px;
+    display: block;
+}
+.iv-invite-amp {
+    font-family: var(--t-font-display);
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: var(--t-accent);
+    font-style: italic;
+    margin: 4px 0;
+    line-height: 1;
+}
+.iv-invite-time {
+    font-family: var(--t-font-label);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--t-on-surface-variant);
+    margin: 0.15rem auto 0.1rem;
+}
+.iv-invite-date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--t-font-label);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t-on-surface);
+    margin: 0.1rem 0 0;
+}
+.iv-invite-date-sep { color: var(--t-accent); opacity: 0.6; }
+.iv-invite-date-num {
+    font-family: var(--t-font-label);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--t-primary);
+    line-height: 1;
+}
+.iv-invite-year {
+    font-family: var(--t-font-label);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--t-on-surface);
+    letter-spacing: 0.08em;
+    margin: 0.15rem 0;
+}
+.iv-invite-lunar {
+    font-family: var(--t-font-body);
+    font-size: 12px;
+    color: var(--t-on-surface-variant);
+    font-style: italic;
+    margin-top: 0.25rem;
+}
+.iv-invite-sep {
+    width: 40px;
+    height: 1px;
+    background: var(--t-accent);
+    margin: 0.75rem auto 0.5rem;
+    opacity: 0.5;
+    border: none;
+}
+.iv-invite-datetime-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 /* ── VENUE ── */
@@ -1821,7 +2080,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
 /* ── GIFT / QR ── */
 .iv-gift-desc {
-    font-size: 14px;
+    font-size: 1em;
     color: var(--t-on-surface-variant);
     text-align: center;
     line-height: 1.7;
@@ -1987,7 +2246,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 .iv-theme-royal .iv-sec-title {
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-size: clamp(1.25rem, 5.5vw, 1.55rem);
+    font-size: calc(var(--t-title-scale, 2.15rem) * 0.72);
 }
 .iv-theme-royal .iv-hero-pre { letter-spacing: 0.3em; }
 
@@ -1996,7 +2255,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-weight: 600;
-    font-size: clamp(1.1rem, 5vw, 1.4rem);
+    font-size: calc(var(--t-title-scale, 1.95rem) * 0.72);
 }
 .iv-theme-modern .iv-event-icon,
 .iv-theme-modern .iv-venue-icon { border-radius: 12px; }
@@ -2024,7 +2283,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 .iv-theme-indochine .iv-sec-title {
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    font-size: clamp(1.2rem, 5.5vw, 1.5rem);
+    font-size: calc(var(--t-title-scale, 2.1rem) * 0.72);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -2090,11 +2349,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     background: linear-gradient(90deg, transparent, var(--t-accent), transparent);
     margin: 8px auto 0;
 }
-.iv-theme-romantic .iv-sec-title {
-    font-family: var(--t-font-script);
-    font-weight: 400;
-    font-size: clamp(2rem, 9vw, 2.6rem);
-}
+
 .iv-theme-modern .iv-sec-title {
     border-bottom: 2px solid var(--t-outline);
     padding-bottom: 10px;
