@@ -1,6 +1,6 @@
 # WedPlan AI — ROADMAP
-Version: 1.0.0
-Updated: 2026-06-15
+Version: 2.1.0
+Updated: 2026-06-18
 
 ---
 

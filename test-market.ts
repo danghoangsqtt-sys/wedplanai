@@ -7,7 +7,12 @@ import { UserProfile } from './types';
 const mockUser: UserProfile = {
   uid: 'test-user',
   email: 'test@example.com',
-  displayName: 'Test User'
+  displayName: 'Test User',
+  photoURL: '',
+  role: 'USER',
+  isActive: true,
+  allowCustomApiKey: false,
+  enableCloudStorage: true
 };
 
 async function test() {

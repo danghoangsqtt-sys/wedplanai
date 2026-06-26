@@ -9,23 +9,45 @@ import { Loader2, AlertCircle, MailOpen, Volume2, VolumeX, Heart, Mail, X, Check
 interface RSVPModalProps {
     groomName: string;
     brideName: string;
+    inviteData?: InvitationData;
     onClose: () => void;
-    onSubmit: (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string }) => void;
+    onSubmit: (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }) => void;
 }
-const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, onClose, onSubmit }) => {
+const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData, onClose, onSubmit }) => {
     const [form, setForm] = useState({ name: '', phone: '', guests: '1', attending: 'yes', note: '' });
+    const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
+    const isMultiEvent = !!(inviteData?.rsvpMultiEvent);
+
+    // Build event list: use rsvpEventSelections if configured, else fallback to events[]
+    const eventOptions: { id: string; label: string }[] = (() => {
+        if (inviteData?.rsvpEventSelections && inviteData.rsvpEventSelections.length > 0) {
+            return inviteData.rsvpEventSelections.map(s => ({ id: s.eventId, label: s.eventTitle }));
+        }
+        if (inviteData?.events && inviteData.events.length > 0) {
+            return inviteData.events.map(ev => ({ id: ev.id || ev.title, label: ev.title }));
+        }
+        return [];
+    })();
+
+    const toggleEvent = (id: string) => {
+        setSelectedEvents(prev =>
+            prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
+        );
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.name.trim()) return;
-        const guestCount = form.attending === 'yes' ? (parseInt(form.guests, 10) || null) : null;
+        const attending = isMultiEvent ? (selectedEvents.length > 0 ? 'yes' : 'no') : form.attending;
+        const guestCount = attending === 'yes' ? (parseInt(form.guests, 10) || null) : null;
         onSubmit({
             name: form.name.trim(),
             phone: form.phone.trim() || undefined,
-            attending: form.attending,
+            attending,
             guestCount,
             message: form.note.trim() || undefined,
+            selectedEventIds: isMultiEvent ? selectedEvents : undefined,
         });
         setSubmitted(true);
     };
@@ -39,7 +61,7 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, onClose, on
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">Cảm ơn bạn! 🎉</h3>
                     <p className="text-gray-500 text-sm mb-2">
-                        {form.attending === 'yes'
+                        {(isMultiEvent ? selectedEvents.length > 0 : form.attending === 'yes')
                             ? 'Chúng tôi rất vui khi biết bạn sẽ đến tham dự!'
                             : 'Cảm ơn bạn đã phản hồi. Chúc bạn sức khoẻ!'}
                     </p>
@@ -81,21 +103,56 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, onClose, on
                             placeholder="0912 345 678" type="tel"
                         />
                     </div>
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Bạn có tham dự không?</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {[{ v: 'yes', l: '🎉 Tôi sẽ đến' }, { v: 'no', l: '😢 Tôi không thể' }].map(opt => (
-                                <button
-                                    type="button" key={opt.v}
-                                    onClick={() => setForm(f => ({ ...f, attending: opt.v }))}
-                                    className={`p-3 rounded-xl border-2 text-sm font-bold transition-all ${form.attending === opt.v ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                                >
-                                    {opt.l}
-                                </button>
-                            ))}
+
+                    {/* ── Multi-event event selection (A&Q style) ── */}
+                    {isMultiEvent && eventOptions.length > 0 ? (
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Chọn sự kiện tham dự</label>
+                            <div className="border border-gray-200 rounded-xl p-3 space-y-2">
+                                {eventOptions.map(ev => (
+                                    <label key={ev.id} className="flex items-center gap-3 cursor-pointer group">
+                                        <div
+                                            onClick={() => toggleEvent(ev.id)}
+                                            className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all cursor-pointer
+                                                ${selectedEvents.includes(ev.id)
+                                                    ? 'border-rose-500 bg-rose-500'
+                                                    : 'border-gray-300 bg-white group-hover:border-rose-300'}`}
+                                        >
+                                            {selectedEvents.includes(ev.id) && (
+                                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <span
+                                            className={`text-sm font-medium uppercase tracking-wide transition-colors ${selectedEvents.includes(ev.id) ? 'text-rose-700' : 'text-gray-600'}`}
+                                            onClick={() => toggleEvent(ev.id)}
+                                        >
+                                            {ev.label}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                    {form.attending === 'yes' && (
+                    ) : (
+                        /* Standard yes/no toggle */
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Bạn có tham dự không?</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[{ v: 'yes', l: '🎉 Tôi sẽ đến' }, { v: 'no', l: '😢 Tôi không thể' }].map(opt => (
+                                    <button
+                                        type="button" key={opt.v}
+                                        onClick={() => setForm(f => ({ ...f, attending: opt.v }))}
+                                        className={`p-3 rounded-xl border-2 text-sm font-bold transition-all ${form.attending === opt.v ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                                    >
+                                        {opt.l}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(isMultiEvent ? selectedEvents.length > 0 : form.attending === 'yes') && (
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase mb-1 block flex items-center gap-1">
                                 <Users className="w-3 h-3" /> Số người tham dự
@@ -118,7 +175,7 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, onClose, on
                         />
                     </div>
                     <button type="submit" className="w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-rose-300/50 transition-all flex items-center justify-center gap-2">
-                        <Send className="w-4 h-4" /> Gửi xác nhận
+                        <Send className="w-4 h-4" /> Xác nhận / Confirm
                     </button>
                 </form>
             </div>
@@ -126,15 +183,17 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, onClose, on
     );
 };
 
+
 // --- GUESTBOOK MODAL ---
 interface GuestbookModalProps {
     groomName: string;
     brideName: string;
+    showEmail?: boolean;
     onClose: () => void;
     onSubmit: (wish: GuestWish) => void;
 }
-const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, onClose, onSubmit }) => {
-    const [form, setForm] = useState({ name: '', message: '' });
+const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, showEmail, onClose, onSubmit }) => {
+    const [form, setForm] = useState({ name: '', email: '', message: '' });
     const [submitted, setSubmitted] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -180,13 +239,26 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, o
                     </button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Tên của bạn *</label>
-                        <input
-                            className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-amber-400 outline-none"
-                            value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                            placeholder="Nguyễn Văn A" required
-                        />
+                    {/* Name + Email row */}
+                    <div className={showEmail ? 'grid grid-cols-2 gap-3' : ''}>
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Tên của bạn *</label>
+                            <input
+                                className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-amber-400 outline-none"
+                                value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                                placeholder="Nguyễn Văn A" required
+                            />
+                        </div>
+                        {showEmail && (
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">E-mail</label>
+                                <input
+                                    className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-amber-400 outline-none"
+                                    value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                                    placeholder="email@..." type="email"
+                                />
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Lời chúc *</label>
@@ -199,7 +271,7 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, o
                         <p className="text-[10px] text-gray-400 mt-1 text-right">{form.message.length}/300</p>
                     </div>
                     <button type="submit" className="w-full bg-gradient-to-r from-amber-400 to-orange-400 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-amber-300/50 transition-all flex items-center justify-center gap-2">
-                        <Heart className="w-4 h-4 fill-current" /> Gửi lời chúc
+                        <Heart className="w-4 h-4 fill-current" /> GỬI LỜI CHÚC
                     </button>
                 </form>
             </div>
@@ -705,6 +777,7 @@ const PublicInvitationView: React.FC = () => {
                 <RSVPModal
                     groomName={data.groomName}
                     brideName={data.brideName}
+                    inviteData={data}
                     onClose={() => setShowRSVP(false)}
                     onSubmit={handleRSVPSubmit}
                 />
@@ -713,6 +786,7 @@ const PublicInvitationView: React.FC = () => {
                 <GuestbookModal
                     groomName={data.groomName}
                     brideName={data.brideName}
+                    showEmail={!!data.guestbookEmailEnabled}
                     onClose={() => setShowGuestbook(false)}
                     onSubmit={handleWishSubmit}
                 />

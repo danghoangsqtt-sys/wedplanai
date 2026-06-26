@@ -510,6 +510,9 @@ const PANEL_TITLES: Record<SectionId, string> = {
     bank: 'Mừng Cưới / QR',
     rsvp: 'RSVP',
     guestbook: 'Sổ Lưu Bút',
+    calendar: 'Lịch Ngày Cưới',
+    coupleProfile: 'Cô Dâu & Chú Rể',
+    opening: 'Lời Ngỏ',
 };
 
 interface EditorContextPanelProps {

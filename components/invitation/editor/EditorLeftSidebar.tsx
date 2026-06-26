@@ -16,15 +16,18 @@ import {
 import { InvitationData, SectionId, DEFAULT_SECTION_ORDER } from '../../../types';
 
 const SECTION_META: Record<SectionId, { label: string; icon: React.ReactNode; alwaysOn?: boolean }> = {
-    hero:      { label: 'Bìa Thiệp',        icon: <Crown size={14} />,      alwaysOn: true },
-    family:    { label: 'Cha Mẹ Hai Bên',   icon: <Users size={14} /> },
-    venue:     { label: 'Địa Điểm',          icon: <MapPin size={14} /> },
-    events:    { label: 'Chương Trình',       icon: <CalendarDays size={14} /> },
-    loveStory: { label: 'Chuyện Tình Yêu',   icon: <Heart size={14} /> },
-    gallery:   { label: 'Album Ảnh',          icon: <Camera size={14} /> },
-    bank:      { label: 'Mừng Cưới / QR',    icon: <QrCode size={14} /> },
-    rsvp:      { label: 'RSVP',               icon: <Send size={14} /> },
-    guestbook: { label: 'Sổ Lưu Bút',        icon: <BookOpen size={14} /> },
+    hero:          { label: 'Bìa Thiệp',        icon: <Crown size={14} />,        alwaysOn: true },
+    family:        { label: 'Cha Mẹ Hai Bên',   icon: <Users size={14} /> },
+    venue:         { label: 'Địa Điểm',          icon: <MapPin size={14} /> },
+    events:        { label: 'Chương Trình',       icon: <CalendarDays size={14} /> },
+    loveStory:     { label: 'Chuyện Tình Yêu',   icon: <Heart size={14} /> },
+    gallery:       { label: 'Album Ảnh',          icon: <Camera size={14} /> },
+    bank:          { label: 'Mừng Cưới / QR',    icon: <QrCode size={14} /> },
+    rsvp:          { label: 'RSVP',               icon: <Send size={14} /> },
+    guestbook:     { label: 'Sổ Lưu Bút',        icon: <BookOpen size={14} /> },
+    calendar:      { label: 'Lịch Ngày Cưới',    icon: <CalendarDays size={14} /> },
+    coupleProfile: { label: 'Cô Dâu & Chú Rể',  icon: <Users size={14} /> },
+    opening:       { label: 'Lời Ngỏ',            icon: <BookOpen size={14} /> },
 };
 
 interface SortableSectionRowProps {

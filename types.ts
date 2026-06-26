@@ -182,12 +182,28 @@ export interface GuestWish {
   createdAt: string;
 }
 
-export type SectionId = 'hero' | 'family' | 'venue' | 'events' | 'loveStory' | 'gallery' | 'bank' | 'rsvp' | 'guestbook';
+export type SectionId = 'hero' | 'family' | 'venue' | 'events' | 'loveStory' | 'gallery' | 'bank' | 'rsvp' | 'guestbook' | 'calendar' | 'coupleProfile' | 'opening';
 
 export const DEFAULT_SECTION_ORDER: SectionId[] = ['hero', 'family', 'venue', 'events', 'loveStory', 'gallery', 'bank', 'rsvp', 'guestbook'];
 
+// --- Couple Profile (Cô Dâu & Chú Rể section) ---
+export interface CoupleProfile {
+  photo?: string;          // Circular avatar URL or base64
+  fatherName?: string;     // "Con ông: Lê Anh Ngọc"
+  motherName?: string;     // "Con bà: Nguyễn Thị Nhẫn"
+  bio?: string;            // Short bio text
+  bioColor?: string;       // Bio text color (default: #4A90D9)
+  bioExpandable?: boolean; // Show "Xem thêm" expand
+}
+
+// --- Multi-event RSVP ---
+export interface RSVPEventSelection {
+  eventId: string;         // WeddingEvent.id
+  eventTitle: string;      // Display label in checkbox list
+}
+
 export interface InvitationData {
-  templateId: 'traditional' | 'romantic' | 'modern' | 'royal' | 'garden' | 'indochine';
+  templateId: 'traditional' | 'romantic' | 'modern' | 'royal' | 'garden' | 'indochine' | 'watercolor';
   groomName: string;
   brideName: string;
   groomShortName?: string;
@@ -248,8 +264,21 @@ export interface InvitationData {
   loveStory?: LoveStoryEvent[];
   rsvpEnabled?: boolean;
   rsvpDeadline?: string;
+  rsvpMultiEvent?: boolean;         // Allow guests to select which events to attend
+  rsvpEventSelections?: RSVPEventSelection[]; // Custom event labels for RSVP checkboxes
   guestbookEnabled?: boolean;
+  guestbookEmailEnabled?: boolean;  // Show email field in guestbook form
   countdownEnabled?: boolean;
+  calendarEnabled?: boolean;        // Show calendar section with wedding date highlighted
+  calendarNote?: string;            // Optional note on calendar section
+  openingEnabled?: boolean;         // Show "Lời Ngỏ" opening message section
+  openingTitle?: string;            // e.g. "Lời Ngỏ"
+  // openingMessage is declared above (line 216) — shared field
+  coupleProfileEnabled?: boolean;   // Show Cô Dâu & Chú Rể profile section
+  groomProfile?: CoupleProfile;     // Groom individual profile
+  brideProfile?: CoupleProfile;     // Bride individual profile
+  coupleProfileTitle?: string;      // Section title, default "Cô Dâu & Chú Rể"
+  fabEnabled?: boolean;             // Show floating action button stack
   petalEffect?: 'none' | 'petals' | 'hearts' | 'sparkles';
   guestWishes?: GuestWish[]; // Lời chúc từ khách (stored locally)
   // --- Sticker decoration fields ---

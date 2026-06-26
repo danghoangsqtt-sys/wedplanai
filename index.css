@@ -197,7 +197,7 @@
   }
 }
 
-/* --- Scroll Reveal Animations --- */
+/* --- Scroll Reveal Animations (legacy .reveal system) --- */
 .reveal {
   opacity: 0;
   transform: translateY(40px);
@@ -239,6 +239,74 @@
 .delay-300 { transition-delay: 300ms; }
 .delay-400 { transition-delay: 400ms; }
 .delay-500 { transition-delay: 500ms; }
+
+/* --- Scroll Reveal — rv / rv-on system (InvitationPreview.tsx) --- */
+/* "Slice" effect: elements slide in from bottom/sides when scrolling  */
+
+/* Base: slide up from bottom (default) */
+.rv {
+  opacity: 0;
+  transform: translateY(36px);
+  transition:
+    opacity  0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: opacity, transform;
+}
+.rv.rv-on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Slice from left */
+.rv.rv-left {
+  transform: translateX(-52px);
+  opacity: 0;
+}
+.rv.rv-left.rv-on {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Slice from right */
+.rv.rv-right {
+  transform: translateX(52px);
+  opacity: 0;
+}
+.rv.rv-right.rv-on {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Scale in */
+.rv.rv-scale {
+  transform: scale(0.93);
+  opacity: 0;
+}
+.rv.rv-scale.rv-on {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Stagger delays for lists/groups */
+.rv.rv-d1 { transition-delay: 70ms; }
+.rv.rv-d2 { transition-delay: 140ms; }
+.rv.rv-d3 { transition-delay: 210ms; }
+.rv.rv-d4 { transition-delay: 280ms; }
+.rv.rv-d5 { transition-delay: 350ms; }
+.rv.rv-d6 { transition-delay: 420ms; }
+
+/* --- Floating hearts/petals in invitation (iv-float) --- */
+@keyframes iv-float-up {
+  0%   { transform: translateY(0) translateX(0) rotate(0deg) scale(1);   opacity: 0; }
+  8%   { opacity: 0.7; }
+  50%  { transform: translateY(-48vh) translateX(var(--fdr, 20px)) rotate(25deg) scale(0.85); opacity: 0.5; }
+  90%  { opacity: 0.15; }
+  100% { transform: translateY(-100vh) translateX(var(--fdr, 20px)) rotate(50deg) scale(0.6); opacity: 0; }
+}
+
+.iv-float {
+  animation: iv-float-up var(--fd, 6s) var(--fdl, 0s) ease-in infinite;
+}
 
 /* --- Vinyl Player Animations --- */
 @keyframes spin-slow {

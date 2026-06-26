@@ -552,6 +552,197 @@ const Gallery3DCarousel: React.FC<{ images: string[]; positions?: string[]; conf
     );
 };
 
+// ─── COUPLE PROFILE CARD ───
+interface CoupleProfileCardProps {
+    label: string;     // 'Chú Rể' | 'Cô Dâu'
+    name: string;
+    profile: {
+        photo?: string;
+        fatherName?: string;
+        motherName?: string;
+        bio?: string;
+        bioColor?: string;
+        bioExpandable?: boolean;
+    };
+}
+const CoupleProfileCard: React.FC<CoupleProfileCardProps> = ({ label, name, profile }) => {
+    const [expanded, setExpanded] = useState(false);
+    const bioColor = profile.bioColor || '#4A90D9';
+    const BIO_LIMIT = 120;
+    const bioText = profile.bio || '';
+    const showToggle = profile.bioExpandable && bioText.length > BIO_LIMIT;
+    const displayedBio = showToggle && !expanded ? bioText.slice(0, BIO_LIMIT) + '...' : bioText;
+    return (
+        <div className="rv" style={{ textAlign: 'center', padding: '0 0.5rem' }}>
+            {/* Circular photo */}
+            {profile.photo && (
+                <div style={{
+                    width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden',
+                    margin: '0 auto 1rem', border: '3px solid #eee',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                }}>
+                    <img src={profile.photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+            )}
+            {/* Role label */}
+            <p style={{ fontSize: '0.7rem', color: '#aaa', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                ✦ {label} ✦
+            </p>
+            {/* Name in display font */}
+            <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--t-font-display)', color: 'var(--t-on-surface)', marginBottom: '0.75rem', fontWeight: 400 }}>{name}</h3>
+            {/* Parents */}
+            {profile.fatherName && (
+                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: '0.2rem' }}>
+                    Con ông: <strong>{profile.fatherName}</strong>
+                </p>
+            )}
+            {profile.motherName && (
+                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: '0.75rem' }}>
+                    Con bà: <strong>{profile.motherName}</strong>
+                </p>
+            )}
+            {/* Bio */}
+            {bioText && (
+                <div>
+                    <p style={{ fontSize: '0.88rem', color: bioColor, lineHeight: 1.8, textAlign: 'center', margin: '0 auto', maxWidth: '340px' }}>
+                        {displayedBio}
+                    </p>
+                    {showToggle && (
+                        <button
+                            onClick={() => setExpanded(e => !e)}
+                            style={{ color: '#888', fontSize: '0.8rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.5rem', textDecoration: 'underline' }}
+                        >
+                            {expanded ? 'Thu gọn' : 'Xem thêm'}
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── ADD TO CALENDAR BUTTON ───
+interface AddToCalendarProps {
+    title: string;
+    date?: string;          // ISO or dd/MM/yyyy
+    time?: string;          // e.g. "18:00"
+    location?: string;
+}
+const AddToCalendarButton: React.FC<AddToCalendarProps> = ({ title, date, time, location }) => {
+    const [open, setOpen] = useState(false);
+
+    const buildGoogleUrl = () => {
+        if (!date) return '#';
+        // parse date: prefer ISO (YYYY-MM-DD), else try dd/MM/yyyy
+        let d: Date;
+        if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
+            d = new Date(date);
+        } else {
+            const parts = date.replace(/\//g, '-').split('-');
+            if (parts.length === 3 && parts[0].length <= 2) {
+                d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
+            } else {
+                d = new Date(date);
+            }
+        }
+        if (isNaN(d.getTime())) return '#';
+        const [h = '0', m = '0'] = (time || '0:00').split(':');
+        d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+        const endD = new Date(d.getTime() + 2 * 60 * 60 * 1000); // +2h default
+        const fmt = (dt: Date) => dt.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const params = new URLSearchParams({
+            action: 'TEMPLATE',
+            text: title,
+            dates: `${fmt(d)}/${fmt(endD)}`,
+            location: location || '',
+        });
+        return `https://calendar.google.com/calendar/render?${params.toString()}`;
+    };
+
+    const buildICS = () => {
+        if (!date) return;
+        let d: Date;
+        if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
+            d = new Date(date);
+        } else {
+            const parts = date.replace(/\//g, '-').split('-');
+            if (parts.length === 3 && parts[0].length <= 2) {
+                d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
+            } else {
+                d = new Date(date);
+            }
+        }
+        if (isNaN(d.getTime())) return;
+        const [h = '0', m = '0'] = (time || '0:00').split(':');
+        d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+        const endD = new Date(d.getTime() + 2 * 60 * 60 * 1000);
+        const fmt = (dt: Date) => dt.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const ics = [
+            'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//WedPlan AI//VI',
+            'BEGIN:VEVENT',
+            `UID:${Date.now()}@wedplan.ai`,
+            `SUMMARY:${title}`,
+            `DTSTART:${fmt(d)}`,
+            `DTEND:${fmt(endD)}`,
+            location ? `LOCATION:${location}` : '',
+            'END:VEVENT', 'END:VCALENDAR',
+        ].filter(Boolean).join('\r\n');
+        const blob = new Blob([ics], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${title.replace(/\s+/g, '_')}.ics`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setOpen(false);
+    };
+
+    if (!date) return null;
+
+    return (
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                title="Thêm vào lịch"
+                style={{
+                    marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px',
+                    fontSize: '0.72rem', color: 'var(--t-primary)', fontWeight: 600,
+                    background: 'rgba(var(--t-primary-rgb,0,0,0),0.06)',
+                    border: '1px solid rgba(var(--t-primary-rgb,0,0,0),0.15)',
+                    borderRadius: '20px', padding: '4px 10px', cursor: 'pointer',
+                    letterSpacing: '0.05em', textTransform: 'uppercase',
+                    transition: 'background 0.2s',
+                }}
+            >
+                📅 Thêm vào lịch
+            </button>
+            {open && (
+                <div style={{
+                    position: 'absolute', top: '100%', left: 0, marginTop: '4px',
+                    background: '#fff', border: '1px solid #eee', borderRadius: '12px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '180px', overflow: 'hidden',
+                }}>
+                    <a
+                        href={buildGoogleUrl()} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', fontSize: '0.82rem', color: '#333', textDecoration: 'none' }}
+                        onClick={() => setOpen(false)}
+                    >
+                        🗓️ Google Calendar
+                    </a>
+                    <div style={{ borderTop: '1px solid #f0f0f0' }} />
+                    <button
+                        type="button"
+                        onClick={buildICS}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', fontSize: '0.82rem', color: '#333', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                    >
+                        📥 Tải file .ics
+                    </button>
+                </div>
+            )}
+            {open && <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setOpen(false)} />}
+        </div>
+    );
+};
+
 // ════════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
@@ -1103,6 +1294,14 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                     <div style={{ width: '60%', paddingLeft: '20px', paddingBottom: i < data.events!.length - 1 ? '30px' : '0' }}>
                                         <InlineRichText tagName="div" field={`events[${i}].title`} placeholder={'Tên sự kiện'} value={ev.title} ec={ec} style={{ color: 'var(--t-primary)', fontSize: '1.05rem', fontWeight: 500 }} />
                                         {ev.location && <InlineRichText tagName="div" field={`events[${i}].location`} placeholder={'Địa điểm'} value={ev.location} ec={ec} style={{ fontSize: '0.85rem', color: 'var(--t-primary)', opacity: 0.7, marginTop: '4px' }} />}
+                                        {!ec && (ev.date || data.date) && (
+                                            <AddToCalendarButton
+                                                title={ev.title}
+                                                date={ev.date || data.date}
+                                                time={ev.time}
+                                                location={ev.location}
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -1275,6 +1474,81 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     </section>
                 )}
 
+                {/* ══════ CALENDAR ══════ */}
+                {data.calendarEnabled && data.date && (() => {
+                    const wDate = new Date(data.date);
+                    const wDay = wDate.getDate();
+                    const wMonth = wDate.getMonth();
+                    const wYear = wDate.getFullYear();
+                    const firstDay = new Date(wYear, wMonth, 1).getDay(); // 0=Sun
+                    // Vietnamese calendar starts Monday: shift so Mon=0
+                    const startOffset = (firstDay === 0 ? 6 : firstDay - 1);
+                    const daysInMonth = new Date(wYear, wMonth + 1, 0).getDate();
+                    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+                    const cells = Array.from({ length: totalCells }, (_, i) => {
+                        const dayNum = i - startOffset + 1;
+                        return dayNum >= 1 && dayNum <= daysInMonth ? dayNum : null;
+                    });
+                    const dayLabels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+                    const monthName = `THÁNG ${wMonth + 1} / ${wYear}`;
+                    return (
+                        <section className="iv-sec rv" style={{ background: '#F7F7F7', padding: '2.5rem 1.5rem' }}>
+                            <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.2em', color: '#555', marginBottom: '1.5rem', textTransform: 'uppercase' }}>{monthName}</p>
+                            <div style={{ maxWidth: '360px', margin: '0 auto' }}>
+                                {/* Day headers */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '0.5rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>
+                                    {dayLabels.map(d => (
+                                        <div key={d} style={{ textAlign: 'center', fontSize: '0.7rem', color: '#888', fontWeight: 500, padding: '0 2px' }}>{d}</div>
+                                    ))}
+                                </div>
+                                {/* Day cells */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+                                    {cells.map((d, i) => {
+                                        const isWedding = d === wDay;
+                                        return (
+                                            <div key={i} style={{
+                                                textAlign: 'center', padding: '6px 2px', fontSize: '0.85rem',
+                                                color: isWedding ? '#fff' : d ? '#333' : 'transparent',
+                                                background: isWedding ? '#333' : 'transparent',
+                                                borderRadius: isWedding ? '50%' : undefined,
+                                                width: isWedding ? '32px' : undefined,
+                                                height: isWedding ? '32px' : undefined,
+                                                lineHeight: isWedding ? '32px' : undefined,
+                                                margin: isWedding ? 'auto' : undefined,
+                                                fontWeight: isWedding ? 700 : 400,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            }}>{d || ''}</div>
+                                        );
+                                    })}
+                                </div>
+                                {/* Divider bottom */}
+                                <div style={{ borderBottom: '1px solid #ddd', marginTop: '0.75rem' }} />
+                            </div>
+                            {data.calendarNote && (
+                                <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#888', marginTop: '1rem' }}>{data.calendarNote}</p>
+                            )}
+                        </section>
+                    );
+                })()}
+
+                {/* ══════ CÔ DÂU & CHÚ RỂ PROFILES ══════ */}
+                {data.coupleProfileEnabled && (data.groomProfile || data.brideProfile) && (() => {
+                    const profiles: Array<{ label: string; name: string; profile: NonNullable<typeof data.groomProfile> }> = [];
+                    if (data.groomProfile) profiles.push({ label: 'Chú Rể', name: data.groomName || 'Chú Rể', profile: data.groomProfile });
+                    if (data.brideProfile) profiles.push({ label: 'Cô Dâu', name: data.brideName || 'Cô Dâu', profile: data.brideProfile });
+                    return (
+                        <section className="iv-sec rv" {...secProps('coupleProfile')}>
+                            <h2 className="iv-sec-title">{data.coupleProfileTitle || 'Cô Dâu & Chú Rể'}</h2>
+                            <Divider glyph={dividerSticker} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '400px', margin: '0 auto' }}>
+                                {profiles.map(({ label, name, profile }) => (
+                                    <CoupleProfileCard key={label} label={label} name={name} profile={profile} />
+                                ))}
+                            </div>
+                        </section>
+                    );
+                })()}
+
                 {/* ══════ FOOTER ══════ */}
                 <footer className="iv-footer rv">
                     {footerSticker && <div className="iv-footer-sticker" aria-hidden>{footerSticker}</div>}
@@ -1283,6 +1557,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     <Divider glyph={dividerSticker} />
                     <p className="iv-footer-credit">Built with love · WedPlan AI</p>
                 </footer>
+
             </div>
 
             {/* ══════════════════════════════════════════════════

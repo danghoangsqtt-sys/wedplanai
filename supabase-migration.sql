@@ -157,3 +157,27 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ============================================================
+-- 7. INVITATION_RESPONSES (RSVP & Guestbook cloud collection)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.invitation_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  uid UUID NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('rsvp','wish')),
+  name TEXT NOT NULL,
+  phone TEXT,
+  attending TEXT,
+  guest_count INT,
+  message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.invitation_responses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "anon insert responses" ON public.invitation_responses
+  FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "public read responses" ON public.invitation_responses
+  FOR SELECT TO anon USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_inv_resp_uid ON public.invitation_responses (uid, kind, created_at DESC);
