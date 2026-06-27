@@ -221,6 +221,9 @@ export const useStore = create<AppState>()(
       },
 
       logout: async () => {
+        // Clear any pending cloud sync and shared plan polling before state reset
+        clearTimeout(syncTimeout);
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
         // Simply reset to default state — no cloud operations
         set({
           user: DEFAULT_GUEST_USER,
@@ -411,6 +414,14 @@ export const useStore = create<AppState>()(
 
       updateInvitation: (data) => {
         set((state) => ({ invitation: { ...state.invitation, ...data } }));
+        // Mirror invitation to localStorage so PublicInvitationView can load it
+        // even when cloud save fails (no-auth local mode).
+        try {
+          const state = get();
+          const uid = getEffectiveUidFromState(state) || OWNER_UID;
+          const merged = { ...state.invitation, ...data };
+          localStorage.setItem(`wedplan_pub_inv_${uid}`, JSON.stringify(merged));
+        } catch { /* storage full — ignore */ }
         triggerCloudSync(get);
       },
 
@@ -614,6 +625,14 @@ export const useStore = create<AppState>()(
           // Mark cloud load as attempted — unblocks triggerCloudSync for future mutations.
           // Always set this, even on failure, so user changes after login still sync.
           set({ isSyncing: false, isCloudLoaded: true });
+          // Seed localStorage public invitation mirror so PublicInvitationView
+          // can load the invitation even when cloud save is unavailable.
+          try {
+            const inv = get().invitation;
+            if (inv && inv.groomName && inv.groomName.trim() !== '') {
+              localStorage.setItem(`wedplan_pub_inv_${OWNER_UID}`, JSON.stringify(inv));
+            }
+          } catch { /* storage full */ }
         }
       },
     }),

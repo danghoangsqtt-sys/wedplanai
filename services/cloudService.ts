@@ -48,13 +48,9 @@ export const saveUserDataToCloud = async (
   cloudLog.info('save start', { uid });
   cloudLog.time('cloud-save');
   try {
-    // Ensure profile row exists (FK: user_data.id → profiles.id)
-    await supabase
-      .from(TABLES.PROFILES)
-      .upsert(
-        { id: uid, last_seen: new Date().toISOString() },
-        { onConflict: 'id', ignoreDuplicates: true }
-      );
+    // NOTE: Skip profiles upsert — it has FK → auth.users(id) which fails
+    // in no-auth single-user mode (OWNER_UID not in auth.users).
+    // profiles is only needed for multi-user auth features.
 
     const payload = {
       id: uid,
@@ -163,7 +159,7 @@ const mapResponseRow = (row: any): InvitationResponse => ({
 
 export const submitRSVP = async (
   uid: string,
-  payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string }
+  payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }
 ): Promise<boolean> => {
   if (!isValidUid(uid) || !payload.name?.trim()) return false;
   try {
@@ -175,6 +171,7 @@ export const submitRSVP = async (
       attending: payload.attending ?? null,
       guest_count: payload.guestCount ?? null,
       message: payload.message ?? null,
+      selected_event_ids: payload.selectedEventIds ?? null,
     });
     if (error) throw error;
     return true;

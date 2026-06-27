@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { loadPublicInvitation, submitRSVP, submitWish, loadInvitationResponses } from '../../services/cloudService';
 import { InvitationData, GuestWish } from '../../types';
 import InvitationPreview from './InvitationPreview';
@@ -308,6 +308,32 @@ const PublicInvitationView: React.FC = () => {
     const [cloudWishes, setCloudWishes] = useState<GuestWish[]>([]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
+    // Stable random positions for petals/sparkles — prevents re-randomizing on each render
+    const petalData = useMemo(() => {
+        const emojis = ['🌸', '🩷', '💮', '✿', '❀', '🪷'];
+        return Array.from({ length: 20 }, (_, i) => ({
+            emoji: emojis[i % emojis.length],
+            left: Math.random() * 100,
+            dur: 6 + Math.random() * 8,
+            delay: Math.random() * 10,
+            drift: -40 + Math.random() * 80,
+            spin: 360 + Math.random() * 720,
+            size: 10 + Math.random() * 14,
+        }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const sparkleData = useMemo(() =>
+        Array.from({ length: 15 }, () => ({
+            left: 5 + Math.random() * 90,
+            top: 5 + Math.random() * 90,
+            fontSize: 6 + Math.random() * 10,
+            dur: 2 + Math.random() * 4,
+            delay: Math.random() * 5,
+        }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    , []);
+
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const uid = params.get('uid');
@@ -320,7 +346,19 @@ const PublicInvitationView: React.FC = () => {
 
         const fetchData = async () => {
             try {
-                const inviteData = await loadPublicInvitation(uid);
+                // 1. Try cloud first
+                let inviteData = await loadPublicInvitation(uid);
+
+                // 2. Fallback: localStorage mirror (set by updateInvitation in no-auth mode)
+                if (!inviteData) {
+                    try {
+                        const cached = localStorage.getItem(`wedplan_pub_inv_${uid}`);
+                        if (cached) {
+                            inviteData = JSON.parse(cached);
+                        }
+                    } catch { /* ignore */ }
+                }
+
                 if (inviteData) {
                     setData(inviteData);
                     try {
@@ -379,10 +417,10 @@ const PublicInvitationView: React.FC = () => {
         submitWish(uid, { name: wish.name, message: wish.message });
     };
 
-    const handleRSVPSubmit = (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string }) => {
+    const handleRSVPSubmit = (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }) => {
         const params = new URLSearchParams(window.location.search);
         const uid = params.get('uid') || 'unknown';
-        // Persist to cloud so the couple receives the RSVP (was previously discarded)
+        // Persist to cloud so the couple receives the RSVP (including multi-event selections)
         submitRSVP(uid, payload);
     };
 
@@ -513,47 +551,37 @@ const PublicInvitationView: React.FC = () => {
 
                 {/* Falling petals */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-                    {Array.from({ length: 20 }).map((_, i) => {
-                        const emojis = ['🌸', '🩷', '💮', '✿', '❀', '🪷'];
-                        const emoji = emojis[i % emojis.length];
-                        const left = Math.random() * 100;
-                        const dur = 6 + Math.random() * 8;
-                        const delay = Math.random() * 10;
-                        const drift = -40 + Math.random() * 80;
-                        const spin = 360 + Math.random() * 720;
-                        const size = 10 + Math.random() * 14;
-                        return (
+                    {petalData.map((p, i) => (
                             <span
                                 key={i}
                                 className="petal select-none"
                                 style={{
-                                    left: `${left}%`,
-                                    fontSize: `${size}px`,
-                                    '--dur': `${dur}s`,
-                                    '--delay': `${delay}s`,
-                                    '--drift': `${drift}px`,
-                                    '--spin': `${spin}deg`,
+                                    left: `${p.left}%`,
+                                    fontSize: `${p.size}px`,
+                                    '--dur': `${p.dur}s`,
+                                    '--delay': `${p.delay}s`,
+                                    '--drift': `${p.drift}px`,
+                                    '--spin': `${p.spin}deg`,
                                     opacity: 0.7,
                                 } as React.CSSProperties}
                             >
-                                {emoji}
+                                {p.emoji}
                             </span>
-                        );
-                    })}
+                        ))}
                 </div>
 
                 {/* Sparkles */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-                    {Array.from({ length: 15 }).map((_, i) => (
+                    {sparkleData.map((s, i) => (
                         <span
                             key={`s${i}`}
                             className="sparkle text-white select-none"
                             style={{
-                                left: `${5 + Math.random() * 90}%`,
-                                top: `${5 + Math.random() * 90}%`,
-                                fontSize: `${6 + Math.random() * 10}px`,
-                                '--dur': `${2 + Math.random() * 4}s`,
-                                '--delay': `${Math.random() * 5}s`,
+                                left: `${s.left}%`,
+                                top: `${s.top}%`,
+                                fontSize: `${s.fontSize}px`,
+                                '--dur': `${s.dur}s`,
+                                '--delay': `${s.delay}s`,
                             } as React.CSSProperties}
                         >
                             ✦
