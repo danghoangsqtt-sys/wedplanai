@@ -508,117 +508,153 @@ const PublicInvitationView: React.FC = () => {
         return (
             <div className="fixed inset-0 z-50 overflow-hidden">
                 <style>{`
-                    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+                    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+
+                    /* ── Envelope screen root ── */
+                    .env-root {
+                        position: fixed; inset: 0;
+                        background: linear-gradient(150deg,
+                            #1a0a0e 0%,
+                            #2d1018 25%,
+                            #3d1a22 45%,
+                            #2a1016 65%,
+                            #1c0d12 100%);
+                    }
+
+                    /* Subtle grain texture */
+                    .env-root::before {
+                        content: '';
+                        position: absolute; inset: 0;
+                        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+                        opacity: 0.35;
+                        pointer-events: none;
+                    }
+
+                    /* Warm light orbs */
+                    .env-orb {
+                        position: absolute; border-radius: 50%;
+                        filter: blur(80px); pointer-events: none;
+                    }
 
                     /* Falling petals */
                     @keyframes petalDrift {
-                        0% { transform: translateY(-10vh) translateX(0) rotate(0deg) scale(0.8); opacity: 0; }
-                        10% { opacity: 1; }
-                        90% { opacity: 0.8; }
+                        0%   { transform: translateY(-10vh) translateX(0) rotate(0deg) scale(0.8); opacity: 0; }
+                        10%  { opacity: 0.6; }
+                        90%  { opacity: 0.4; }
                         100% { transform: translateY(110vh) translateX(var(--drift, 60px)) rotate(var(--spin, 720deg)) scale(0.4); opacity: 0; }
                     }
-                    .petal { 
-                        position: absolute; top: -5%; pointer-events: none; 
+                    .petal {
+                        position: absolute; top: -5%; pointer-events: none;
                         animation: petalDrift var(--dur, 8s) var(--delay, 0s) linear infinite;
                     }
 
                     /* Sparkle twinkle */
                     @keyframes twinkle {
-                        0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
-                        50% { opacity: 1; transform: scale(1) rotate(180deg); }
+                        0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+                        50%       { opacity: 0.7; transform: scale(1) rotate(180deg); }
                     }
                     .sparkle {
-                        position: absolute; pointer-events: none;
+                        position: absolute; pointer-events: none; color: #c9a96e;
                         animation: twinkle var(--dur, 3s) var(--delay, 0s) ease-in-out infinite;
                     }
 
-                    /* Envelope 3D flip */
-                    @keyframes envelopeOpen {
-                        0% { transform: perspective(800px) rotateX(0deg) scale(1); }
-                        40% { transform: perspective(800px) rotateX(-25deg) scale(1.05); }
-                        70% { transform: perspective(800px) rotateX(-15deg) scale(1.02) translateY(-20px); }
-                        100% { transform: perspective(800px) rotateX(0deg) scale(0.8) translateY(-60px); opacity: 0; }
+                    /* Envelope float */
+                    @keyframes gentleFloat {
+                        0%, 100% { transform: translateY(0px); }
+                        50%       { transform: translateY(-10px); }
                     }
-                    .envelope-opening {
-                        animation: envelopeOpen 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                    }
-
-                    /* Envelope flap animation */
-                    @keyframes flapOpen {
-                        0% { transform: rotateX(0deg); }
-                        100% { transform: rotateX(-180deg); }
-                    }
-                    .flap-opening {
-                        animation: flapOpen 0.6s ease-in-out forwards;
-                        transform-origin: top center;
-                    }
-
-                    /* Content reveal */
-                    @keyframes contentReveal {
-                        0% { opacity: 0; transform: scale(0.9) translateY(30px); filter: blur(10px); }
-                        100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
-                    }
-                    .content-reveal { animation: contentReveal 0.8s 0.6s ease-out forwards; opacity: 0; }
+                    .gentle-float { animation: gentleFloat 4s ease-in-out infinite; }
 
                     /* Pulse ring */
                     @keyframes pulseRing {
-                        0% { transform: scale(1); opacity: 0.4; }
-                        100% { transform: scale(2.5); opacity: 0; }
+                        0%   { transform: scale(1); opacity: 0.3; }
+                        100% { transform: scale(2.8); opacity: 0; }
                     }
-                    .pulse-ring { animation: pulseRing 2s ease-out infinite; }
+                    .pulse-ring { animation: pulseRing 2.5s ease-out infinite; }
 
-                    /* Gentle float */
-                    @keyframes gentleFloat {
-                        0%, 100% { transform: translateY(0); }
-                        50% { transform: translateY(-8px); }
-                    }
-                    .gentle-float { animation: gentleFloat 3s ease-in-out infinite; }
-
-                    /* Golden glow */
+                    /* Envelope golden glow */
                     @keyframes goldenGlow {
-                        0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.2), 0 0 40px rgba(251, 191, 36, 0.1); }
-                        50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.4), 0 0 60px rgba(251, 191, 36, 0.2); }
+                        0%, 100% { box-shadow: 0 0 30px rgba(201, 169, 110, 0.15), 0 8px 40px rgba(0,0,0,0.5); }
+                        50%       { box-shadow: 0 0 50px rgba(201, 169, 110, 0.30), 0 8px 60px rgba(0,0,0,0.5); }
                     }
-                    .golden-glow { animation: goldenGlow 2s ease-in-out infinite; }
+                    .golden-glow { animation: goldenGlow 3s ease-in-out infinite; }
+
+                    /* Content entry */
+                    @keyframes luxeReveal {
+                        0%   { opacity: 0; transform: translateY(16px); }
+                        100% { opacity: 1; transform: translateY(0); }
+                    }
+                    .luxe-in-1 { animation: luxeReveal 0.9s 0.1s ease-out both; }
+                    .luxe-in-2 { animation: luxeReveal 0.9s 0.3s ease-out both; }
+                    .luxe-in-3 { animation: luxeReveal 0.9s 0.5s ease-out both; }
+                    .luxe-in-4 { animation: luxeReveal 0.9s 0.7s ease-out both; }
+                    .luxe-in-5 { animation: luxeReveal 0.9s 0.9s ease-out both; }
+
+                    /* Shimmer on CTA */
+                    @keyframes shimmerMove {
+                        0%   { transform: translateX(-200%) skewX(-15deg); }
+                        100% { transform: translateX(400%) skewX(-15deg); }
+                    }
+                    .btn-shimmer::after {
+                        content: ''; position: absolute; top: 0; left: 0;
+                        width: 50%; height: 100%;
+                        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+                        animation: shimmerMove 3s 1.5s ease-in-out infinite;
+                    }
+
+                    /* Gold divider line */
+                    .gold-line {
+                        height: 1px;
+                        background: linear-gradient(90deg, transparent, rgba(201,169,110,0.5), transparent);
+                    }
+
+                    /* Font overrides */
+                    .font-envelope-name {
+                        font-family: 'Great Vibes', cursive;
+                        letter-spacing: 0.02em;
+                    }
+                    .font-envelope-label {
+                        font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+                        letter-spacing: 0.25em;
+                    }
                 `}</style>
 
-                {/* Gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-rose-600 via-pink-600 to-rose-800" />
+                {/* Dark luxury background */}
+                <div className="env-root" />
 
-                {/* Animated background orbs */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-                    <div className="absolute w-[400px] h-[400px] rounded-full bg-white/8 blur-3xl animate-pulse" style={{ top: '-10%', left: '-10%', animationDuration: '4s' }} />
-                    <div className="absolute w-[300px] h-[300px] rounded-full bg-pink-300/10 blur-3xl animate-pulse" style={{ top: '50%', right: '-5%', animationDuration: '5s', animationDelay: '1s' }} />
-                    <div className="absolute w-[250px] h-[250px] rounded-full bg-rose-300/10 blur-3xl animate-pulse" style={{ bottom: '-5%', left: '20%', animationDuration: '6s', animationDelay: '2s' }} />
-                </div>
+                {/* Warm amber orbs */}
+                <div className="env-orb" style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(120,40,30,0.35) 0%, transparent 70%)', top: '-15%', left: '-10%', animation: 'pulse 6s ease-in-out infinite' }} aria-hidden />
+                <div className="env-orb" style={{ width: 350, height: 350, background: 'radial-gradient(circle, rgba(160,80,20,0.2) 0%, transparent 70%)', bottom: '5%', right: '-5%', animation: 'pulse 7s ease-in-out 2s infinite' }} aria-hidden />
+                <div className="env-orb" style={{ width: 250, height: 250, background: 'radial-gradient(circle, rgba(80,20,15,0.4) 0%, transparent 70%)', top: '40%', right: '15%', animation: 'pulse 5s ease-in-out 1s infinite' }} aria-hidden />
 
-                {/* Falling petals */}
+                {/* Falling petals — muted */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
                     {petalData.map((p, i) => (
-                            <span
-                                key={i}
-                                className="petal select-none"
-                                style={{
-                                    left: `${p.left}%`,
-                                    fontSize: `${p.size}px`,
-                                    '--dur': `${p.dur}s`,
-                                    '--delay': `${p.delay}s`,
-                                    '--drift': `${p.drift}px`,
-                                    '--spin': `${p.spin}deg`,
-                                    opacity: 0.7,
-                                } as React.CSSProperties}
-                            >
-                                {p.emoji}
-                            </span>
-                        ))}
+                        <span
+                            key={i}
+                            className="petal select-none"
+                            style={{
+                                left: `${p.left}%`,
+                                fontSize: `${p.size}px`,
+                                '--dur': `${p.dur}s`,
+                                '--delay': `${p.delay}s`,
+                                '--drift': `${p.drift}px`,
+                                '--spin': `${p.spin}deg`,
+                                opacity: 0.3,
+                                filter: 'brightness(0.7) sepia(0.4)',
+                            } as React.CSSProperties}
+                        >
+                            {p.emoji}
+                        </span>
+                    ))}
                 </div>
 
-                {/* Sparkles */}
+                {/* Gold sparkles */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
                     {sparkleData.map((s, i) => (
                         <span
                             key={`s${i}`}
-                            className="sparkle text-white select-none"
+                            className="sparkle select-none"
                             style={{
                                 left: `${s.left}%`,
                                 top: `${s.top}%`,
@@ -632,114 +668,140 @@ const PublicInvitationView: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Floating hearts */}
-                <FloatingHearts />
-
                 {/* Decorative corners */}
-                <div className="absolute top-6 left-6 text-white/15 text-4xl pointer-events-none select-none" style={{ fontFamily: 'serif' }}>❦</div>
-                <div className="absolute top-6 right-6 text-white/15 text-4xl pointer-events-none select-none" style={{ fontFamily: 'serif', transform: 'scaleX(-1)' }}>❦</div>
-                <div className="absolute bottom-20 left-6 text-white/10 text-2xl pointer-events-none select-none">✧</div>
-                <div className="absolute bottom-20 right-6 text-white/10 text-2xl pointer-events-none select-none">✧</div>
+                <div className="absolute top-5 left-5 text-[#c9a96e]/20 text-3xl pointer-events-none select-none" style={{ fontFamily: 'serif' }}>❦</div>
+                <div className="absolute top-5 right-5 text-[#c9a96e]/20 text-3xl pointer-events-none select-none" style={{ fontFamily: 'serif', transform: 'scaleX(-1)' }}>❦</div>
+                <div className="absolute bottom-16 left-5 text-[#c9a96e]/15 text-xl pointer-events-none select-none">✧</div>
+                <div className="absolute bottom-16 right-5 text-[#c9a96e]/15 text-xl pointer-events-none select-none">✧</div>
 
-                {/* Main envelope card */}
-                <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
-                    <div className={`flex flex-col items-center text-center max-w-xs w-full ${isOpened ? 'envelope-opening' : 'animate-envelope-pop'}`}>
+                {/* Main content */}
+                <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-10">
+                    <div className="flex flex-col items-center text-center max-w-xs w-full">
 
-                        {/* Envelope with 3D effect */}
-                        <div className="mb-8 relative gentle-float">
-                            {/* Pulse rings behind */}
+                        {/* ── Envelope icon ── */}
+                        <div className="mb-8 relative gentle-float luxe-in-1">
+                            {/* Pulse rings */}
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-24 h-24 rounded-full border-2 border-white/20 pulse-ring" />
+                                <div className="w-24 h-24 rounded-full border border-[#c9a96e]/20 pulse-ring" />
                             </div>
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-24 h-24 rounded-full border-2 border-white/15 pulse-ring" style={{ animationDelay: '0.7s' }} />
+                                <div className="w-24 h-24 rounded-full border border-[#c9a96e]/15 pulse-ring" style={{ animationDelay: '0.8s' }} />
                             </div>
 
                             {/* Envelope body */}
-                            <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-white/25 to-white/10 backdrop-blur-md flex items-center justify-center border-2 border-white/30 shadow-2xl golden-glow relative overflow-hidden">
-                                {/* Envelope flap (triangle) */}
-                                <div className="absolute top-0 left-0 right-0 h-[45%] overflow-hidden">
+                            <div
+                                className="w-24 h-24 rounded-2xl flex items-center justify-center relative overflow-hidden golden-glow"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(201,169,110,0.12) 0%, rgba(201,169,110,0.06) 100%)',
+                                    border: '1.5px solid rgba(201,169,110,0.25)',
+                                    backdropFilter: 'blur(12px)',
+                                }}
+                            >
+                                {/* Envelope flap triangle */}
+                                <div className="absolute top-0 left-0 right-0 h-[40%] overflow-hidden pointer-events-none">
                                     <div className="w-0 h-0 mx-auto" style={{
-                                        borderLeft: '56px solid transparent',
-                                        borderRight: '56px solid transparent',
-                                        borderTop: '40px solid rgba(255,255,255,0.15)',
+                                        borderLeft: '48px solid transparent',
+                                        borderRight: '48px solid transparent',
+                                        borderTop: '34px solid rgba(201,169,110,0.12)',
                                     }} />
                                 </div>
-                                <Mail className="w-12 h-12 text-white drop-shadow-lg relative z-10" />
+                                <Mail className="w-10 h-10 relative z-10" style={{ color: '#c9a96e', filter: 'drop-shadow(0 2px 8px rgba(201,169,110,0.4))' }} />
                             </div>
 
-                            {/* Floating hearts around envelope */}
-                            <Heart className="w-6 h-6 text-white fill-current absolute -top-2 -right-3 animate-bounce drop-shadow-lg" style={{ animationDuration: '2s' }} />
-                            <Heart className="w-4 h-4 text-pink-200 fill-current absolute bottom-0 -left-3 animate-bounce drop-shadow-md" style={{ animationDelay: '0.5s', animationDuration: '2.5s' }} />
-                            <span className="absolute -top-1 -left-2 text-lg animate-pulse select-none">✨</span>
-                            <span className="absolute -bottom-2 -right-2 text-sm animate-pulse select-none" style={{ animationDelay: '1s' }}>✨</span>
+                            {/* Small floating hearts */}
+                            <Heart className="absolute -top-2 -right-2 w-5 h-5 fill-current" style={{ color: '#c9a96e', opacity: 0.7, animation: 'pulse 2s ease-in-out infinite' }} />
+                            <Heart className="absolute bottom-1 -left-3 w-3.5 h-3.5 fill-current" style={{ color: '#c9a96e', opacity: 0.45, animation: 'pulse 2.8s ease-in-out 0.6s infinite' }} />
                         </div>
 
-                        {/* Tagline */}
-                        <p className="text-[10px] uppercase tracking-[0.5em] text-white/50 font-light mb-5 select-none">
-                            ✦ &nbsp; Thiệp Cưới Trân Trọng &nbsp; ✦
+                        {/* ── Tagline ── */}
+                        <p className="font-envelope-label text-[9px] text-[#c9a96e]/50 mb-6 select-none luxe-in-2">
+                            ✦ &nbsp; THIỆP CƯỚI TRÂN TRỌNG &nbsp; ✦
                         </p>
 
-                        {/* Names */}
+                        {/* ── Names ── */}
                         {(data.groomName || data.brideName) ? (
-                            <div className="mb-4">
-                                <p className="text-white/40 text-[10px] uppercase tracking-[0.35em] mb-3">Trân trọng kính mời</p>
-                                <div className="font-handwriting text-5xl sm:text-6xl text-white leading-tight drop-shadow-lg">
+                            <div className="mb-5 luxe-in-3">
+                                <p className="font-envelope-label text-[9px] text-[#c9a96e]/35 mb-4">TRÂN TRỌNG KÍNH MỜI</p>
+
+                                {/* Groom */}
+                                <div
+                                    className="font-envelope-name leading-tight drop-shadow-lg"
+                                    style={{ fontSize: 'clamp(2.2rem, 10vw, 3rem)', color: '#f5ede0' }}
+                                >
                                     <RichField value={data.groomName} />
                                 </div>
-                                <div className="text-white/40 text-2xl my-2 font-light tracking-widest select-none">&</div>
-                                <div className="font-handwriting text-5xl sm:text-6xl text-white leading-tight drop-shadow-lg">
+
+                                {/* Ampersand */}
+                                <div
+                                    className="my-1 select-none"
+                                    style={{ color: '#c9a96e', opacity: 0.7, fontSize: '1.4rem', fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}
+                                >
+                                    &
+                                </div>
+
+                                {/* Bride */}
+                                <div
+                                    className="font-envelope-name leading-tight drop-shadow-lg"
+                                    style={{ fontSize: 'clamp(2.2rem, 10vw, 3rem)', color: '#f5ede0' }}
+                                >
                                     <RichField value={data.brideName} />
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-3xl text-white font-light mb-4 tracking-wide">Thiệp Mời Của Bạn</p>
+                            <p className="font-envelope-name text-3xl mb-5 luxe-in-3" style={{ color: '#f5ede0' }}>Thiệp Mời Của Bạn</p>
                         )}
 
-                        {/* Date */}
+                        {/* ── Date ── */}
                         {wDate && (
-                            <div className="flex items-center gap-2 mt-2 mb-1">
-                                <div className="w-8 h-px bg-white/30" />
-                                <p className="text-[11px] tracking-[0.35em] text-white/60 uppercase font-medium">
+                            <div className="flex items-center gap-3 mb-1 luxe-in-3">
+                                <div className="flex-1 gold-line" />
+                                <p className="font-envelope-label text-[10px] text-[#c9a96e]/70 whitespace-nowrap">
                                     {wDate}
                                 </p>
-                                <div className="w-8 h-px bg-white/30" />
+                                <div className="flex-1 gold-line" />
                             </div>
                         )}
 
-                        {/* Ornamental divider */}
-                        <div className="flex items-center gap-3 my-6 w-full">
-                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                            <span className="text-white/30 text-lg select-none">❧</span>
-                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                        {/* ── Ornamental divider ── */}
+                        <div className="flex items-center gap-3 my-5 w-full luxe-in-4">
+                            <div className="flex-1 gold-line" />
+                            <span className="text-[#c9a96e]/40 select-none" style={{ fontSize: '1rem', fontFamily: 'serif' }}>❧</span>
+                            <div className="flex-1 gold-line" />
                         </div>
 
-                        {/* CTA Button */}
+                        {/* ── CTA Button ── */}
                         <button
                             type="button"
                             onClick={handleOpenInvite}
-                            className="relative w-full overflow-hidden bg-white text-rose-600 py-4 px-8 rounded-2xl font-bold text-base shadow-2xl shadow-rose-900/40 flex items-center justify-center gap-3 active:scale-95 transition-all group hover:shadow-rose-900/50"
+                            className="btn-shimmer relative w-full overflow-hidden py-3.5 px-8 rounded-xl font-semibold text-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 hover:brightness-110 luxe-in-5"
+                            style={{
+                                background: 'linear-gradient(135deg, #c9a96e 0%, #e8d5a3 50%, #c9a96e 100%)',
+                                color: '#1a0a0e',
+                                letterSpacing: '0.12em',
+                                fontFamily: 'Cormorant Garamond, serif',
+                                fontSize: '0.85rem',
+                                boxShadow: '0 4px 24px rgba(201,169,110,0.25), 0 1px 4px rgba(0,0,0,0.5)',
+                            }}
                         >
-                            <MailOpen className="w-5 h-5 group-hover:rotate-12 group-active:rotate-[-12deg] transition-transform flex-shrink-0" />
-                            <span>Mở Thiệp Ngay</span>
-                            {/* Shimmer effect */}
-                            <div className="absolute inset-0 animate-shimmer rounded-2xl pointer-events-none" />
+                            <MailOpen className="w-4 h-4 flex-shrink-0" />
+                            <span>MỞ THIỆP NGAY</span>
                         </button>
 
-                        {/* Music hint */}
+                        {/* ── Music hint ── */}
                         {data.musicUrl && (
-                            <p className="mt-4 text-[9px] text-white/35 flex items-center gap-1.5">
-                                <Volume2 className="w-3 h-3" />
+                            <p className="mt-4 text-[8px] text-[#c9a96e]/30 flex items-center justify-center gap-1.5 font-envelope-label luxe-in-5">
+                                <Volume2 className="w-2.5 h-2.5" />
                                 <span>Nhạc nền sẽ phát khi bạn mở thiệp</span>
                             </p>
                         )}
 
-                        <p className="mt-6 text-[8px] text-white/20 uppercase tracking-[0.4em] select-none">Powered by WedPlan AI</p>
+                        <p className="mt-5 text-[7px] text-[#c9a96e]/20 font-envelope-label tracking-[0.5em] select-none luxe-in-5">POWERED BY WEDPLAN AI</p>
                     </div>
                 </div>
             </div>
         );
     }
+
 
     // Merge cloud wishes + this-device wishes + any legacy embedded wishes, deduped by id
     const wishMap = new Map<string, GuestWish>();
