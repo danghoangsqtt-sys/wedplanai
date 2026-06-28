@@ -1,9 +1,11 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Guest, GuestGroup, AttendanceProbability } from '../types';
-import { Plus, Trash2, FileSpreadsheet, Users, Baby, Banknote, CheckCircle, Search, ChevronUp, MapPin, Pencil, Check, X } from 'lucide-react';
+import { Plus, Trash2, FileSpreadsheet, Users, Baby, Banknote, CheckCircle, Search, ChevronUp, MapPin, Pencil, Check, X, RefreshCw, UserCheck, UserX, PhoneCall, MessageSquare, Download } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { sanitizeGuestInput, isValidAttendanceProbability } from '../lib/sanitize';
+import { loadInvitationResponses, InvitationResponse } from '../services/cloudService';
+import { OWNER_UID } from '../lib/constants';
 
 const generateId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -12,6 +14,48 @@ const generateId = () =>
 
 const GuestManager: React.FC = () => {
   const { guests, addGuest, removeGuest, updateGuest } = useStore();
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'list' | 'rsvp'>('list');
+
+  // RSVP tab state
+  const [rsvpList, setRsvpList] = useState<InvitationResponse[]>([]);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
+
+  const loadRsvp = useCallback(async () => {
+    setRsvpLoading(true);
+    try {
+      const { rsvps } = await loadInvitationResponses(OWNER_UID);
+      setRsvpList(rsvps);
+    } catch {
+      /* ignore */
+    } finally {
+      setRsvpLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'rsvp') loadRsvp();
+  }, [activeTab, loadRsvp]);
+
+  // Import RSVP submission → add to guests[]
+  const handleImportRsvp = (r: InvitationResponse) => {
+    if (importedIds.has(r.id)) return;
+    const avgEnvelope = guests.length > 0
+      ? Math.round(guests.reduce((s, g) => s + g.redEnvelope, 0) / guests.length / 100000) * 100000
+      : 500000;
+    const newGuest: Guest = {
+      id: generateId(),
+      name: r.name.trim().slice(0, 100),
+      group: GuestGroup.FRIEND,
+      probability: r.attending === 'yes' ? AttendanceProbability.CONFIRMED : AttendanceProbability.UNLIKELY,
+      childrenCount: 0,
+      redEnvelope: avgEnvelope,
+    };
+    addGuest(newGuest);
+    setImportedIds(prev => new Set([...prev, r.id]));
+  };
 
   // Add form state
   const [newName, setNewName] = useState("");
@@ -388,8 +432,193 @@ const GuestManager: React.FC = () => {
     );
   };
 
+  // ─── RSVP Stats ─────────────────────────────────────────────────────────────
+  const rsvpStats = useMemo(() => {
+    const attending = rsvpList.filter(r => r.attending === 'yes');
+    const notAttending = rsvpList.filter(r => r.attending === 'no');
+    const totalGuests = attending.reduce((s, r) => s + (r.guestCount ?? 1), 0);
+    const avgEnvelope = guests.length > 0
+      ? guests.reduce((s, g) => s + g.redEnvelope, 0) / guests.length
+      : 500000;
+    const expectedGift = Math.round(totalGuests * avgEnvelope);
+    return { attending, notAttending, totalGuests, expectedGift };
+  }, [rsvpList, guests]);
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden h-full flex flex-col">
+
+      {/* ── Tab Bar ── */}
+      <div className="flex border-b border-rose-100 flex-shrink-0 bg-rose-50/30">
+        <button
+          type="button"
+          onClick={() => setActiveTab('list')}
+          className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors border-b-2 ${
+            activeTab === 'list'
+              ? 'border-rose-500 text-rose-600 bg-white'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Danh Sách
+          <span className="bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full text-[10px]">{guests.length}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('rsvp')}
+          className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors border-b-2 ${
+            activeTab === 'rsvp'
+              ? 'border-emerald-500 text-emerald-600 bg-white'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4" />
+          RSVP Thực Tế
+          {rsvpList.length > 0 && (
+            <span className="bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full text-[10px]">{rsvpList.length}</span>
+          )}
+        </button>
+      </div>
+
+      {/* ── RSVP DASHBOARD TAB ── */}
+      {activeTab === 'rsvp' && (
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          {/* Refresh */}
+          <div className="flex justify-between items-center mb-5">
+            <div>
+              <h3 className="font-bold text-gray-800">Xác nhận tham dự từ thiệp</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Phản hồi từ khách mời qua đường link thiệp điện tử</p>
+            </div>
+            <button
+              type="button"
+              onClick={loadRsvp}
+              disabled={rsvpLoading}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${rsvpLoading ? 'animate-spin' : ''}`} />
+              {rsvpLoading ? 'Đang tải...' : 'Làm mới'}
+            </button>
+          </div>
+
+          {/* 4 Stat Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
+              <UserCheck className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
+              <div className="text-2xl font-bold text-emerald-700">{rsvpStats.attending.length}</div>
+              <div className="text-xs text-emerald-600 font-medium mt-0.5">Sẽ đến</div>
+            </div>
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
+              <UserX className="w-6 h-6 text-red-400 mx-auto mb-1" />
+              <div className="text-2xl font-bold text-red-600">{rsvpStats.notAttending.length}</div>
+              <div className="text-xs text-red-500 font-medium mt-0.5">Không đến</div>
+            </div>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+              <Users className="w-6 h-6 text-blue-400 mx-auto mb-1" />
+              <div className="text-2xl font-bold text-blue-700">{rsvpStats.totalGuests}</div>
+              <div className="text-xs text-blue-600 font-medium mt-0.5">Tổng số khách</div>
+            </div>
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
+              <Banknote className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+              <div className="text-lg font-bold text-amber-700">
+                {rsvpStats.expectedGift >= 1000000
+                  ? `${(rsvpStats.expectedGift / 1000000).toFixed(1)}M`
+                  : `${(rsvpStats.expectedGift / 1000).toFixed(0)}k`
+                }
+              </div>
+              <div className="text-xs text-amber-600 font-medium mt-0.5">Tiền mừng dự kiến</div>
+            </div>
+          </div>
+
+          {/* RSVP Submissions Table */}
+          {rsvpLoading ? (
+            <div className="flex items-center justify-center py-12 text-gray-400">
+              <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+              Đang tải phản hồi...
+            </div>
+          ) : rsvpList.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">Chưa có phản hồi nào</p>
+              <p className="text-sm mt-1">Chia sẻ link thiệp để khách mời xác nhận tham dự</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {rsvpList.map((r) => (
+                <div
+                  key={r.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                    r.attending === 'yes'
+                      ? 'bg-emerald-50 border-emerald-100'
+                      : 'bg-red-50 border-red-100'
+                  }`}
+                >
+                  {/* Status dot */}
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                    r.attending === 'yes' ? 'bg-emerald-500' : 'bg-red-400'
+                  }`} />
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-800 text-sm">{r.name}</span>
+                      {r.attending === 'yes' && r.guestCount && (
+                        <span className="text-xs bg-white border border-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                          {r.guestCount} người
+                        </span>
+                      )}
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                        r.attending === 'yes'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-red-100 text-red-600'
+                      }`}>
+                        {r.attending === 'yes' ? '✓ Sẽ đến' : '✗ Không đến'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      {r.phone && (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <PhoneCall className="w-3 h-3" />{r.phone}
+                        </span>
+                      )}
+                      {r.message && (
+                        <span className="text-xs text-gray-400 flex items-center gap-1 truncate max-w-[180px]">
+                          <MessageSquare className="w-3 h-3 flex-shrink-0" />{r.message}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(r.createdAt).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Import button */}
+                  {r.attending === 'yes' && (
+                    <button
+                      type="button"
+                      onClick={() => handleImportRsvp(r)}
+                      disabled={importedIds.has(r.id)}
+                      title={importedIds.has(r.id) ? 'Đã thêm vào danh sách' : 'Thêm vào danh sách khách mời'}
+                      className={`flex-shrink-0 p-2 rounded-lg text-xs flex items-center gap-1 transition-all ${
+                        importedIds.has(r.id)
+                          ? 'bg-gray-100 text-gray-400 cursor-default'
+                          : 'bg-white border border-emerald-300 text-emerald-600 hover:bg-emerald-50'
+                      }`}
+                    >
+                      {importedIds.has(r.id)
+                        ? <Check className="w-3.5 h-3.5" />
+                        : <Download className="w-3.5 h-3.5" />
+                      }
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── LIST TAB contents (original) ── */}
+      {activeTab === 'list' && (<>
+
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-rose-100 flex flex-col md:flex-row justify-between items-start md:items-center bg-rose-50/50 gap-4 flex-shrink-0">
         <div>
@@ -538,6 +767,7 @@ const GuestManager: React.FC = () => {
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 };
