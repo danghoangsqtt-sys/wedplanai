@@ -17,6 +17,7 @@ interface InvitationPreviewProps {
     onRSVP?: () => void;
     onGuestbook?: () => void;
     editorConfig?: EditorConfig;
+    hideAudio?: boolean; // When true, suppress built-in music button (parent manages audio)
 }
 
 /* ============================================================
@@ -746,7 +747,7 @@ const AddToCalendarButton: React.FC<AddToCalendarProps> = ({ title, date, time, 
 // ════════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
-const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook, editorConfig }) => {
+const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onGuestbook, editorConfig, hideAudio }) => {
     const ec = editorConfig;
     const rootRef = useRef<HTMLDivElement>(null);
     const secProps = (id: string, extraStyle?: React.CSSProperties) => {
@@ -933,7 +934,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                 {ec && <FloatingTextToolbar containerRef={rootRef} />}
 
                 {/* ── FLOATING MUSIC BUTTON ── */}
-                {safeMusicUrl && (
+                {safeMusicUrl && !hideAudio && (
                     <button onClick={toggleAudio} className="iv-music-btn" title={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'} aria-label={audioPlaying ? 'Tắt nhạc' : 'Bật nhạc'}>
                         {audioPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
                     </button>

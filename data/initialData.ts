@@ -163,7 +163,7 @@ export const INITIAL_INVITATION: InvitationData = {
   photoConfig: { scale: 1, x: 50, y: 50 },
   themeColor: '#e11d48',
   templateId: 'modern',
-  musicUrl: '/audio/canon-in-d.mp3',
+  musicUrl: '/audio/a thousand years.mp3',
   couplePhoto: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
   galleryImages: [
     'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',

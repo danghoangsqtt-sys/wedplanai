@@ -763,6 +763,7 @@ const PublicInvitationView: React.FC = () => {
                     data={invitationWithWishes}
                     onRSVP={() => setShowRSVP(true)}
                     onGuestbook={() => setShowGuestbook(true)}
+                    hideAudio={true}
                 />
             </div>
 

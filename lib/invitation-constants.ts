@@ -10,16 +10,14 @@ export const BANKS = [
 ] as const;
 
 export const MUSIC_OPTIONS = [
-  { url: '/audio/canon-in-d.mp3', label: 'Canon in D – Pachelbel (Cổ điển)' },
-  { url: '/audio/wedding-march.mp3', label: 'Wedding March – Mendelssohn (Hành khúc)' },
   { url: '/audio/a thousand years.mp3', label: 'A Thousand Years (Christina Perri)' },
   { url: '/audio/Chăm Em Một Đời.mp3', label: 'Chăm Em Một Đời' },
-  { url: '/audio/Die With A Smile.mp3', label: 'Die With A Smile' },
   { url: '/audio/Em Đồng Ý (I Do).mp3', label: 'Em Đồng Ý (I Do)' },
+  { url: '/audio/Marry You.mp3', label: 'Marry You (Bruno Mars)' },
+  { url: '/audio/Die With A Smile.mp3', label: 'Die With A Smile' },
   { url: '/audio/In Your Eyes.mp3', label: 'In Your Eyes' },
   { url: '/audio/Lover (First Dance Remix).mp3', label: 'Lover (First Dance Remix)' },
   { url: '/audio/Lễ Đường.mp3', label: 'Lễ Đường' },
-  { url: '/audio/Marry You.mp3', label: 'Marry You (Bruno Mars)' },
   { url: '/audio/Ngày Này, Người Con Gái Này.mp3', label: 'Ngày Này, Người Con Gái Này' },
   { url: '/audio/Ordinary (Wedding Version).mp3', label: 'Ordinary (Wedding Version)' },
   { url: '/audio/Summertime (Imanbek Remix).mp3', label: 'Summertime (Imanbek Remix)' },
