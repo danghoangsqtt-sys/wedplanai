@@ -57,7 +57,7 @@ const resolveImageUrl = (url: string | undefined): string | undefined => {
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
     const { getEffectiveUid, invitation } = useStore();
     const uid = getEffectiveUid();
-    const shareUrl = `https://${SITE_NAME}/?view=invitation&uid=${uid}`;
+    const shareUrl = `https://${SITE_NAME}/thiep`;
     const qrContainerRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState(false);
     const [downloading, setDownloading] = useState(false);
