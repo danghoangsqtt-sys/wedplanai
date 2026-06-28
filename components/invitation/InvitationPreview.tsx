@@ -1061,8 +1061,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                 {/* Date badge */}
                                 {data.date && (
                                     <div className="iv-date-badge">
-                                        <InlineRichText tagName="span" field={'date'} placeholder={'Ngày'} value={data.date} ec={ec}  />
-                                        {(data.location || data.address) && <><span className="iv-badge-dot" /><InlineRichText tagName="span" field={'location'} placeholder={'Địa điểm'} value={data.location || data.address.split(',').pop()?.trim() || ''} ec={ec}  /></>}
+                                        <span>📅 {shortDate}</span>
+                                        {(data.location || data.address) && <><span className="iv-badge-dot" /><span style={{ maxWidth: '55vw', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>{data.location || data.address.split(',')[0]?.trim() || ''}</span></>}
                                     </div>
                                 )}
 
@@ -1578,7 +1578,8 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     font-family: var(--t-font-body);
-    font-size: var(--t-body-size, 14px);
+    font-size: var(--t-body-size, 15px);
+    font-weight: 500;
 }
 
 /* ── FLOATING TEXT TOOLBAR ── */
@@ -1828,20 +1829,25 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 .iv-date-badge {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
     font-family: var(--t-font-label);
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--t-primary);
     background: color-mix(in srgb, var(--t-surface) 60%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    padding: 8px 20px;
+    padding: 6px 14px;
     border-radius: 9999px;
     border: 1px solid color-mix(in srgb, white 50%, transparent);
     margin-bottom: 1rem;
+    max-width: 90vw;
+    text-align: center;
+    line-height: 1.5;
 }
 .iv-badge-dot {
     width: 5px; height: 5px;
@@ -1856,12 +1862,14 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 }
 .iv-wishes-text {
     font-family: var(--t-font-body);
-    font-size: 14px;
-    color: var(--t-on-surface-variant);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--t-on-surface);
     font-style: italic;
     max-width: 320px;
     margin: 0 auto 1.25rem;
-    line-height: 1.6;
+    line-height: 1.75;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 /* ── COUNTDOWN ── */
@@ -1910,8 +1918,9 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 .iv-sec {
     padding: 3.5rem 2rem;
     font-family: var(--t-font-body);
-    font-size: var(--t-body-size, 14px);
+    font-size: var(--t-body-size, 15px);
     color: var(--t-on-surface);
+    font-weight: 500;
 }
 .iv-sec-alt {
     background: var(--t-surface-dim);
@@ -1954,18 +1963,20 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 }
 .iv-parent-side {
     font-family: var(--t-font-label);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--t-accent);
+    color: var(--t-primary);
     margin-bottom: 6px;
 }
 .iv-parent-name {
     font-family: var(--t-font-body);
-    font-size: 15px;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--t-on-surface);
     line-height: 1.5;
+    text-wrap: balance;
 }
 .iv-parent-divider {
     display: flex;
@@ -1990,12 +2001,12 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 .iv-invite .iv-parent-divider svg { background: var(--t-surface); }
 .iv-invite-line {
     font-family: var(--t-font-body);
-    font-size: 14px;
-    color: var(--t-on-surface-variant);
-    line-height: 1.7;
+    font-size: 15px;
+    color: var(--t-on-surface);
+    line-height: 1.8;
     max-width: 340px;
     margin: 0 auto 0.75rem;
-    font-style: italic;
+    font-weight: 500;
 }
 .iv-invite-header {
     background: var(--t-primary);

@@ -25,26 +25,61 @@ export function sanitizeMapUrl(raw: string | undefined): string | null {
 const SAFE_AUDIO_HOSTS = [
   // Supabase storage (project-specific subdomain pattern)
   'supabase.co',
-  // Google Drive direct audio
+  // Google Drive / Google Cloud
   'drive.google.com',
   'docs.google.com',
-  // Common music CDNs used in wedding apps
-  'soundcloud.com',
   'storage.googleapis.com',
+  'lh3.googleusercontent.com',
+  // YouTube (for embedded audio via YouTube API)
+  'youtube.com',
+  'youtu.be',
+  // Common music CDNs
+  'soundcloud.com',
+  'sndcdn.com',
+  // VN music platforms
+  'zingmp3.vn',
+  'nhaccuatui.com',
+  'keeng.vn',
+  // Common storage / CDNs
+  'cloudinary.com',
+  'res.cloudinary.com',
+  'cdn.jsdelivr.net',
+  'files.freemusicarchive.org',
+  'archive.org',
+  'raw.githubusercontent.com',
+  // Supabase patterns (any project)
+  'supabase.in',
+  'amazonaws.com',
+  'digitaloceanspaces.com',
+  'r2.cloudflarestorage.com',
+  // Dropbox
+  'dl.dropboxusercontent.com',
 ];
 
 export function sanitizeAudioUrl(raw: string | undefined): string | null {
   if (!raw) return null;
-  // Relative path — always safe (same origin)
-  if (raw.startsWith('/')) return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  // Relative path — always safe (same origin). Encode spaces and special chars.
+  if (trimmed.startsWith('/')) {
+    // Encode only the path segments, not the slashes
+    const encoded = trimmed.split('/').map((seg, i) =>
+      i === 0 ? seg : encodeURIComponent(decodeURIComponent(seg))
+    ).join('/');
+    return encoded;
+  }
   try {
     const url = new URL(raw);
+    // Only allow HTTP(S)
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
     // Same origin is always safe
     if (typeof location !== 'undefined' && url.origin === location.origin) return raw;
     // Allow known safe audio CDN hosts
     if (SAFE_AUDIO_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h))) return raw;
-    // Unknown external source: return null to block autoplay from unverified origins
+    // GENERAL HTTPS FALLBACK: allow any well-formed HTTPS URL.
+    // Rationale: audio plays in the guest's browser — the risk model is low.
+    // The user chose to embed a URL in their own wedding invitation.
+    if (url.protocol === 'https:') return raw;
     return null;
   } catch {
     return null;

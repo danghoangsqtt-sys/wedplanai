@@ -356,9 +356,14 @@ const PublicInvitationView: React.FC = () => {
     const [data, setData] = useState<InvitationData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isOpened, setIsOpened] = useState(true);
+    const [isOpened, setIsOpened] = useState(false);
 
     const [isPlaying, setIsPlaying] = useState(false);
+    const isPlayingRef = useRef(false);
+    const setPlayingState = (playing: boolean) => {
+        isPlayingRef.current = playing;
+        setIsPlaying(playing);
+    };
     const [showRSVP, setShowRSVP] = useState(false);
     const [showGuestbook, setShowGuestbook] = useState(false);
     const [localWishes, setLocalWishes] = useState<GuestWish[]>([]);
@@ -417,7 +422,29 @@ const PublicInvitationView: React.FC = () => {
                 }
 
                 if (inviteData) {
+                    // Validate musicUrl: if it points to a non-existent file, use a valid default
+                    const VALID_AUDIO_PATHS = [
+                        '/audio/a thousand years.mp3',
+                        '/audio/Chăm Em Một Đời.mp3',
+                        '/audio/Em Đồng Ý (I Do).mp3',
+                        '/audio/Marry You.mp3',
+                        '/audio/Die With A Smile.mp3',
+                        '/audio/In Your Eyes.mp3',
+                        '/audio/Lover (First Dance Remix).mp3',
+                        '/audio/Lễ Đường.mp3',
+                        '/audio/Ngày Này, Người Con Gái Này.mp3',
+                        '/audio/Ordinary (Wedding Version).mp3',
+                        '/audio/Summertime (Imanbek Remix).mp3',
+                        '/audio/The Most Beautiful Bride In The World.mp3',
+                        '/audio/một đời.mp3',
+                        '/audio/50 Năm Về Sau (Nghĩ Đến Ngày Chúng Ta Sẽ Già).mp3',
+                    ];
+                    if (inviteData.musicUrl && !VALID_AUDIO_PATHS.includes(inviteData.musicUrl) && inviteData.musicUrl.startsWith('/audio/')) {
+                        console.warn('[WedPlan] Invalid local musicUrl, using default:', inviteData.musicUrl);
+                        inviteData = { ...inviteData, musicUrl: '/audio/a thousand years.mp3' };
+                    }
                     setData(inviteData);
+
                     try {
                         const stored = localStorage.getItem(`wishes_${uid}`);
                         if (stored) setLocalWishes(JSON.parse(stored));
@@ -442,30 +469,70 @@ const PublicInvitationView: React.FC = () => {
         fetchData();
     }, []);
 
+    // Lazily initialise the Audio element from musicUrl.
+    // Returns null if the URL is absent or unsafe.
+    const ensureAudio = (): HTMLAudioElement | null => {
+        if (audioRef.current) return audioRef.current;
+        if (!data?.musicUrl) return null;
+        const safeUrl = sanitizeAudioUrl(data.musicUrl);
+        if (!safeUrl) {
+            console.warn('[WedPlan] Music URL blocked by sanitizer:', data.musicUrl);
+            return null;
+        }
+        const audio = new Audio(safeUrl);
+        audio.loop = true;
+        audio.volume = 0.65;
+        audio.preload = 'auto';
+        // Fallback: if the stored URL returns 404 or fails to load, switch to default song
+        const DEFAULT_SONG = '/audio/a%20thousand%20years.mp3';
+        audio.onerror = () => {
+            console.warn('[WedPlan] Primary audio failed, falling back to default song. URL was:', safeUrl);
+            if (audioRef.current && audioRef.current.src !== window.location.origin + DEFAULT_SONG) {
+                audioRef.current.src = DEFAULT_SONG;
+                audioRef.current.load();
+                // Use ref to avoid stale closure bug
+                if (isPlayingRef.current) {
+                    audioRef.current.play()
+                        .then(() => setPlayingState(true))
+                        .catch(() => {});
+                }
+            }
+        };
+        audioRef.current = audio;
+        return audio;
+    };
+
+
     const handleOpenInvite = () => {
         setIsOpened(true);
         if (data?.musicUrl) {
-            // BUG-004 fix: sanitize audio URL before creating Audio element
-            const safeUrl = sanitizeAudioUrl(data.musicUrl);
-            if (!safeUrl) return;
-            if (!audioRef.current) {
-                audioRef.current = new Audio(safeUrl);
-                audioRef.current.loop = true;
+            const audio = ensureAudio();
+            if (audio) {
+                audio.play()
+                    .then(() => setPlayingState(true))
+                    .catch((err) => {
+                        // Autoplay blocked — user must tap the vinyl button manually
+                        console.info('[WedPlan] Autoplay blocked (expected on mobile):', err?.message);
+                        // Still mark as "should play" so vinyl shows active state
+                        setPlayingState(false);
+                    });
             }
-            audioRef.current.play().catch(() => {/* autoplay blocked */});
-            setIsPlaying(true);
         }
     };
 
     const toggleMusic = () => {
-        if (!audioRef.current) return;
+        const audio = ensureAudio();
+        if (!audio) return;
         if (isPlaying) {
-            audioRef.current.pause();
+            audio.pause();
+            setPlayingState(false);
         } else {
-            audioRef.current.play().catch(() => {/* blocked */});
+            audio.play()
+                .then(() => setPlayingState(true))
+                .catch((err) => console.warn('[WedPlan] play() failed:', err?.message));
         }
-        setIsPlaying(!isPlaying);
     };
+
 
     const handleWishSubmit = (wish: GuestWish) => {
         const params = new URLSearchParams(window.location.search);
@@ -531,110 +598,179 @@ const PublicInvitationView: React.FC = () => {
                 <style>{`
                     @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
 
-                    /* ── Background ── */
+                    /* ═══════════════════════════════════════════════════
+                       ENVELOPE SCREEN — BRIGHT RED & CHERRY BLOSSOM
+                    ═══════════════════════════════════════════════════ */
+
+                    /* ── Page background: pure white ── */
                     .eb-bg {
                         position: fixed; inset: 0;
-                        background: radial-gradient(ellipse 120% 120% at 30% 20%, #ffe8ef 0%, #fdf4f7 35%, #f8edf5 60%, #fce8ee 100%);
+                        background: #ffffff;
                     }
+
+                    /* ── Blurred couple photo backdrop (bright, not dark) ── */
                     .eb-bg-photo {
                         position: absolute; inset: 0;
                         background-size: cover; background-position: center;
-                        filter: blur(28px) brightness(0.55) saturate(0.8);
-                        transform: scale(1.08);
+                        filter: blur(30px) brightness(0.85) saturate(0.9);
+                        transform: scale(1.06);
                     }
+
+                    /* ── Light white overlay on photo (keeps it bright) ── */
                     .eb-bg-overlay {
                         position: absolute; inset: 0;
-                        background: linear-gradient(160deg, rgba(20,5,10,0.55) 0%, rgba(60,10,20,0.45) 50%, rgba(30,5,12,0.6) 100%);
+                        background: linear-gradient(160deg,
+                            rgba(255,255,255,0.55) 0%,
+                            rgba(255,240,245,0.35) 50%,
+                            rgba(255,255,255,0.5) 100%
+                        );
                     }
 
-                    /* ── Orbs (light mode) ── */
-                    .eb-orb {
+                    /* ── Soft orbs ── */
+                    .eb-orb-white {
                         position: absolute; border-radius: 50%;
-                        pointer-events: none; filter: blur(70px);
+                        pointer-events: none; filter: blur(80px);
                     }
 
-                    /* ── Petals ── */
-                    @keyframes eb-petal {
-                        0%   { transform: translateY(-8vh) translateX(0) rotate(0deg); opacity: 0; }
+                    /* ── Falling red hearts ── */
+                    @keyframes eb-heart {
+                        0%   { transform: translateY(-8vh) translateX(0) rotate(0deg) scale(1); opacity: 0; }
                         8%   { opacity: 1; }
-                        92%  { opacity: 0.6; }
-                        100% { transform: translateY(108vh) translateX(var(--drift,50px)) rotate(var(--spin,540deg)); opacity: 0; }
+                        50%  { transform: translateY(50vh) translateX(var(--drift,30px)) rotate(var(--spin,180deg)) scale(var(--s2,1.1)); }
+                        92%  { opacity: 0.7; }
+                        100% { transform: translateY(108vh) translateX(var(--drift,50px)) rotate(var(--spin,360deg)) scale(0.8); opacity: 0; }
                     }
-                    .eb-petal { position: absolute; top:-5%; pointer-events:none; animation: eb-petal var(--dur,9s) var(--delay,0s) linear infinite; }
+                    .eb-heart {
+                        position: absolute; top: -5%;
+                        pointer-events: none;
+                        animation: eb-heart var(--dur,9s) var(--delay,0s) linear infinite;
+                        color: #E8000D;
+                        filter: drop-shadow(0 2px 6px rgba(232,0,13,0.45));
+                    }
 
-                    /* ── Sparkles ── */
+                    /* ── Red sparkle ── */
                     @keyframes eb-twinkle {
                         0%,100% { opacity:0; transform:scale(0.3) rotate(0deg); }
-                        50%     { opacity:0.8; transform:scale(1) rotate(180deg); }
+                        50%     { opacity:0.9; transform:scale(1) rotate(180deg); }
                     }
-                    .eb-sparkle { position:absolute; pointer-events:none; animation: eb-twinkle var(--dur,3s) var(--delay,0s) ease-in-out infinite; }
+                    .eb-sparkle {
+                        position:absolute; pointer-events:none;
+                        animation: eb-twinkle var(--dur,3s) var(--delay,0s) ease-in-out infinite;
+                        color: #E8000D;
+                        filter: drop-shadow(0 1px 4px rgba(232,0,13,0.4));
+                    }
 
                     /* ── Card float ── */
                     @keyframes eb-float {
-                        0%,100% { transform: translateY(0px); }
-                        50%     { transform: translateY(-8px); }
+                        0%,100% { transform: translateY(0px) rotate(0deg); }
+                        33%     { transform: translateY(-7px) rotate(0.25deg); }
+                        66%     { transform: translateY(-11px) rotate(-0.25deg); }
                     }
                     .eb-float { animation: eb-float 5s ease-in-out infinite; }
 
                     /* ── Card entry ── */
                     @keyframes eb-in {
-                        0%   { opacity:0; transform: translateY(28px) scale(0.97); }
+                        0%   { opacity:0; transform: translateY(36px) scale(0.94); }
                         100% { opacity:1; transform: translateY(0) scale(1); }
                     }
-                    .eb-card { animation: eb-in 0.8s 0.15s cubic-bezier(0.22,1,0.36,1) both; }
+                    .eb-card { animation: eb-in 0.85s 0.1s cubic-bezier(0.22,1,0.36,1) both; }
 
                     /* ── Staggered content ── */
                     @keyframes eb-fade {
-                        0%   { opacity:0; transform: translateY(10px); }
+                        0%   { opacity:0; transform: translateY(12px); }
                         100% { opacity:1; transform: translateY(0); }
                     }
-                    .eb-1 { animation: eb-fade 0.7s 0.4s ease-out both; }
-                    .eb-2 { animation: eb-fade 0.7s 0.55s ease-out both; }
-                    .eb-3 { animation: eb-fade 0.7s 0.7s ease-out both; }
-                    .eb-4 { animation: eb-fade 0.7s 0.85s ease-out both; }
-                    .eb-5 { animation: eb-fade 0.7s 1.0s ease-out both; }
+                    .eb-1 { animation: eb-fade 0.65s 0.35s ease-out both; }
+                    .eb-2 { animation: eb-fade 0.65s 0.5s ease-out both; }
+                    .eb-3 { animation: eb-fade 0.65s 0.65s ease-out both; }
+                    .eb-4 { animation: eb-fade 0.65s 0.8s ease-out both; }
+                    .eb-5 { animation: eb-fade 0.65s 0.95s ease-out both; }
 
                     /* ── Pulse rings ── */
                     @keyframes eb-ring {
-                        0%   { transform: scale(1); opacity: 0.4; }
-                        100% { transform: scale(2.6); opacity: 0; }
+                        0%   { transform: scale(1); opacity: 0.55; }
+                        100% { transform: scale(2.8); opacity: 0; }
                     }
-                    .eb-ring { animation: eb-ring 2.8s ease-out infinite; border-radius: 50%; }
+                    .eb-ring { animation: eb-ring 2.6s ease-out infinite; border-radius: 50%; }
 
                     /* ── Button shimmer ── */
                     @keyframes eb-shimmer {
                         0%   { left: -60%; }
                         100% { left: 140%; }
                     }
-                    .eb-btn { position: relative; overflow: hidden; }
+                    .eb-btn { position: relative; overflow: hidden; cursor: pointer; }
                     .eb-btn::after {
                         content: ''; position: absolute;
                         top: 0; left: -60%; width: 40%; height: 100%;
-                        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+                        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
                         transform: skewX(-15deg);
-                        animation: eb-shimmer 3.5s 1.2s ease-in-out infinite;
+                        animation: eb-shimmer 2.8s 1.0s ease-in-out infinite;
                     }
 
-                    /* ── Divider ── */
+                    /* ── Envelope icon bounce ── */
+                    @keyframes eb-bounce-icon {
+                        0%,100% { transform: translateY(0) scale(1); }
+                        40%     { transform: translateY(-5px) scale(1.06); }
+                        70%     { transform: translateY(2px) scale(0.97); }
+                    }
+                    .eb-icon-bounce { animation: eb-bounce-icon 3s ease-in-out infinite; }
+
+                    /* ── Divider — red tint ── */
                     .eb-divider {
                         height: 1px;
-                        background: linear-gradient(90deg, transparent, rgba(155,41,87,0.25), transparent);
+                        background: linear-gradient(90deg, transparent, rgba(200,0,10,0.3), transparent);
                     }
 
-                    /* ── Name font ── */
+                    /* ── Name font — DARK RED, BOLD, HIGH CONTRAST ── */
                     .eb-name {
                         font-family: 'Great Vibes', cursive;
                         white-space: nowrap;
-                        line-height: 1.15;
+                        line-height: 1.2;
                         display: block;
+                        color: #7B0000;
+                        -webkit-text-stroke: 0.5px #5a0000;
+                        text-shadow:
+                            /* Strong white halo for contrast against pink bg */
+                            0 0 8px rgba(255,255,255,1),
+                            0 0 16px rgba(255,255,255,0.9),
+                            2px 0 0 rgba(255,255,255,0.8),
+                            -2px 0 0 rgba(255,255,255,0.8),
+                            0 2px 0 rgba(255,255,255,0.8),
+                            0 -2px 0 rgba(255,255,255,0.8),
+                            /* Red glow underneath */
+                            0 4px 16px rgba(139,0,0,0.4),
+                            0 8px 32px rgba(139,0,0,0.2);
+                        paint-order: stroke fill;
+                    }
+                    .eb-name-photo {
+                        font-family: 'Great Vibes', cursive;
+                        white-space: nowrap;
+                        line-height: 1.2;
+                        display: block;
+                        color: #6B0000;
+                        -webkit-text-stroke: 0.5px #4a0000;
+                        text-shadow:
+                            0 0 10px rgba(255,255,255,0.95),
+                            0 0 20px rgba(255,255,255,0.8),
+                            2px 0 0 rgba(255,255,255,0.7),
+                            -2px 0 0 rgba(255,255,255,0.7),
+                            0 4px 16px rgba(139,0,0,0.35);
                     }
                     .eb-label {
                         font-family: 'Cormorant Garamond', 'Times New Roman', serif;
                         letter-spacing: 0.22em;
+                        font-weight: 700;
                     }
+
+                    /* ── Corner floral pulse ── */
+                    @keyframes eb-corner-pulse {
+                        0%,100% { opacity: 0.4; transform: scale(1); }
+                        50%     { opacity: 0.9; transform: scale(1.12); }
+                    }
+                    .eb-corner { animation: eb-corner-pulse 4s ease-in-out infinite; }
                 `}</style>
 
-                {/* ── Background ── */}
+                {/* ── Page Background: pure white ── */}
                 <div className="eb-bg" />
                 {hasPhoto && (
                     <>
@@ -643,37 +779,35 @@ const PublicInvitationView: React.FC = () => {
                     </>
                 )}
 
-                {/* Light mode orbs (shown when no photo) */}
-                {!hasPhoto && (
-                    <>
-                        <div className="eb-orb" style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(240,180,200,0.45) 0%, transparent 70%)', top: '-15%', left: '-15%', animation: 'pulse 7s ease-in-out infinite' }} aria-hidden />
-                        <div className="eb-orb" style={{ width: 400, height: 400, background: 'radial-gradient(circle, rgba(250,200,215,0.35) 0%, transparent 70%)', bottom: '-10%', right: '-10%', animation: 'pulse 8s ease-in-out 2s infinite' }} aria-hidden />
-                        <div className="eb-orb" style={{ width: 280, height: 280, background: 'radial-gradient(circle, rgba(245,200,220,0.3) 0%, transparent 70%)', top: '35%', right: '5%', animation: 'pulse 6s ease-in-out 1s infinite' }} aria-hidden />
-                    </>
-                )}
+                {/* White/pink soft orbs — always shown for brightness */}
+                <div className="eb-orb-white" style={{ width: 600, height: 600, background: 'radial-gradient(circle, rgba(242,189,214,0.38) 0%, transparent 70%)', top: '-20%', left: '-15%' }} aria-hidden />
+                <div className="eb-orb-white" style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(242,205,223,0.3) 0%, transparent 70%)', bottom: '-15%', right: '-12%' }} aria-hidden />
+                <div className="eb-orb-white" style={{ width: 350, height: 350, background: 'radial-gradient(circle, rgba(232,0,13,0.06) 0%, transparent 70%)', top: '30%', right: '5%' }} aria-hidden />
+                <div className="eb-orb-white" style={{ width: 280, height: 280, background: 'radial-gradient(circle, rgba(255,182,193,0.3) 0%, transparent 70%)', top: '60%', left: '3%' }} aria-hidden />
 
                 {/* Petals */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
                     {petalData.map((p, i) => (
                         <span
                             key={i}
-                            className="eb-petal select-none"
+                            className="eb-heart select-none"
                             style={{
                                 left: `${p.left}%`,
-                                fontSize: `${p.size * 0.75}px`,
+                                fontSize: `${p.size * 0.7}px`,
                                 '--dur': `${p.dur}s`,
                                 '--delay': `${p.delay}s`,
                                 '--drift': `${p.drift}px`,
                                 '--spin': `${p.spin}deg`,
-                                opacity: hasPhoto ? 0.5 : 0.55,
+                                '--s2': `${0.9 + Math.random() * 0.3}`,
+                                opacity: hasPhoto ? 0.7 : 0.85,
                             } as React.CSSProperties}
                         >
-                            {p.emoji}
+                            ❤
                         </span>
                     ))}
                 </div>
 
-                {/* Sparkles */}
+                {/* ── Red sparkle stars ── */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
                     {sparkleData.map((s, i) => (
                         <span
@@ -682,8 +816,7 @@ const PublicInvitationView: React.FC = () => {
                             style={{
                                 left: `${s.left}%`,
                                 top: `${s.top}%`,
-                                fontSize: `${s.fontSize * 0.85}px`,
-                                color: hasPhoto ? 'rgba(255,220,190,0.7)' : 'rgba(155,41,87,0.35)',
+                                fontSize: `${s.fontSize * 0.9}px`,
                                 '--dur': `${s.dur}s`,
                                 '--delay': `${s.delay}s`,
                             } as React.CSSProperties}
@@ -693,168 +826,169 @@ const PublicInvitationView: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Corner decorations */}
-                <div className="absolute top-4 left-4 pointer-events-none select-none" style={{ color: hasPhoto ? 'rgba(255,210,180,0.3)' : 'rgba(155,41,87,0.15)', fontSize: '1.6rem', fontFamily: 'serif' }}>❦</div>
-                <div className="absolute top-4 right-4 pointer-events-none select-none" style={{ color: hasPhoto ? 'rgba(255,210,180,0.3)' : 'rgba(155,41,87,0.15)', fontSize: '1.6rem', fontFamily: 'serif', transform: 'scaleX(-1)' }}>❦</div>
+                {/* ── Corner florals (red) ── */}
+                <div className="absolute top-5 left-5 pointer-events-none select-none eb-corner" style={{ color: 'rgba(232,0,13,0.35)', fontSize: '2rem', fontFamily: 'serif' }} aria-hidden>❦</div>
+                <div className="absolute top-5 right-5 pointer-events-none select-none eb-corner" style={{ color: 'rgba(232,0,13,0.35)', fontSize: '2rem', fontFamily: 'serif', transform: 'scaleX(-1)', animationDelay: '1.5s' }} aria-hidden>❦</div>
+                <div className="absolute bottom-5 left-5 pointer-events-none select-none eb-corner" style={{ color: 'rgba(242,189,214,0.6)', fontSize: '1.4rem', animationDelay: '0.8s' }} aria-hidden>✿</div>
+                <div className="absolute bottom-5 right-5 pointer-events-none select-none eb-corner" style={{ color: 'rgba(242,189,214,0.6)', fontSize: '1.4rem', animationDelay: '2.2s' }} aria-hidden>✿</div>
 
                 {/* ── Main card ── */}
                 <div className="relative z-10 flex items-center justify-center min-h-screen px-5 py-8">
                     <div
                         className="eb-card eb-float w-full flex flex-col items-center text-center"
                         style={{
-                            maxWidth: 380,
-                            background: hasPhoto
-                                ? 'rgba(255,248,248,0.10)'
-                                : 'rgba(255,255,255,0.82)',
-                            backdropFilter: 'blur(24px) saturate(1.6)',
-                            WebkitBackdropFilter: 'blur(24px) saturate(1.6)',
-                            border: hasPhoto
-                                ? '1px solid rgba(255,220,210,0.2)'
-                                : '1px solid rgba(155,41,87,0.12)',
-                            borderRadius: 28,
-                            padding: '36px 32px 32px',
-                            boxShadow: hasPhoto
-                                ? '0 24px 80px rgba(0,0,0,0.5), 0 2px 0 rgba(255,220,210,0.15) inset'
-                                : '0 20px 60px rgba(155,41,87,0.12), 0 4px 20px rgba(0,0,0,0.06)',
+                            maxWidth: 390,
+                            /* Cherry blossom pink — always bright, regardless of photo */
+                            background: 'linear-gradient(160deg, #F2CEDF 0%, #F2BDD6 38%, #F29BC4 75%, rgba(242,119,187,0.5) 100%)',
+                            backdropFilter: hasPhoto ? 'blur(16px) saturate(1.5)' : 'blur(4px)',
+                            WebkitBackdropFilter: hasPhoto ? 'blur(16px) saturate(1.5)' : 'blur(4px)',
+                            border: '2px solid rgba(255,255,255,0.7)',
+                            borderRadius: 32,
+                            padding: '40px 36px 36px',
+                            boxShadow: '0 24px 80px rgba(200,0,10,0.18), 0 8px 40px rgba(242,155,196,0.55), 0 2px 0 rgba(255,255,255,0.9) inset',
                         }}
                     >
-                        {/* Envelope icon */}
-                        <div className="mb-6 relative eb-1">
-                            {/* Pulse rings */}
+                        {/* ── Red envelope icon ── */}
+                        <div className="mb-6 relative eb-1 eb-icon-bounce">
+                            {/* Pulse rings — red */}
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="w-16 h-16 eb-ring" style={{ border: `1px solid ${hasPhoto ? 'rgba(255,200,180,0.3)' : 'rgba(155,41,87,0.2)'}` }} />
+                                <div className="w-20 h-20 eb-ring" style={{ border: '1.5px solid rgba(232,0,13,0.4)' }} />
                             </div>
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="w-16 h-16 eb-ring" style={{ border: `1px solid ${hasPhoto ? 'rgba(255,200,180,0.2)' : 'rgba(155,41,87,0.15)'}`, animationDelay: '0.9s' }} />
+                                <div className="w-20 h-20 eb-ring" style={{ border: '1.5px solid rgba(232,0,13,0.22)', animationDelay: '0.9s' }} />
                             </div>
 
-                            {/* Icon box */}
+                            {/* Envelope box — vivid red */}
                             <div
-                                className="w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden"
+                                className="w-20 h-20 rounded-2xl flex items-center justify-center relative overflow-hidden"
                                 style={{
                                     background: hasPhoto
-                                        ? 'linear-gradient(135deg, rgba(255,200,180,0.15), rgba(255,160,140,0.08))'
-                                        : 'linear-gradient(135deg, rgba(155,41,87,0.1), rgba(220,80,120,0.06))',
-                                    border: hasPhoto
-                                        ? '1px solid rgba(255,200,180,0.25)'
-                                        : '1px solid rgba(155,41,87,0.18)',
+                                        ? 'linear-gradient(135deg, rgba(232,0,13,0.85), rgba(180,0,10,0.75))'
+                                        : 'linear-gradient(135deg, #FF1A1A 0%, #E8000D 55%, #BB0008 100%)',
+                                    border: '2px solid rgba(255,255,255,0.5)',
+                                    boxShadow: '0 8px 32px rgba(200,0,10,0.55), 0 3px 12px rgba(0,0,0,0.2), 0 1px 0 rgba(255,150,150,0.5) inset',
                                 }}
                             >
                                 <Mail
-                                    className="w-7 h-7 relative z-10"
-                                    style={{
-                                        color: hasPhoto ? 'rgba(255,210,190,0.95)' : '#9b2957',
-                                        filter: hasPhoto
-                                            ? 'drop-shadow(0 2px 8px rgba(255,160,120,0.4))'
-                                            : 'drop-shadow(0 2px 6px rgba(155,41,87,0.25))',
-                                    }}
+                                    className="w-9 h-9 relative z-10"
+                                    style={{ color: '#ffffff', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}
                                 />
                             </div>
 
-                            {/* Tiny hearts */}
+                            {/* Red heart badge */}
                             <Heart
-                                className="absolute -top-1.5 -right-1.5 w-4 h-4 fill-current"
-                                style={{ color: hasPhoto ? 'rgba(255,180,160,0.8)' : '#e06090', animation: 'pulse 2.2s ease-in-out infinite' }}
+                                className="absolute -top-2 -right-2 w-5 h-5 fill-current"
+                                style={{
+                                    color: '#E8000D',
+                                    filter: 'drop-shadow(0 2px 6px rgba(232,0,13,0.65))',
+                                    animation: 'pulse 1.8s ease-in-out infinite',
+                                }}
                             />
                         </div>
 
-                        {/* Label */}
-                        <p className="eb-label eb-1 mb-5 select-none" style={{ fontSize: '0.6rem', color: hasPhoto ? 'rgba(255,200,180,0.55)' : 'rgba(155,41,87,0.45)' }}>
-                            ✦ &nbsp; THIỆP CƯỚI TRÂN TRỌNG &nbsp; ✦
-                        </p>
+                        {/* ── Greeting label ── */}
 
-                        {/* Names */}
+                        {/* ── Names ── */}
                         {(data.groomName || data.brideName) ? (
                             <div className="eb-2 mb-1 w-full">
-                                <p className="eb-label mb-3" style={{ fontSize: '0.58rem', color: hasPhoto ? 'rgba(255,200,180,0.4)' : 'rgba(155,41,87,0.35)' }}>TRÂN TRỌNG KÍNH MỜI</p>
+                                <p className="eb-label mb-4" style={{
+                                    fontSize: '0.68rem',
+                                    fontWeight: 700,
+                                    color: '#111111',
+                                    letterSpacing: '0.18em',
+                                    textShadow: '0 1px 0 rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.7)',
+                                    lineHeight: 1.6,
+                                }}>TRÂN TRỌNG KÍNH MỜI QUÝ VỊ KHÁCH QUÝ</p>
 
-                                {/* Names row — display on single lines using vw */}
-                                <div style={{ fontSize: 'clamp(1.55rem, 8.5vw, 2.2rem)' }}>
-                                    {/* Groom */}
-                                    <span
-                                        className="eb-name"
-                                        style={{ color: hasPhoto ? '#fff5f0' : '#7a1a3d' }}
-                                    >
-                                        <RichField value={data.groomName} />
-                                    </span>
-
-                                    {/* Ampersand */}
-                                    <span
-                                        className="block my-0.5 select-none"
-                                        style={{
-                                            fontFamily: 'Cormorant Garamond, serif',
-                                            fontStyle: 'italic',
-                                            fontSize: '1rem',
-                                            color: hasPhoto ? 'rgba(255,190,160,0.7)' : 'rgba(155,41,87,0.5)',
-                                        }}
-                                    >
-                                        &
-                                    </span>
-
-                                    {/* Bride */}
-                                    <span
-                                        className="eb-name"
-                                        style={{ color: hasPhoto ? '#fff5f0' : '#7a1a3d' }}
-                                    >
-                                        <RichField value={data.brideName} />
-                                    </span>
-                                </div>
+                                    <div style={{ fontSize: 'clamp(1.7rem, 9vw, 2.5rem)' }}>
+                                        <span className={hasPhoto ? 'eb-name-photo' : 'eb-name'}>
+                                            <RichField value={data.groomName} />
+                                        </span>
+                                        <span
+                                            className="block my-0.5 select-none"
+                                            style={{
+                                                fontFamily: 'Cormorant Garamond, serif',
+                                                fontStyle: 'italic',
+                                                fontWeight: 700,
+                                                fontSize: '1.1rem',
+                                                color: '#1a1a1a',
+                                                textShadow: '0 1px 0 rgba(255,255,255,0.8)',
+                                            }}
+                                        >
+                                            &
+                                        </span>
+                                        <span className={hasPhoto ? 'eb-name-photo' : 'eb-name'}>
+                                            <RichField value={data.brideName} />
+                                        </span>
+                                    </div>
                             </div>
                         ) : (
-                            <p className="eb-name eb-2 mb-1" style={{ fontSize: '2rem', color: hasPhoto ? '#fff5f0' : '#7a1a3d' }}>Thiệp Mời Của Bạn</p>
+                            <p className="eb-name eb-2 mb-1" style={{ fontSize: '2rem' }}>Thiệp Mời Của Bạn</p>
                         )}
 
-                        {/* Date */}
+                        {/* ── Date — large & prominent ── */}
                         {wDate && (
-                            <div className="flex items-center gap-3 mt-4 mb-1 eb-3 w-full">
-                                <div className="flex-1 eb-divider" style={{ background: hasPhoto ? 'linear-gradient(90deg,transparent,rgba(255,200,180,0.3),transparent)' : undefined }} />
-                                <p className="eb-label whitespace-nowrap" style={{ fontSize: '0.65rem', color: hasPhoto ? 'rgba(255,200,180,0.7)' : 'rgba(155,41,87,0.6)' }}>
+                            <div className="flex items-center gap-3 mt-5 mb-6 eb-3 w-full">
+                                <div className="flex-1" style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(139,0,0,0.6), transparent)' }} />
+                                <p className="eb-label whitespace-nowrap" style={{
+                                    fontSize: '1.05rem',
+                                    color: '#7B0000',
+                                    textShadow: '0 0 12px rgba(255,255,255,0.9), 0 2px 0 rgba(255,255,255,0.8)',
+                                    fontWeight: 800,
+                                    letterSpacing: '0.25em',
+                                    padding: '4px 12px',
+                                }}>
                                     {wDate}
                                 </p>
-                                <div className="flex-1 eb-divider" style={{ background: hasPhoto ? 'linear-gradient(90deg,transparent,rgba(255,200,180,0.3),transparent)' : undefined }} />
+                                <div className="flex-1" style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(139,0,0,0.6), transparent)' }} />
                             </div>
                         )}
 
-                        {/* Ornament */}
-                        <div className="flex items-center gap-3 mt-3 mb-6 w-full eb-4">
-                            <div className="flex-1 eb-divider" style={{ background: hasPhoto ? 'linear-gradient(90deg,transparent,rgba(255,200,180,0.2),transparent)' : undefined }} />
-                            <span className="select-none" style={{ fontSize: '0.9rem', fontFamily: 'serif', color: hasPhoto ? 'rgba(255,200,180,0.35)' : 'rgba(155,41,87,0.25)' }}>❧</span>
-                            <div className="flex-1 eb-divider" style={{ background: hasPhoto ? 'linear-gradient(90deg,transparent,rgba(255,200,180,0.2),transparent)' : undefined }} />
-                        </div>
 
-                        {/* CTA Button */}
+
+                        {/* ── CTA Button — vivid red ── */}
                         <button
                             type="button"
                             onClick={handleOpenInvite}
-                            className="eb-btn eb-5 w-full flex items-center justify-center gap-2 py-3.5 rounded-xl transition-all active:scale-[0.98] hover:brightness-105"
+                            className="eb-btn eb-5 w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl transition-all active:scale-[0.97] hover:brightness-110"
                             style={{
-                                background: hasPhoto
-                                    ? 'rgba(255,255,255,0.95)'
-                                    : '#9b2957',
-                                color: hasPhoto ? '#8b1540' : '#ffffff',
+                                background: 'linear-gradient(135deg, #FF1A1A 0%, #E8000D 50%, #CC0000 100%)',
+                                color: '#ffffff',
                                 fontFamily: 'Cormorant Garamond, serif',
-                                fontSize: '0.82rem',
-                                fontWeight: 600,
-                                letterSpacing: '0.18em',
-                                border: 'none',
-                                boxShadow: hasPhoto
-                                    ? '0 4px 20px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.5) inset'
-                                    : '0 4px 20px rgba(155,41,87,0.35), 0 1px 0 rgba(255,255,255,0.15) inset',
+                                fontSize: '0.88rem',
+                                fontWeight: 700,
+                                letterSpacing: '0.2em',
+                                border: '1.5px solid rgba(255,120,120,0.35)',
+                                boxShadow: '0 6px 28px rgba(200,0,10,0.55), 0 2px 8px rgba(200,0,10,0.3), 0 1px 0 rgba(255,150,150,0.4) inset',
                             }}
                         >
-                            <MailOpen className="w-4 h-4 flex-shrink-0" />
+                            <MailOpen style={{ width: 18, height: 18, flexShrink: 0 }} />
                             <span>MỞ THIỆP NGAY</span>
                         </button>
 
-                        {/* Music hint */}
-                        {data.musicUrl && (
-                            <p className="mt-4 eb-5 eb-label flex items-center justify-center gap-1.5" style={{ fontSize: '0.55rem', color: hasPhoto ? 'rgba(255,200,180,0.35)' : 'rgba(155,41,87,0.35)' }}>
-                                <Volume2 className="w-2.5 h-2.5" />
-                                <span>Nhạc nền sẽ phát khi bạn mở thiệp</span>
-                            </p>
-                        )}
-
-                        <p className="mt-4 eb-label eb-5 select-none" style={{ fontSize: '0.5rem', letterSpacing: '0.45em', color: hasPhoto ? 'rgba(255,200,180,0.2)' : 'rgba(155,41,87,0.2)' }}>POWERED BY WEDPLAN AI</p>
+                        {/* ── WedPlan AI Ad ── */}
+                        <p className="mt-4 eb-5 eb-label text-center select-none" style={{
+                            fontSize: '0.6rem',
+                            color: '#5a0000',
+                            textShadow: '0 1px 0 rgba(255,255,255,0.85)',
+                            letterSpacing: '0.08em',
+                            lineHeight: 1.8,
+                        }}>
+                            Tạo thiệp cưới của bạn tại{' '}
+                            <a
+                                href="https://wedplanai.io.vn"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    color: '#CC0000',
+                                    fontWeight: 700,
+                                    textDecoration: 'underline',
+                                    textUnderlineOffset: '2px',
+                                }}
+                            >
+                                wedplanai.io.vn
+                            </a>
+                        </p>
                     </div>
                 </div>
             </div>

@@ -19,11 +19,17 @@ const InvitationEditorPage: React.FC = () => {
     const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile' | false>(false);
     const [showTemplateGallery, setShowTemplateGallery] = useState(false);
 
-    // Sync store → history when cloud data loads externally
+    // Sync store → history only when invitation changes from an EXTERNAL source
+    // (e.g., cloud load). We track what the editor last wrote so we don't clear
+    // undo history on our own debounced saves coming back through the store.
     const prevInvRef = useRef(invitation);
+    const editorLastWriteRef = useRef<InvitationData | null>(null);
     useEffect(() => {
         if (invitation !== prevInvRef.current) {
-            reset(invitation);
+            // Only reset if this change did NOT originate from the editor itself
+            if (invitation !== editorLastWriteRef.current) {
+                reset(invitation);
+            }
             prevInvRef.current = invitation;
         }
     }, [invitation, reset]);
@@ -52,13 +58,18 @@ const InvitationEditorPage: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKey);
     }, [undo, redo]);
 
-    // Debounce store sync — flush on unmount so pending changes aren't lost
+    // Debounce store sync — flush on unmount so pending changes aren't lost.
+    // Track the last value written so the external-change detector above can
+    // distinguish editor writes from true external cloud loads.
     const syncTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const latestData = useRef(data);
     latestData.current = data;
     useEffect(() => {
         if (syncTimeout.current) clearTimeout(syncTimeout.current);
-        syncTimeout.current = setTimeout(() => updateInvitation(data), 500);
+        syncTimeout.current = setTimeout(() => {
+            editorLastWriteRef.current = latestData.current;
+            updateInvitation(latestData.current);
+        }, 500);
         return () => { if (syncTimeout.current) clearTimeout(syncTimeout.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data]);
