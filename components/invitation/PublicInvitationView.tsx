@@ -5,6 +5,49 @@ import { InvitationData, GuestWish } from '../../types';
 import InvitationPreview from './InvitationPreview';
 import { Loader2, AlertCircle, MailOpen, Volume2, VolumeX, Heart, Mail, X, CheckCircle2, Send, Users, MessageCircle, Music } from 'lucide-react';
 
+// Strip HTML tags — used for plain text contexts (titles, buttons, labels)
+const stripHtml = (html: string): string => html ? html.replace(/<[^>]*>?/gm, '') : '';
+
+// Sanitize and render HTML safely — used for rich-text fields (names, messages)
+// Allows safe inline tags (b, i, em, strong, span, br) only.
+const SAFE_TAGS = /^(b|strong|i|em|u|s|br|span)$/i;
+const sanitizeHtml = (html: string): string => {
+    if (!html) return '';
+    // Fast path: no tags present
+    if (!html.includes('<')) return html;
+    try {
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html;
+        const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_ELEMENT);
+        const toRemove: Element[] = [];
+        let node = walker.nextNode() as Element | null;
+        while (node) {
+            if (!SAFE_TAGS.test(node.tagName)) {
+                toRemove.push(node);
+            } else {
+                Array.from(node.attributes).forEach(attr => {
+                    if (attr.name !== 'style') node!.removeAttribute(attr.name);
+                });
+            }
+            node = walker.nextNode() as Element | null;
+        }
+        toRemove.forEach(el => {
+            el.parentNode?.replaceChild(document.createTextNode(el.textContent || ''), el);
+        });
+        const div = document.createElement('div');
+        div.appendChild(tpl.content.cloneNode(true));
+        return div.innerHTML;
+    } catch {
+        return stripHtml(html);
+    }
+};
+
+// Convenience: render a rich-text field as a span with safe inner HTML
+const RichField: React.FC<{ value: string; className?: string; style?: React.CSSProperties }> = ({ value, className, style }) => (
+    <span className={className} style={style} dangerouslySetInnerHTML={{ __html: sanitizeHtml(value || '') }} />
+);
+
+
 // --- RSVP MODAL ---
 interface RSVPModalProps {
     groomName: string;
@@ -642,11 +685,11 @@ const PublicInvitationView: React.FC = () => {
                             <div className="mb-4">
                                 <p className="text-white/40 text-[10px] uppercase tracking-[0.35em] mb-3">Trân trọng kính mời</p>
                                 <div className="font-handwriting text-5xl sm:text-6xl text-white leading-tight drop-shadow-lg">
-                                    {data.groomName}
+                                    <RichField value={data.groomName} />
                                 </div>
-                                <div className="text-white/40 text-2xl my-2 font-light tracking-widest select-none">&amp;</div>
+                                <div className="text-white/40 text-2xl my-2 font-light tracking-widest select-none">&</div>
                                 <div className="font-handwriting text-5xl sm:text-6xl text-white leading-tight drop-shadow-lg">
-                                    {data.brideName}
+                                    <RichField value={data.brideName} />
                                 </div>
                             </div>
                         ) : (
@@ -803,8 +846,8 @@ const PublicInvitationView: React.FC = () => {
             {/* Modals */}
             {showRSVP && (
                 <RSVPModal
-                    groomName={data.groomName}
-                    brideName={data.brideName}
+                    groomName={stripHtml(data.groomName)}
+                    brideName={stripHtml(data.brideName)}
                     inviteData={data}
                     onClose={() => setShowRSVP(false)}
                     onSubmit={handleRSVPSubmit}
@@ -812,8 +855,8 @@ const PublicInvitationView: React.FC = () => {
             )}
             {showGuestbook && (
                 <GuestbookModal
-                    groomName={data.groomName}
-                    brideName={data.brideName}
+                    groomName={stripHtml(data.groomName)}
+                    brideName={stripHtml(data.brideName)}
                     showEmail={!!data.guestbookEmailEnabled}
                     onClose={() => setShowGuestbook(false)}
                     onSubmit={handleWishSubmit}
