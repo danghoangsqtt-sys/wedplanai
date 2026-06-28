@@ -116,8 +116,9 @@ const EditorLeftSidebar: React.FC<EditorLeftSidebarProps> = ({
     };
 
     const toggleVisibility = (id: SectionId) => {
-        const newVis = { ...visibility, [id]: visibility[id] === false ? true : false };
-        onChange({ sectionVisibility: newVis });
+        // visibility[id] is undefined when visible (not explicitly set). Toggle must treat undefined as true.
+        const currentlyVisible = visibility[id] !== false;
+        onChange({ sectionVisibility: { ...visibility, [id]: !currentlyVisible } });
     };
 
     const isVisible = (id: SectionId) => visibility[id] !== false;

@@ -42,6 +42,15 @@ const GuestManager: React.FC = () => {
   // Import RSVP submission → add to guests[] — default 500k (mức cơ bản Việt Nam)
   const handleImportRsvp = (r: InvitationResponse) => {
     if (importedIds.has(r.id)) return;
+    // BUG-007 fix: check duplicate by name (case-insensitive) before adding
+    // importedIds resets on navigate, so this is the true duplicate guard
+    const normalizedName = r.name.trim().toLowerCase();
+    const alreadyExists = guests.some(g => g.name.trim().toLowerCase() === normalizedName);
+    if (alreadyExists) {
+      // Still mark as imported so the UI shows "Đã import"
+      setImportedIds(prev => new Set([...prev, r.id]));
+      return;
+    }
     const newGuest: Guest = {
       id: generateId(),
       name: r.name.trim().slice(0, 100),

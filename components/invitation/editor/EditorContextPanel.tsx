@@ -542,15 +542,42 @@ const EditorContextPanel: React.FC<EditorContextPanelProps> = ({ selectedSection
                     </div>
                     {/* Panel content */}
                     <div className="flex-1 overflow-y-auto p-4">
-                        {selectedSection === 'hero'      && <HeroPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'family'    && <FamilyPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'venue'     && <VenuePanel data={data} onChange={onChange} />}
-                        {selectedSection === 'events'    && <EventsPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'loveStory' && <LoveStoryPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'gallery'   && <GalleryPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'bank'      && <BankPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'rsvp'      && <RSVPPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'guestbook' && <GuestbookPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'hero'          && <HeroPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'family'        && <FamilyPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'venue'         && <VenuePanel data={data} onChange={onChange} />}
+                        {selectedSection === 'events'        && <EventsPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'loveStory'     && <LoveStoryPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'gallery'       && <GalleryPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'bank'          && <BankPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'rsvp'          && <RSVPPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'guestbook'     && <GuestbookPanel data={data} onChange={onChange} />}
+                        {/* Phase-3 sections */}
+                        {selectedSection === 'calendar'      && (
+                            <div className="space-y-3">
+                                <PanelLabel label="Lịch Ngày Cưới" />
+                                <p className="text-xs text-gray-400">Lịch tự động tạo từ <strong>Ngày &amp; Giờ</strong> trong phần Bìa Thiệp. Chỉnh sửa ngày trong phần <span className="font-medium text-rose-500">Hero → Ngày &amp; Giờ</span>.</p>
+                                <PanelLabel label="Ghi Chú Lịch (tùy chọn)" />
+                                <PInput placeholder="VD: Ngày lành tháng tốt..." value={data.calendarNote || ''} onChange={e => onChange({ calendarNote: e.target.value })} />
+                            </div>
+                        )}
+                        {selectedSection === 'coupleProfile' && (
+                            <div className="space-y-3">
+                                <PanelLabel label="Tiêu Đề Section" />
+                                <PInput placeholder="Cô Dâu & Chú Rể" value={data.coupleProfileTitle || ''} onChange={e => onChange({ coupleProfileTitle: e.target.value })} />
+                                <PanelLabel label="Bio Chú Rể" />
+                                <PTextarea rows={3} placeholder="Giới thiệu bản thân chú rể..." value={data.groomProfile?.bio || ''} onChange={e => onChange({ groomProfile: { ...(data.groomProfile || {}), bio: e.target.value } as any })} />
+                                <PanelLabel label="Bio Cô Dâu" />
+                                <PTextarea rows={3} placeholder="Giới thiệu bản thân cô dâu..." value={data.brideProfile?.bio || ''} onChange={e => onChange({ brideProfile: { ...(data.brideProfile || {}), bio: e.target.value } as any })} />
+                            </div>
+                        )}
+                        {selectedSection === 'opening'       && (
+                            <div className="space-y-3">
+                                <PanelLabel label="Tiêu Đề Lời Ngỏ" />
+                                <PInput placeholder="Lời Ngỏ" value={data.openingTitle || ''} onChange={e => onChange({ openingTitle: e.target.value })} />
+                                <PanelLabel label="Nội Dung Lời Ngỏ" />
+                                <PTextarea rows={6} placeholder="Lời mở đầu cho thiệp cưới..." value={data.openingMessage || ''} onChange={e => onChange({ openingMessage: e.target.value })} />
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

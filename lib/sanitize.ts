@@ -20,17 +20,32 @@ export function sanitizeMapUrl(raw: string | undefined): string | null {
   }
 }
 
-const SAFE_AUDIO_ORIGINS: string[] =
-  typeof location !== 'undefined' ? [location.origin] : [];
+// Audio CDN allowlist — add trusted hostnames here as needed.
+// Same-origin relative URLs (starting with /) are always allowed.
+const SAFE_AUDIO_HOSTS = [
+  // Supabase storage (project-specific subdomain pattern)
+  'supabase.co',
+  // Google Drive direct audio
+  'drive.google.com',
+  'docs.google.com',
+  // Common music CDNs used in wedding apps
+  'soundcloud.com',
+  'storage.googleapis.com',
+];
 
 export function sanitizeAudioUrl(raw: string | undefined): string | null {
   if (!raw) return null;
+  // Relative path — always safe (same origin)
   if (raw.startsWith('/')) return raw;
   try {
     const url = new URL(raw);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-    if (SAFE_AUDIO_ORIGINS.some(o => raw.startsWith(o))) return raw;
-    return raw;
+    // Same origin is always safe
+    if (typeof location !== 'undefined' && url.origin === location.origin) return raw;
+    // Allow known safe audio CDN hosts
+    if (SAFE_AUDIO_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h))) return raw;
+    // Unknown external source: return null to block autoplay from unverified origins
+    return null;
   } catch {
     return null;
   }

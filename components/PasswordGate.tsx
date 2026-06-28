@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Heart, Lock } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Heart, Lock, AlertTriangle } from 'lucide-react';
 import { PIN_HASH, SESSION_UNLOCKED_KEY } from '../lib/constants';
 
 interface PasswordGateProps {
@@ -21,7 +21,26 @@ export default function PasswordGate({ children, onUnlock }: PasswordGateProps) 
   const [error, setError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [shake, setShake] = useState(false);
+  // BUG-002 fix: track cloud load failure to show warning
+  const [cloudWarning, setCloudWarning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // BUG-001 fix: wrap in useCallback with proper dependency
+  const handleUnlock = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await onUnlock();
+      sessionStorage.setItem(SESSION_UNLOCKED_KEY, 'true');
+      setUnlocked(true);
+    } catch {
+      // BUG-002 fix: set warning flag, still unlock (cloud may be unavailable)
+      setCloudWarning(true);
+      sessionStorage.setItem(SESSION_UNLOCKED_KEY, 'true');
+      setUnlocked(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onUnlock]);
 
   useEffect(() => {
     if (sessionStorage.getItem(SESSION_UNLOCKED_KEY) === 'true') {
@@ -29,21 +48,7 @@ export default function PasswordGate({ children, onUnlock }: PasswordGateProps) 
     } else {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, []);
-
-  const handleUnlock = async () => {
-    setIsLoading(true);
-    try {
-      await onUnlock();
-      sessionStorage.setItem(SESSION_UNLOCKED_KEY, 'true');
-      setUnlocked(true);
-    } catch {
-      sessionStorage.setItem(SESSION_UNLOCKED_KEY, 'true');
-      setUnlocked(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [handleUnlock]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -61,7 +66,24 @@ export default function PasswordGate({ children, onUnlock }: PasswordGateProps) 
     }
   };
 
-  if (unlocked) return <>{children}</>;
+  if (unlocked) return (
+    <>
+      {children}
+      {/* BUG-002 fix: show cloud warning banner after unlock if load failed */}
+      {cloudWarning && (
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-sm z-50 bg-amber-50 border border-amber-200 rounded-xl shadow-lg p-3 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">Không thể tải dữ liệu cloud</p>
+            <p className="text-xs text-amber-600 mt-0.5">Đang hiển thị dữ liệu cục bộ. Kiểm tra kết nối mạng và tải lại trang.</p>
+          </div>
+          <button onClick={() => setCloudWarning(false)} className="text-amber-400 hover:text-amber-600 p-1 flex-shrink-0" aria-label="Đóng">
+            ×
+          </button>
+        </div>
+      )}
+    </>
+  );
 
   if (isLoading && sessionStorage.getItem(SESSION_UNLOCKED_KEY) === 'true') {
     return (
@@ -103,7 +125,7 @@ export default function PasswordGate({ children, onUnlock }: PasswordGateProps) 
               onChange={e => { setPin(e.target.value); setError(false); }}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               placeholder="••••••"
-              maxLength={20}
+              maxLength={8}
               autoComplete="current-password"
               className={`w-full px-4 py-3 rounded-xl border text-center text-lg tracking-widest font-mono transition-all outline-none focus:ring-2 ${
                 error

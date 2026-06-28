@@ -184,7 +184,11 @@ export interface GuestWish {
 
 export type SectionId = 'hero' | 'family' | 'venue' | 'events' | 'loveStory' | 'gallery' | 'bank' | 'rsvp' | 'guestbook' | 'calendar' | 'coupleProfile' | 'opening';
 
-export const DEFAULT_SECTION_ORDER: SectionId[] = ['hero', 'family', 'venue', 'events', 'loveStory', 'gallery', 'bank', 'rsvp', 'guestbook'];
+export const DEFAULT_SECTION_ORDER: SectionId[] = [
+  'hero', 'opening', 'family', 'venue', 'events',
+  'calendar', 'coupleProfile', 'loveStory', 'gallery',
+  'bank', 'rsvp', 'guestbook'
+];
 
 // --- Couple Profile (Cô Dâu & Chú Rể section) ---
 export interface CoupleProfile {

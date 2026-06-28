@@ -34,11 +34,14 @@ export function useEditorHistory(initial: InvitationData) {
   }, []);
 
   const set = useCallback((data: InvitationData) => {
-    setHistory(h => ({
-      past: [...h.past.slice(-(MAX_HISTORY - 1)), h.present],
-      present: data,
-      future: [],
-    }));
+    setHistory(h => {
+      if (data === h.present) return h; // no-op guard: skip if same reference
+      return {
+        past: [...h.past.slice(-(MAX_HISTORY - 1)), h.present],
+        present: data,
+        future: [],
+      };
+    });
   }, []);
 
   const undo = useCallback(() => {

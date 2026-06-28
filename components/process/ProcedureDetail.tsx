@@ -142,7 +142,7 @@ const ProcedureDetail: React.FC<ProcedureDetailProps> = ({ step, region }) => {
       if (confirm(`Thêm ${tasksToAdd.length} công việc này vào Ngân sách?`)) {
          tasksToAdd.forEach(t => {
             addBudgetItem({
-               id: Date.now().toString() + Math.random(),
+               id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
                category: t.category,
                itemName: t.itemName,
                estimatedCost: t.estimatedCost,

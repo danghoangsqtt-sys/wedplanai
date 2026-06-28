@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { loadPublicInvitation, submitRSVP, submitWish, loadInvitationResponses } from '../../services/cloudService';
 import { InvitationData, GuestWish } from '../../types';
 import InvitationPreview from './InvitationPreview';
+import { sanitizeAudioUrl } from '../../lib/sanitize';
 import { Loader2, AlertCircle, MailOpen, Volume2, VolumeX, Heart, Mail, X, CheckCircle2, Send, Users, MessageCircle, Music } from 'lucide-react';
 
 // Strip HTML tags — used for plain text contexts (titles, buttons, labels)
@@ -25,8 +26,9 @@ const sanitizeHtml = (html: string): string => {
             if (!SAFE_TAGS.test(node.tagName)) {
                 toRemove.push(node);
             } else {
+                // BUG-011 fix: strip ALL attributes (including style) to prevent CSS injection
                 Array.from(node.attributes).forEach(attr => {
-                    if (attr.name !== 'style') node!.removeAttribute(attr.name);
+                    node!.removeAttribute(attr.name);
                 });
             }
             node = walker.nextNode() as Element | null;
@@ -60,6 +62,8 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData,
     const [form, setForm] = useState({ name: '', phone: '', guests: '1', attending: 'yes', note: '' });
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
+    // BUG-005 fix: submitting state to prevent double-tap / spam
+    const [submitting, setSubmitting] = useState(false);
     const isMultiEvent = !!(inviteData?.rsvpMultiEvent);
 
     // Build event list: use rsvpEventSelections if configured, else fallback to events[]
@@ -81,15 +85,19 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData,
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.name.trim()) return;
+        if (!form.name.trim() || submitting) return;
+        // BUG-005 fix: set submitting state immediately
+        setSubmitting(true);
         const attending = isMultiEvent ? (selectedEvents.length > 0 ? 'yes' : 'no') : form.attending;
-        const guestCount = attending === 'yes' ? (parseInt(form.guests, 10) || null) : null;
+        // BUG-014 fix: parse '5+' as 5 (store actual number, not the string)
+        const rawGuests = form.guests === '5+' ? '5' : form.guests;
+        const guestCount = attending === 'yes' ? (parseInt(rawGuests, 10) || 1) : null;
         onSubmit({
             name: form.name.trim(),
             phone: form.phone.trim() || undefined,
             attending,
             guestCount,
-            message: form.note.trim() || undefined,
+            message: (form.note.trim() || (form.guests === '5+' && attending === 'yes' ? '5+ người' : undefined)) || undefined,
             selectedEventIds: isMultiEvent ? selectedEvents : undefined,
         });
         setSubmitted(true);
@@ -217,8 +225,12 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData,
                             placeholder="Dị ứng thức ăn, yêu cầu đặc biệt..."
                         />
                     </div>
-                    <button type="submit" className="w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-rose-300/50 transition-all flex items-center justify-center gap-2">
-                        <Send className="w-4 h-4" /> Xác nhận / Confirm
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className={`w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-rose-300/50 transition-all flex items-center justify-center gap-2 ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                        <Send className="w-4 h-4" /> {submitting ? 'Đang gửi...' : 'Xác nhận / Confirm'}
                     </button>
                 </form>
             </div>
@@ -243,7 +255,8 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, s
         e.preventDefault();
         if (!form.name.trim() || !form.message.trim()) return;
         const wish: GuestWish = {
-            id: `wish-${Date.now()}`,
+            // BUG-006 fix: use randomUUID to prevent ID collision between concurrent submissions
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `wish-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             name: form.name.trim(),
             message: form.message.trim(),
             createdAt: new Date().toISOString(),
@@ -409,11 +422,13 @@ const PublicInvitationView: React.FC = () => {
                         const stored = localStorage.getItem(`wishes_${uid}`);
                         if (stored) setLocalWishes(JSON.parse(stored));
                     } catch { /* ignore */ }
-                    // Load wishes other guests submitted (from the cloud)
-                    try {
-                        const { wishes } = await loadInvitationResponses(uid);
-                        setCloudWishes(wishes.map(w => ({ id: w.id, name: w.name, message: w.message ?? '', createdAt: w.createdAt })));
-                    } catch { /* ignore */ }
+                    // BUG-012 fix: only load wishes when guestbook is enabled
+                    if (inviteData.guestbookEnabled) {
+                        try {
+                            const { wishes } = await loadInvitationResponses(uid);
+                            setCloudWishes(wishes.map(w => ({ id: w.id, name: w.name, message: w.message ?? '', createdAt: w.createdAt })));
+                        } catch { /* ignore */ }
+                    }
                 } else {
                     setError("Không tìm thấy thiệp mời này hoặc thiệp chưa được tạo.");
                 }
@@ -430,8 +445,11 @@ const PublicInvitationView: React.FC = () => {
     const handleOpenInvite = () => {
         setIsOpened(true);
         if (data?.musicUrl) {
+            // BUG-004 fix: sanitize audio URL before creating Audio element
+            const safeUrl = sanitizeAudioUrl(data.musicUrl);
+            if (!safeUrl) return;
             if (!audioRef.current) {
-                audioRef.current = new Audio(data.musicUrl);
+                audioRef.current = new Audio(safeUrl);
                 audioRef.current.loop = true;
             }
             audioRef.current.play().catch(() => {/* autoplay blocked */});

@@ -5,6 +5,8 @@ import { useEditorHistory } from '../../../hooks/useEditorHistory';
 import InvitationPreview from '../InvitationPreview';
 import EditorTopBar from './EditorTopBar';
 import EditorFormPanel from './EditorFormPanel';
+import EditorLeftSidebar from './EditorLeftSidebar';
+import EditorContextPanel from './EditorContextPanel';
 import TemplateGalleryModal from '../TemplateGalleryModal';
 
 const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@400;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Spectral:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=DM+Sans:wght@400;500;600&family=Fahkwang:wght@400;500;600&family=Nunito:wght@400;500;600&family=Quicksand:wght@400;500;600&family=Josefin+Sans:wght@400;500;600&family=Mulish:wght@400;500;600&display=swap';
@@ -126,7 +128,15 @@ const InvitationEditorPage: React.FC = () => {
             />
 
             <div className="flex flex-1 min-h-0 overflow-hidden">
-                {/* Left Form Panel */}
+                {/* Left Sidebar: section reorder, visibility, style picker */}
+                <EditorLeftSidebar
+                    data={data}
+                    selectedSection={selectedSection}
+                    onSectionClick={handleSectionClick as (id: SectionId) => void}
+                    onChange={handleChange}
+                />
+
+                {/* Left Form Panel: detailed accordion editing */}
                 <EditorFormPanel data={data} onChange={handleChange} selectedSection={selectedSection} />
 
                 {/* Canvas area */}
@@ -161,6 +171,14 @@ const InvitationEditorPage: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Right Context Panel: section-specific flyout (slides in on section select) */}
+                <EditorContextPanel
+                    selectedSection={selectedSection}
+                    data={data}
+                    onClose={() => setSelectedSection(null)}
+                    onChange={handleChange}
+                />
 
             </div>
 

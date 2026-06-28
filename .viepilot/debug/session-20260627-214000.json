@@ -1,0 +1,58 @@
+{
+  "id": "debug-20260627-214000",
+  "status": "resolved",
+  "created_at": "2026-06-27T21:40:00+07:00",
+  "updated_at": "2026-06-27T21:42:00+07:00",
+  "problem": {
+    "description": "vp-audit + vp-debug deep scan: Find and auto-fix ALL bugs in wedplan-ai codebase",
+    "symptoms": [
+      "EditorLeftSidebar and EditorContextPanel were defined but NEVER mounted",
+      "toggleVisibility logic in EditorLeftSidebar was inverted — always set to false",
+      "sectionMap in EditorFormPanel missing calendar, coupleProfile, opening sections",
+      "EditorContextPanel missing panels for Phase-3 sections",
+      "sanitizeAudioUrl allowed all https URLs — no allowlist enforcement",
+      "addEvent used Date.now() for ID (collision risk)",
+      "groomBio/brideBio/openingText referenced non-existent fields in InvitationData"
+    ],
+    "error_messages": [],
+    "affected_files": [
+      "components/invitation/editor/EditorLeftSidebar.tsx",
+      "components/invitation/editor/EditorFormPanel.tsx",
+      "components/invitation/editor/EditorContextPanel.tsx",
+      "components/invitation/editor/InvitationEditorPage.tsx",
+      "lib/sanitize.ts"
+    ]
+  },
+  "investigation": {
+    "hypotheses": [
+      {"id": 1, "description": "EditorLeftSidebar + EditorContextPanel are dead code from Phase-3 that were never connected", "status": "confirmed"},
+      {"id": 2, "description": "toggleVisibility boolean inversion bug", "status": "confirmed"},
+      {"id": 3, "description": "sectionMap missing 3 Phase-3 SectionIds", "status": "confirmed"},
+      {"id": 4, "description": "sanitizeAudioUrl passthrough unsafe", "status": "confirmed"},
+      {"id": 5, "description": "EditorContextPanel missing Phase-3 section panels", "status": "confirmed"},
+      {"id": 6, "description": "Wrong field names used in EditorContextPanel for Phase-3 panels", "status": "confirmed"}
+    ],
+    "tests_run": [
+      {"command": "npx tsc --noEmit", "output": "0 errors after all fixes", "timestamp": "2026-06-27T21:42:00+07:00"}
+    ],
+    "findings": [
+      "Phase-3 vp-auto session created EditorLeftSidebar and EditorContextPanel but forgot to wire them into InvitationEditorPage layout",
+      "toggleVisibility: visibility[id] === false ? true : false evaluates to false when id not in map (undefined state = visible), effectively permanently hiding sections on first click and never restoring them",
+      "sectionMap fallback: calendar/coupleProfile/opening clicked in preview would log a miss but still scroll to correct (fallback 'selectedSection' value) — not a crash but a UX degradation",
+      "sanitizeAudioUrl returned raw URL for all external https sources — could allow embedding from any host",
+      "EditorContextPanel Phase-3 panels used non-existent type fields (groomBio, brideBio, openingText) — would cause TypeScript errors if not caught early"
+    ]
+  },
+  "resolution": {
+    "root_cause": "Phase-3 vp-auto session added 3 new SectionIds + 2 editor components but did not: (a) mount EditorLeftSidebar/EditorContextPanel in InvitationEditorPage, (b) fix toggleVisibility boolean logic, (c) add Phase-3 sections to EditorFormPanel sectionMap, (d) add Phase-3 panels to EditorContextPanel",
+    "fix_applied": "All 6 bugs fixed. TypeScript compile: 0 errors.",
+    "files_changed": [
+      "components/invitation/editor/EditorLeftSidebar.tsx — fix toggleVisibility logic",
+      "components/invitation/editor/InvitationEditorPage.tsx — mount EditorLeftSidebar + EditorContextPanel",
+      "components/invitation/editor/EditorFormPanel.tsx — add Phase-3 sections to sectionMap + fix addEvent ID",
+      "components/invitation/editor/EditorContextPanel.tsx — add Phase-3 section panels with correct type fields",
+      "lib/sanitize.ts — add audio CDN allowlist to sanitizeAudioUrl"
+    ],
+    "verification": "npx tsc --noEmit → 0 errors"
+  }
+}

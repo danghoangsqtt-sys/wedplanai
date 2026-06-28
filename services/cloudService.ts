@@ -85,7 +85,8 @@ export const saveUserDataToCloud = async (
 
     cloudLog.timeEnd('cloud-save');
     cloudLog.info('save complete', { uid });
-    updateLastActive(uid);
+    // BUG-008 fix: removed updateLastActive() - profiles table has FK → auth.users
+    // which always fails in no-auth single-user mode (OWNER_UID not in auth.users).
   } catch (error) {
     cloudLog.timeEnd('cloud-save');
     cloudLog.error('save to cloud failed', error);
@@ -430,16 +431,17 @@ export const checkGuestIPLimit = async (
     if (!ip) return false;
     const ipId = ip.replace(/\./g, '_');
 
+    // BUG-009 fix: use maybeSingle() to avoid PGRST116 error for new IP (not found → null, not error)
     const { data: doc, error } = await supabase
       .from(TABLES.GUEST_USAGE)
       .select(col)
       .eq('ip_id', ipId)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') return false; // Not found
       return false;
     }
+    if (!doc) return false; // new IP → under limit
 
     return (doc[col] || 0) >= maxLimit;
   } catch (err) {

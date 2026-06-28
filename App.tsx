@@ -12,6 +12,7 @@ import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import PasswordGate from './components/PasswordGate';
 import { OWNER_UID } from './lib/constants';
+import { logAppVisit } from './services/cloudService';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
 // --- Helper to handle lazy loading chunk errors (Vite cached index.html issue) ---
@@ -136,6 +137,14 @@ function App() {
     }
   }, [settings.themeMode]);
 
+  // BUG-016 fix: log app visit for analytics (once per day, per session)
+  useEffect(() => {
+    if (!isPublicView) {
+      logAppVisit(OWNER_UID);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // --- Statistics Calculation Logic ---
   const stats: DashboardStats = useMemo(() => {
     const totalGuests = guests.length;
@@ -167,7 +176,7 @@ function App() {
     );
   }
 
-  // --- RENDER: APP VIEW ---
+  // BUG-015 note: isRestricted reserved for future feature-gating logic
   const isRestricted = false;
 
   return (

@@ -40,7 +40,8 @@ export const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange
         if (file.size > 2 * 1048576) { alert('Ảnh quá lớn (tối đa 2MB)'); return; }
         setUploadingField('hero');
         try {
-            const url = await uploadInvitationImage(file, user.uid);
+            const compressedFile = await compressImage(file, 1.5, 1500);
+            const url = await uploadInvitationImage(compressedFile, user.uid);
             onChange({ couplePhoto: url, photoConfig: { scale: 1, x: 50, y: 50 } });
         } catch (err) {
             console.error('cover upload failed', err);
@@ -56,11 +57,15 @@ export const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange
                 'family': 'familyInfo',
                 'venue': 'party',
                 'events': 'timeline',
-                'loveStory': 'opening', // Fallback
+                'loveStory': 'opening',
                 'gallery': 'gallery',
                 'bank': 'bank',
                 'rsvp': 'rsvp',
-                'guestbook': 'guestbook'
+                'guestbook': 'guestbook',
+                // Phase-3 sections:
+                'calendar': 'basicInfo',      // calendar relates to wedding date in basicInfo
+                'coupleProfile': 'basicInfo', // couple profile relates to hero/basicInfo section
+                'opening': 'opening',         // opening section maps to opening accordion
             };
             
             const formSection = sectionMap[selectedSection] || selectedSection;
@@ -130,7 +135,7 @@ export const EditorFormPanel: React.FC<EditorFormPanelProps> = ({ data, onChange
     const addEvent = () => {
         const events = [...(data.events || [])];
         events.push({
-            id: `ev-${Date.now()}`,
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `ev-${Date.now()}`,
             title: 'Sự kiện mới',
             time: '18:00',
             date: data.date || '',
