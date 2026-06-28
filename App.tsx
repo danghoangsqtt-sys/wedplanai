@@ -11,6 +11,7 @@ import WelcomeOnboarding from './components/WelcomeOnboarding';
 import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import PasswordGate from './components/PasswordGate';
+import { OWNER_UID } from './lib/constants';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
 // --- Helper to handle lazy loading chunk errors (Vite cached index.html issue) ---
@@ -111,16 +112,20 @@ function App() {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<SettingsTab>('ACCOUNT');
 
-  // Public View State
-  const [isPublicView, setIsPublicView] = useState(false);
-
-  // --- Check for Public URL Params ---
-  useEffect(() => {
+  // Public View State — read synchronously so PasswordGate NEVER renders for guest links
+  // (useEffect runs after first render, causing PIN gate flash on invitation URLs)
+  const [isPublicView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'invitation' && params.get('uid')) {
-      setIsPublicView(true);
+    const isQueryView = params.get('view') === 'invitation' && !!params.get('uid');
+    // Short URL: /thiep → show owner's invitation without UID in URL
+    const isShortUrl = window.location.pathname === '/thiep';
+    if (isShortUrl && !params.get('uid')) {
+      // Inject OWNER_UID into URL without page reload (history API)
+      const newUrl = `/?view=invitation&uid=${OWNER_UID}`;
+      window.history.replaceState(null, '', newUrl);
     }
-  }, []);
+    return isQueryView || isShortUrl;
+  });
 
   // --- Apply Theme Effect ---
   useEffect(() => {
