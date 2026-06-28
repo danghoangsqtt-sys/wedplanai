@@ -39,19 +39,16 @@ const GuestManager: React.FC = () => {
     if (activeTab === 'rsvp') loadRsvp();
   }, [activeTab, loadRsvp]);
 
-  // Import RSVP submission → add to guests[]
+  // Import RSVP submission → add to guests[] — default 500k (mức cơ bản Việt Nam)
   const handleImportRsvp = (r: InvitationResponse) => {
     if (importedIds.has(r.id)) return;
-    const avgEnvelope = guests.length > 0
-      ? Math.round(guests.reduce((s, g) => s + g.redEnvelope, 0) / guests.length / 100000) * 100000
-      : 500000;
     const newGuest: Guest = {
       id: generateId(),
       name: r.name.trim().slice(0, 100),
       group: GuestGroup.FRIEND,
       probability: r.attending === 'yes' ? AttendanceProbability.CONFIRMED : AttendanceProbability.UNLIKELY,
       childrenCount: 0,
-      redEnvelope: avgEnvelope,
+      redEnvelope: 500000, // Mức mừng cơ bản 500.000đ (Việt Nam)
     };
     addGuest(newGuest);
     setImportedIds(prev => new Set([...prev, r.id]));
@@ -432,17 +429,15 @@ const GuestManager: React.FC = () => {
     );
   };
 
-  // ─── RSVP Stats ─────────────────────────────────────────────────────────────
+  // ─── RSVP Stats — dùng 500.000đ/người (mức cơ bản Việt Nam) ────────────────────────────────
+  const BASE_GIFT_VND = 500000; // Mức mừng cơ bản Việt Nam
   const rsvpStats = useMemo(() => {
     const attending = rsvpList.filter(r => r.attending === 'yes');
     const notAttending = rsvpList.filter(r => r.attending === 'no');
     const totalGuests = attending.reduce((s, r) => s + (r.guestCount ?? 1), 0);
-    const avgEnvelope = guests.length > 0
-      ? guests.reduce((s, g) => s + g.redEnvelope, 0) / guests.length
-      : 500000;
-    const expectedGift = Math.round(totalGuests * avgEnvelope);
+    const expectedGift = totalGuests * BASE_GIFT_VND; // 500k × số khách
     return { attending, notAttending, totalGuests, expectedGift };
-  }, [rsvpList, guests]);
+  }, [rsvpList]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden h-full flex flex-col">
@@ -524,7 +519,8 @@ const GuestManager: React.FC = () => {
                   : `${(rsvpStats.expectedGift / 1000).toFixed(0)}k`
                 }
               </div>
-              <div className="text-xs text-amber-600 font-medium mt-0.5">Tiền mừng dự kiến</div>
+              <div className="text-xs text-amber-600 font-medium mt-0.5">Thu hồi dự kiến</div>
+              <div className="text-[9px] text-amber-400 mt-0.5">~500k/người</div>
             </div>
           </div>
 
