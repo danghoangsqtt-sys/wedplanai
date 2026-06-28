@@ -343,7 +343,8 @@ const PublicInvitationView: React.FC = () => {
     const [data, setData] = useState<InvitationData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isOpened, setIsOpened] = useState(false);
+    const [isOpened, setIsOpened] = useState(true);
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [showRSVP, setShowRSVP] = useState(false);
     const [showGuestbook, setShowGuestbook] = useState(false);
