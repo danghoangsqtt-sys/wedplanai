@@ -11,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
     Layers, Palette, Plus, GripVertical, Eye, EyeOff,
     Layout, Image as ImgIcon, Users, MapPin, Music2, CalendarDays, Camera,
-    Heart, QrCode, Send, BookOpen, Crown,
+    Heart, QrCode, Send, BookOpen, Crown, Settings, Mail, MessageCircle, Shirt
 } from 'lucide-react';
 import { InvitationData, SectionId, DEFAULT_SECTION_ORDER } from '../../../types';
 
@@ -20,13 +20,11 @@ const SECTION_META: Record<SectionId, { label: string; icon: React.ReactNode; al
     family:        { label: 'Cha Mẹ Hai Bên',   icon: <Users size={14} /> },
     venue:         { label: 'Địa Điểm',          icon: <MapPin size={14} /> },
     events:        { label: 'Chương Trình',       icon: <CalendarDays size={14} /> },
-    loveStory:     { label: 'Chuyện Tình Yêu',   icon: <Heart size={14} /> },
     gallery:       { label: 'Album Ảnh',          icon: <Camera size={14} /> },
     bank:          { label: 'Mừng Cưới / QR',    icon: <QrCode size={14} /> },
     rsvp:          { label: 'RSVP',               icon: <Send size={14} /> },
     guestbook:     { label: 'Sổ Lưu Bút',        icon: <BookOpen size={14} /> },
     calendar:      { label: 'Lịch Ngày Cưới',    icon: <CalendarDays size={14} /> },
-    coupleProfile: { label: 'Cô Dâu & Chú Rể',  icon: <Users size={14} /> },
     opening:       { label: 'Lời Ngỏ',            icon: <BookOpen size={14} /> },
 };
 
@@ -83,12 +81,12 @@ const SortableSectionRow: React.FC<SortableSectionRowProps> = ({
     );
 };
 
-type SidebarTab = 'sections' | 'style' | 'add';
+type SidebarTab = 'sections' | 'style' | 'settings' | 'add';
 
 interface EditorLeftSidebarProps {
     data: InvitationData;
     selectedSection: string | null;
-    onSectionClick: (id: SectionId) => void;
+    onSectionClick: (id: string) => void;
     onChange: (patch: Partial<InvitationData>) => void;
 }
 
@@ -126,6 +124,7 @@ const EditorLeftSidebar: React.FC<EditorLeftSidebarProps> = ({
     const ICON_TABS = [
         { id: 'sections' as SidebarTab, icon: <Layers size={18} />, label: 'Sections' },
         { id: 'style' as SidebarTab, icon: <Palette size={18} />, label: 'Style' },
+        { id: 'settings' as SidebarTab, icon: <Settings size={18} />, label: 'Cài Đặt' },
         { id: 'add' as SidebarTab, icon: <Plus size={18} />, label: 'Thêm' },
     ];
 
@@ -218,6 +217,30 @@ const EditorLeftSidebar: React.FC<EditorLeftSidebarProps> = ({
                                     </button>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <div className="p-2 space-y-1">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2 py-1.5 mb-1">Cài Đặt Thiệp</p>
+                            {[
+                                { id: 'dresscode', label: 'Dress Code', icon: <Shirt size={14} /> },
+                                { id: 'envelope', label: 'Lời Mời Phong Bì', icon: <Mail size={14} /> },
+                                { id: 'thankyou', label: 'Lời Cảm Ơn', icon: <MessageCircle size={14} /> },
+                            ].map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => onSectionClick(item.id)}
+                                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                        selectedSection === item.id 
+                                            ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' 
+                                            : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <span className="text-gray-400">{item.icon}</span>
+                                    {item.label}
+                                </button>
+                            ))}
                         </div>
                     )}
 

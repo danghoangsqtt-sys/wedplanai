@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
     X, Upload, Trash2, Plus, RefreshCw, Music2,
-    ChevronDown, ChevronUp, Eye, Smile, MapPin, Lightbulb
+    ChevronDown, ChevronUp, Eye, Smile, MapPin, Lightbulb, Pencil, ImageIcon
 } from 'lucide-react';
 import { InvitationData, BankInfo, WeddingEvent, LoveStoryEvent, SectionId } from '../../../types';
 import { useStore } from '../../../store/useStore';
@@ -20,6 +20,15 @@ const STICKER_GROUPS = {
 };
 
 import { PhotoPositionEditor } from './PhotoPositionEditor';
+
+const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, '') : '';
+
+const resolveImageUrl = (url: string | undefined): string | undefined => {
+    if (!url) return url;
+    const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    return url;
+};
 
 /* ── SECTION PANEL LABEL ── */
 const PanelLabel: React.FC<{ label: string }> = ({ label }) => (
@@ -73,19 +82,47 @@ const HeroPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invitati
             {/* Couple names */}
             <div>
                 <PanelLabel label="Tên Cặp Đôi" />
-                <div className="grid grid-cols-2 gap-2">
-                    <PInput placeholder="Tên Chú Rể" value={data.groomName || ''} onChange={e => onChange({ groomName: e.target.value })} />
-                    <PInput placeholder="Tên Cô Dâu" value={data.brideName || ''} onChange={e => onChange({ brideName: e.target.value })} />
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                    <PInput placeholder="Tên Chú Rể" value={stripHtml(data.groomName || '')} onChange={e => onChange({ groomName: e.target.value })} />
+                    <PInput placeholder="Tên Cô Dâu" value={stripHtml(data.brideName || '')} onChange={e => onChange({ brideName: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                    <PInput placeholder="Tên ngắn (vd: Anh Ngọc)" value={stripHtml(data.groomShortName || '')} onChange={e => onChange({ groomShortName: e.target.value })} />
+                    <PInput placeholder="Tên ngắn (vd: Diệu Ly)" value={stripHtml(data.brideShortName || '')} onChange={e => onChange({ brideShortName: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                    <PInput placeholder="Danh xưng (vd: Chú Rể)" value={stripHtml(data.groomTitle || '')} onChange={e => onChange({ groomTitle: e.target.value })} />
+                    <PInput placeholder="Danh xưng (vd: Cô Dâu)" value={stripHtml(data.brideTitle || '')} onChange={e => onChange({ brideTitle: e.target.value })} />
+                </div>
+                <div className="mt-2">
+                    <PanelLabel label="Thứ tự hiển thị" />
+                    <select
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-400 bg-white"
+                        value={data.displayOrder || 'groom_first'}
+                        onChange={e => onChange({ displayOrder: e.target.value as 'groom_first' | 'bride_first' })}
+                    >
+                        <option value="groom_first">Nhà trai trước (VD: Anh Ngọc & Diệu Ly)</option>
+                        <option value="bride_first">Nhà gái trước (VD: Diệu Ly & Anh Ngọc)</option>
+                    </select>
                 </div>
             </div>
             {/* Date & time */}
             <div>
                 <PanelLabel label="Ngày & Giờ" />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                     <PInput type="date" value={data.date || ''} onChange={e => onChange({ date: e.target.value })} />
-                    <PInput type="time" value={data.time || ''} onChange={e => onChange({ time: e.target.value })} />
+                    <PInput placeholder="Ngày âm lịch" value={data.lunarDate || ''} onChange={e => onChange({ lunarDate: e.target.value })} />
                 </div>
-                <PInput className="mt-2" placeholder="Ngày âm lịch (vd: 10/01 Âm lịch)" value={data.lunarDate || ''} onChange={e => onChange({ lunarDate: e.target.value })} />
+                <div className="grid grid-cols-2 gap-2">
+                    <div>
+                        <PanelLabel label="Giờ đón khách" />
+                        <PInput type="time" value={data.receptionTime || ''} onChange={e => onChange({ receptionTime: e.target.value })} />
+                    </div>
+                    <div>
+                        <PanelLabel label="Giờ khai tiệc" />
+                        <PInput type="time" value={data.time || ''} onChange={e => onChange({ time: e.target.value })} />
+                    </div>
+                </div>
             </div>
             {/* Wishes */}
             <div>
@@ -98,7 +135,7 @@ const HeroPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invitati
                 {data.couplePhoto ? (
                     <>
                         <PhotoPositionEditor
-                            src={data.couplePhoto}
+                            src={resolveImageUrl(data.couplePhoto) || ''}
                             config={data.photoConfig ?? { scale: 1, x: 50, y: 50 }}
                             onChange={c => onChange({ photoConfig: c })}
                             onRemove={() => onChange({ couplePhoto: undefined, photoConfig: undefined, heroOverlayOpacity: undefined })}
@@ -198,17 +235,34 @@ const FamilyPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invita
     return (
         <div className="space-y-4">
             <div>
-                <PanelLabel label="Nhà Trai" />
+                <PanelLabel label="Thông Điệp Chung" />
                 <div className="space-y-2">
-                    <PInput placeholder="Tên Cha (Bố Chú Rể)" value={gp.father} onChange={e => onChange({ groomParents: { ...gp, father: e.target.value } })} />
-                    <PInput placeholder="Tên Mẹ (Mẹ Chú Rể)" value={gp.mother} onChange={e => onChange({ groomParents: { ...gp, mother: e.target.value } })} />
+                    <PInput placeholder="Tiêu đề (vd: Trân trọng kính mời)" value={stripHtml(data.inviteSectionTitle || '')} onChange={e => onChange({ inviteSectionTitle: e.target.value })} />
+                    <PTextarea rows={2} placeholder="Lời mở đầu (vd: Sự hiện diện của...)" value={stripHtml(data.openingMessage || '')} onChange={e => onChange({ openingMessage: e.target.value })} />
                 </div>
             </div>
             <div>
-                <PanelLabel label="Nhà Gái" />
+                <div className="flex items-center gap-2 mb-1.5">
+                    <PanelLabel label="Nhà Trai" />
+                    <PInput className="py-1 px-2 text-xs w-32" placeholder="Nhãn cột (vd: NHÀ TRAI)" value={stripHtml(data.familySideGroom || '')} onChange={e => onChange({ familySideGroom: e.target.value })} />
+                </div>
                 <div className="space-y-2">
-                    <PInput placeholder="Tên Cha (Bố Cô Dâu)" value={bp.father} onChange={e => onChange({ brideParents: { ...bp, father: e.target.value } })} />
-                    <PInput placeholder="Tên Mẹ (Mẹ Cô Dâu)" value={bp.mother} onChange={e => onChange({ brideParents: { ...bp, mother: e.target.value } })} />
+                    <PInput placeholder="Danh xưng (vd: Ông Bà, Ông, Bà)" value={stripHtml(gp.title || '')} onChange={e => onChange({ groomParents: { ...gp, title: e.target.value } })} />
+                    <PInput placeholder="Tên Cha (Bố Chú Rể)" value={stripHtml(gp.father || '')} onChange={e => onChange({ groomParents: { ...gp, father: e.target.value } })} />
+                    <PInput placeholder="Tên Mẹ (Mẹ Chú Rể)" value={stripHtml(gp.mother || '')} onChange={e => onChange({ groomParents: { ...gp, mother: e.target.value } })} />
+                    <PTextarea rows={2} placeholder="Địa chỉ nhà trai" value={stripHtml(gp.address || '')} onChange={e => onChange({ groomParents: { ...gp, address: e.target.value } })} />
+                </div>
+            </div>
+            <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                    <PanelLabel label="Nhà Gái" />
+                    <PInput className="py-1 px-2 text-xs w-32" placeholder="Nhãn cột (vd: NHÀ GÁI)" value={stripHtml(data.familySideBride || '')} onChange={e => onChange({ familySideBride: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                    <PInput placeholder="Danh xưng (vd: Ông Bà, Ông, Bà)" value={stripHtml(bp.title || '')} onChange={e => onChange({ brideParents: { ...bp, title: e.target.value } })} />
+                    <PInput placeholder="Tên Cha (Bố Cô Dâu)" value={stripHtml(bp.father || '')} onChange={e => onChange({ brideParents: { ...bp, father: e.target.value } })} />
+                    <PInput placeholder="Tên Mẹ (Mẹ Cô Dâu)" value={stripHtml(bp.mother || '')} onChange={e => onChange({ brideParents: { ...bp, mother: e.target.value } })} />
+                    <PTextarea rows={2} placeholder="Địa chỉ nhà gái" value={stripHtml(bp.address || '')} onChange={e => onChange({ brideParents: { ...bp, address: e.target.value } })} />
                 </div>
             </div>
             <div>
@@ -227,6 +281,10 @@ const FamilyPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invita
 
 const VenuePanel: React.FC<{ data: InvitationData; onChange: (p: Partial<InvitationData>) => void }> = ({ data, onChange }) => (
     <div className="space-y-3">
+        <div>
+            <PanelLabel label="Tiêu Đề Phần" />
+            <PInput placeholder="vd: Địa Điểm Tổ Chức" value={data.venueSectionTitle || ''} onChange={e => onChange({ venueSectionTitle: e.target.value })} />
+        </div>
         <div>
             <PanelLabel label="Tên Địa Điểm" />
             <PInput placeholder="vd: Nhà Hàng Tiệc Cưới ABC" value={data.location || ''} onChange={e => onChange({ location: e.target.value })} />
@@ -254,7 +312,16 @@ const VenuePanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invitat
                         className="w-full bg-white border border-gray-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-300 transition-all pl-8"
                         placeholder="https://maps.app.goo.gl/..." 
                         value={data.mapLink || ''} 
-                        onChange={e => onChange({ mapLink: e.target.value })} 
+                        onChange={e => {
+                            let val = e.target.value;
+                            if (val.includes('<iframe') && val.includes('src="')) {
+                                const match = val.match(/src="([^"]+)"/);
+                                if (match && match[1]) {
+                                    val = match[1];
+                                }
+                            }
+                            onChange({ mapLink: val });
+                        }}
                     />
                     <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-amber-400">
                         <Lightbulb size={14} />
@@ -278,6 +345,10 @@ const EventsPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invita
 
     return (
         <div className="space-y-3">
+            <div>
+                <PanelLabel label="Tiêu Đề Phần" />
+                <PInput placeholder="vd: Chương Trình Lễ Cưới" value={stripHtml(data.eventsSectionTitle || '')} onChange={e => onChange({ eventsSectionTitle: e.target.value })} />
+            </div>
             {events.map(ev => (
                 <div key={ev.id} className="border border-gray-100 rounded-xl p-3 space-y-2 bg-gray-50">
                     <div className="flex items-center justify-between">
@@ -301,8 +372,11 @@ const EventsPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invita
 const GalleryPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<InvitationData>) => void }> = ({ data, onChange }) => {
     const { user } = useStore();
     const [uploading, setUploading] = useState(false);
+    const [croppingImageIndex, setCroppingImageIndex] = useState<number | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const galleryLinkRef = useRef<HTMLInputElement>(null);
     const images = data.galleryImages ?? [];
+    const configs = data.galleryConfigs ?? [];
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const fileArray = Array.from(e.target.files ?? []) as File[];
@@ -324,31 +398,108 @@ const GalleryPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invit
         }
     };
 
-    const removeImage = (idx: number) => onChange({ galleryImages: images.filter((_, i) => i !== idx) });
+    const removeImage = (idx: number) => {
+        const newImgs = [...images];
+        newImgs.splice(idx, 1);
+        const newCfgs = [...configs];
+        if (newCfgs.length > idx) newCfgs.splice(idx, 1);
+        onChange({ galleryImages: newImgs, galleryConfigs: newCfgs });
+    };
+
+    const handleAddLink = () => {
+        let val = galleryLinkRef.current?.value.trim();
+        if (val) {
+            if (val.includes('drive.google.com/file/d/')) {
+                const match = val.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) val = `https://lh3.googleusercontent.com/d/${match[1]}`;
+            }
+            onChange({ galleryImages: [...images, val] });
+            if (galleryLinkRef.current) galleryLinkRef.current.value = '';
+        }
+    };
 
     return (
-        <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-                {images.map((img, i) => (
-                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden group border border-gray-100">
-                        <img src={img} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" loading="lazy"
-                            onError={e => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).className = 'w-full h-full bg-gray-100 flex items-center justify-center'; }} />
-                        <button
-                            onClick={() => removeImage(i)}
-                            className="absolute top-1 right-1 bg-black/50 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                        ><X size={11} /></button>
-                    </div>
-                ))}
+        <div className="space-y-4">
+            <div>
+                <PanelLabel label="Tiêu Đề Phần" />
+                <PInput placeholder="vd: Album Ảnh Cưới" value={data.gallerySectionTitle || ''} onChange={e => onChange({ gallerySectionTitle: e.target.value })} />
             </div>
+            <div className="flex bg-gray-100 rounded-lg p-1">
+                <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryStyle === 'grid' || !data.galleryStyle ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`} onClick={() => onChange({ galleryStyle: 'grid' })}>Lưới</button>
+                <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryStyle === 'collage' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`} onClick={() => onChange({ galleryStyle: 'collage' })}>Ghép ảnh</button>
+                <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryStyle === '3d' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`} onClick={() => onChange({ galleryStyle: '3d' })}>3D</button>
+            </div>
+            <div className="flex bg-gray-100 rounded-lg p-1">
+                <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryFit !== 'contain' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`} onClick={() => onChange({ galleryFit: 'cover' })}>Lấp đầy (Cắt ảnh)</button>
+                <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${data.galleryFit === 'contain' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`} onClick={() => onChange({ galleryFit: 'contain' })}>Giữ tỷ lệ</button>
+            </div>
+
+            <div className="space-y-1">
+                <PanelLabel label="Thêm ảnh qua Link" />
+                <div className="flex gap-2">
+                    <input
+                        ref={galleryLinkRef}
+                        type="text"
+                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                        placeholder="Dán link ảnh..."
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddLink(); }}
+                    />
+                    <button onClick={handleAddLink} className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm hover:bg-rose-600 transition-colors">Thêm</button>
+                </div>
+            </div>
+
             <button
                 onClick={() => inputRef.current?.click()}
                 disabled={uploading}
-                className="w-full py-4 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-rose-300 hover:text-rose-400 flex flex-col items-center gap-1.5 transition-colors"
+                className="w-full py-3 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-rose-300 hover:text-rose-500 flex items-center justify-center gap-2 transition-colors"
             >
-                <Upload size={18} />
-                {uploading ? 'Đang tải lên...' : 'Tải thêm ảnh (tối đa 2MB/ảnh)'}
+                <Upload size={16} />
+                {uploading ? 'Đang tải lên...' : 'Tải ảnh từ thiết bị (tối đa 2MB)'}
             </button>
             <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
+
+            <div className="grid grid-cols-3 gap-2">
+                {images.map((img, i) => {
+                    const cfg = configs[i] || { scale: 1, x: 50, y: 50 };
+                    return (
+                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden group border border-gray-100 bg-gray-100">
+                            <img src={resolveImageUrl(img)} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" loading="lazy"
+                                style={{ objectPosition: `${cfg.x}% ${cfg.y}%`, transform: cfg.scale !== 1 ? `scale(${cfg.scale})` : undefined }}
+                                onError={e => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).className = 'w-full h-full bg-gray-100 flex items-center justify-center'; }} />
+                            
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity gap-2">
+                                <button onClick={() => setCroppingImageIndex(i)} className="text-white hover:text-blue-400 p-1"><Pencil size={14} /></button>
+                                <button onClick={() => removeImage(i)} className="text-white hover:text-red-400 p-1"><Trash2 size={14} /></button>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {croppingImageIndex !== null && images[croppingImageIndex] && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+                        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-800 text-sm">Căn chỉnh vị trí</h3>
+                            <button onClick={() => setCroppingImageIndex(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+                        </div>
+                        <div className="p-4">
+                            <PhotoPositionEditor 
+                                src={resolveImageUrl(images[croppingImageIndex]) || ''}
+                                config={configs[croppingImageIndex] || { scale: 1, x: 50, y: 50 }}
+                                onChange={(c) => {
+                                    const cfgArr = [...(configs.length ? configs : Array(images.length).fill(null))];
+                                    cfgArr[croppingImageIndex] = c;
+                                    onChange({ galleryConfigs: cfgArr });
+                                }}
+                            />
+                        </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+                            <button onClick={() => setCroppingImageIndex(null)} className="px-5 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600">Xong</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -398,7 +549,7 @@ const LoveStoryPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Inv
                         <PTextarea rows={2} placeholder="Câu chuyện..." value={ev.description} onChange={e => update(ev.id, { description: e.target.value })} />
                         {ev.photo ? (
                             <div className="relative h-20 rounded-lg overflow-hidden">
-                                <img src={ev.photo} alt="Love story" className="w-full h-full object-cover" />
+                                <img src={resolveImageUrl(ev.photo)} alt="Love story" className="w-full h-full object-cover" />
                                 <button onClick={() => update(ev.id, { photo: undefined })} className="absolute top-1 right-1 bg-black/50 text-white p-0.5 rounded-full"><X size={11} /></button>
                             </div>
                         ) : (
@@ -424,37 +575,75 @@ const LoveStoryPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Inv
 };
 
 const BankPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<InvitationData>) => void }> = ({ data, onChange }) => {
-    const bank = data.bankInfo ?? { bankId: '', accountNumber: '', accountName: '' };
-    const upd = (patch: Partial<BankInfo>) => onChange({ bankInfo: { ...bank, ...patch } });
-    const qrUrl = bank.bankId && bank.accountNumber
-        ? `https://img.vietqr.io/image/${bank.bankId}-${bank.accountNumber}-compact2.png?accountName=${encodeURIComponent(bank.accountName || '')}`
-        : null;
+    // If bankAccounts is undefined, fallback to a single item from bankInfo or empty
+    const accounts = data.bankAccounts || (data.bankInfo?.bankId ? [data.bankInfo] : []);
+
+    const updateAccount = (index: number, patch: Partial<BankInfo>) => {
+        const list = [...accounts];
+        list[index] = { ...list[index], ...patch };
+        onChange({ bankAccounts: list });
+    };
+
+    const addAccount = () => {
+        onChange({ bankAccounts: [...accounts, { bankId: '', accountNumber: '', accountName: '', title: '' }] });
+    };
+
+    const removeAccount = (index: number) => {
+        const list = [...accounts];
+        list.splice(index, 1);
+        onChange({ bankAccounts: list });
+    };
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             <div>
-                <PanelLabel label="Ngân Hàng" />
-                <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-400 bg-white"
-                    value={bank.bankId} onChange={e => upd({ bankId: e.target.value })}
-                >
-                    <option value="">— Chọn ngân hàng —</option>
-                    {BANKS.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
+                <PanelLabel label="Tiêu Đề Phần" />
+                <PInput placeholder="vd: Gửi Quà Mừng" value={data.giftSectionTitle || ''} onChange={e => onChange({ giftSectionTitle: e.target.value })} />
             </div>
-            <div>
-                <PanelLabel label="Số Tài Khoản" />
-                <PInput placeholder="0123456789" value={bank.accountNumber} onChange={e => upd({ accountNumber: e.target.value })} />
-            </div>
-            <div>
-                <PanelLabel label="Tên Chủ Tài Khoản" />
-                <PInput placeholder="NGUYEN VAN A" value={bank.accountName} onChange={e => upd({ accountName: e.target.value.toUpperCase() })} />
-            </div>
-            {qrUrl && (
-                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex flex-col items-center gap-2">
-                    <p className="text-xs text-gray-500 font-medium">Preview QR</p>
-                    <img src={qrUrl} alt="VietQR preview" className="w-36 h-auto rounded-lg" loading="lazy" />
-                </div>
-            )}
+            {accounts.map((acc, index) => {
+                const qrUrl = acc.bankId && acc.accountNumber
+                    ? `https://img.vietqr.io/image/${acc.bankId}-${acc.accountNumber}-compact2.png?accountName=${encodeURIComponent(acc.accountName || '')}`
+                    : null;
+
+                return (
+                    <div key={index} className="p-3 border border-gray-100 rounded-xl space-y-3 bg-gray-50 relative">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tài khoản {index + 1}</span>
+                            <button onClick={() => removeAccount(index)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={14} /></button>
+                        </div>
+                        <div>
+                            <PanelLabel label="Tiêu Đề (VD: Mừng cưới Chú Rể)" />
+                            <PInput placeholder="Tiêu đề" value={acc.title || ''} onChange={e => updateAccount(index, { title: e.target.value })} />
+                        </div>
+                        <div>
+                            <PanelLabel label="Ngân Hàng" />
+                            <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-400 bg-white"
+                                value={acc.bankId} onChange={e => updateAccount(index, { bankId: e.target.value })}
+                            >
+                                <option value="">— Chọn ngân hàng —</option>
+                                {BANKS.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <PanelLabel label="Số Tài Khoản" />
+                            <PInput placeholder="0123456789" value={acc.accountNumber} onChange={e => updateAccount(index, { accountNumber: e.target.value })} />
+                        </div>
+                        <div>
+                            <PanelLabel label="Tên Chủ Tài Khoản" />
+                            <PInput placeholder="NGUYEN VAN A" value={acc.accountName} onChange={e => updateAccount(index, { accountName: e.target.value.toUpperCase() })} />
+                        </div>
+                        {qrUrl && (
+                            <div className="bg-white border border-gray-200 rounded-lg p-2 flex flex-col items-center gap-2 mt-2">
+                                <p className="text-[10px] text-gray-400 font-medium uppercase">Preview QR</p>
+                                <img src={qrUrl} alt="VietQR preview" className="w-32 h-auto rounded-lg" loading="lazy" />
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+            <button onClick={addAccount} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-rose-300 hover:text-rose-400 flex items-center justify-center gap-1.5 transition-colors">
+                <Plus size={14} /> Thêm tài khoản
+            </button>
         </div>
     );
 };
@@ -471,10 +660,29 @@ const RSVPPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Invitati
             </button>
         </div>
         {data.rsvpEnabled && (
-            <div>
-                <PanelLabel label="Hạn Cuối Phản Hồi" />
-                <PInput type="date" value={data.rsvpDeadline || ''} onChange={e => onChange({ rsvpDeadline: e.target.value })} />
-            </div>
+            <>
+                <div>
+                    <PanelLabel label="Tiêu Đề Phần" />
+                    <PInput placeholder="vd: Xác Nhận Tham Dự" value={data.rsvpSectionTitle || ''} onChange={e => onChange({ rsvpSectionTitle: e.target.value })} />
+                </div>
+                <div>
+                    <PanelLabel label="Lời Nhắn" />
+                    <PTextarea rows={2} placeholder="Sự hiện diện của quý khách..." value={data.rsvpMessage || ''} onChange={e => onChange({ rsvpMessage: e.target.value })} />
+                </div>
+                <div>
+                    <PanelLabel label="Hạn Cuối Phản Hồi" />
+                    <PInput type="date" value={data.rsvpDeadline || ''} onChange={e => onChange({ rsvpDeadline: e.target.value })} />
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-gray-700">Cho phép chọn sự kiện tham dự</span>
+                    <button
+                        onClick={() => onChange({ rsvpMultiEvent: !data.rsvpMultiEvent })}
+                        className={`w-8 h-4 rounded-full transition-colors relative ${data.rsvpMultiEvent ? 'bg-rose-500' : 'bg-gray-200'}`}
+                    >
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${data.rsvpMultiEvent ? 'left-4' : 'left-0.5'}`} />
+                    </button>
+                </div>
+            </>
         )}
     </div>
 );
@@ -491,7 +699,115 @@ const GuestbookPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Inv
             </button>
         </div>
         {data.guestbookEnabled && (
-            <p className="text-xs text-gray-400">Khách có thể để lại lời chúc trên trang thiệp của bạn.</p>
+            <>
+                <p className="text-xs text-gray-400">Khách có thể để lại lời chúc trên trang thiệp của bạn.</p>
+                <div className="mt-2">
+                    <PanelLabel label="Tiêu Đề Phần" />
+                    <PInput placeholder="vd: Sổ Lưu Bút" value={data.guestbookSectionTitle || ''} onChange={e => onChange({ guestbookSectionTitle: e.target.value })} />
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-gray-700">Hiển thị ô nhập Email</span>
+                    <button
+                        onClick={() => onChange({ guestbookEmailEnabled: !data.guestbookEmailEnabled })}
+                        className={`w-8 h-4 rounded-full transition-colors relative ${data.guestbookEmailEnabled ? 'bg-rose-500' : 'bg-gray-200'}`}
+                    >
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${data.guestbookEmailEnabled ? 'left-4' : 'left-0.5'}`} />
+                    </button>
+                </div>
+            </>
+        )}
+    </div>
+);
+
+/* ══════════════════════════════
+   NEW GLOBAL PANELS
+══════════════════════════════ */
+
+const ThankYouPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<InvitationData>) => void }> = ({ data, onChange }) => (
+    <div className="space-y-3">
+        <PanelLabel label="Lời Cảm Ơn" />
+        <PTextarea 
+            rows={4} 
+            placeholder="Sự hiện diện của quý khách là niềm vinh hạnh..." 
+            value={data.thankYouMessage ?? ''} 
+            onChange={e => onChange({ thankYouMessage: e.target.value })} 
+        />
+        <p className="text-[10px] text-gray-400">Để trống nếu không muốn hiển thị lời cảm ơn ở cuối thiệp.</p>
+    </div>
+);
+
+const EnvelopePanel: React.FC<{ data: InvitationData; onChange: (p: Partial<InvitationData>) => void }> = ({ data, onChange }) => (
+    <div className="space-y-3">
+        <PanelLabel label="Lời Mời Trên Phong Bì" />
+        <PInput 
+            placeholder="VD: Thân Mời" 
+            value={data.envelopeMessage ?? ''} 
+            onChange={e => onChange({ envelopeMessage: e.target.value })} 
+        />
+    </div>
+);
+
+const DressCodePanel: React.FC<{ data: InvitationData; onChange: (p: Partial<InvitationData>) => void }> = ({ data, onChange }) => (
+    <div className="space-y-4">
+        <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">Hiển thị Dress Code</span>
+            <button
+                onClick={() => onChange({ dressCodeEnabled: !data.dressCodeEnabled })}
+                className={`w-10 h-5 rounded-full transition-colors relative ${data.dressCodeEnabled ? 'bg-rose-500' : 'bg-gray-200'}`}
+            >
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${data.dressCodeEnabled ? 'left-5' : 'left-0.5'}`} />
+            </button>
+        </div>
+        {data.dressCodeEnabled && (
+            <>
+                <div>
+                    <PanelLabel label="Tiêu Đề Phần" />
+                    <PInput placeholder="vd: Dress Code" value={data.dressCodeSectionTitle || ''} onChange={e => onChange({ dressCodeSectionTitle: e.target.value })} />
+                </div>
+                <div>
+                    <PanelLabel label="Lời nhắn gợi ý" />
+                    <PTextarea 
+                        rows={2} 
+                        placeholder="Gợi ý trang phục cho khách mời..." 
+                        value={data.dressCodeMessage ?? ''} 
+                        onChange={e => onChange({ dressCodeMessage: e.target.value })} 
+                    />
+                </div>
+                <div>
+                    <PanelLabel label="Màu sắc gợi ý" />
+                    <div className="flex flex-wrap gap-2">
+                        {(data.dressCodeColors || []).map((c, i) => (
+                            <div key={i} className="relative group">
+                                <input
+                                    type="color"
+                                    value={c}
+                                    onChange={e => {
+                                        const colors = [...(data.dressCodeColors || [])];
+                                        colors[i] = e.target.value;
+                                        onChange({ dressCodeColors: colors });
+                                    }}
+                                    className="w-8 h-8 rounded-full border border-gray-200 cursor-pointer p-0"
+                                />
+                                <button
+                                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-500 text-white rounded-full text-[9px] leading-none hidden group-hover:flex items-center justify-center"
+                                    onClick={() => {
+                                        const colors = [...(data.dressCodeColors || [])];
+                                        colors.splice(i, 1);
+                                        onChange({ dressCodeColors: colors });
+                                    }}
+                                >✕</button>
+                            </div>
+                        ))}
+                        {(data.dressCodeColors || []).length < 8 && (
+                            <button
+                                className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 text-gray-400 text-lg flex items-center justify-center hover:border-rose-400 hover:text-rose-400 transition-colors"
+                                onClick={() => onChange({ dressCodeColors: [...(data.dressCodeColors || []), '#cccccc'] })}
+                            >+</button>
+                        )}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">Để trống sẽ dùng bảng màu mặc định theo mẫu thiệp.</p>
+                </div>
+            </>
         )}
     </div>
 );
@@ -500,19 +816,20 @@ const GuestbookPanel: React.FC<{ data: InvitationData; onChange: (p: Partial<Inv
    MAIN CONTEXT PANEL
 ══════════════════════════════ */
 
-const PANEL_TITLES: Record<SectionId, string> = {
+const PANEL_TITLES: Record<string, string> = {
     hero: 'Bìa Thiệp',
     family: 'Cha Mẹ Hai Bên',
     venue: 'Địa Điểm',
     events: 'Chương Trình',
-    loveStory: 'Chuyện Tình Yêu',
     gallery: 'Album Ảnh',
     bank: 'Mừng Cưới / QR',
     rsvp: 'RSVP',
     guestbook: 'Sổ Lưu Bút',
     calendar: 'Lịch Ngày Cưới',
-    coupleProfile: 'Cô Dâu & Chú Rể',
     opening: 'Lời Ngỏ',
+    thankyou: 'Lời Cảm Ơn',
+    envelope: 'Phong Bì',
+    dresscode: 'Dress Code',
 };
 
 interface EditorContextPanelProps {
@@ -546,36 +863,28 @@ const EditorContextPanel: React.FC<EditorContextPanelProps> = ({ selectedSection
                         {selectedSection === 'family'        && <FamilyPanel data={data} onChange={onChange} />}
                         {selectedSection === 'venue'         && <VenuePanel data={data} onChange={onChange} />}
                         {selectedSection === 'events'        && <EventsPanel data={data} onChange={onChange} />}
-                        {selectedSection === 'loveStory'     && <LoveStoryPanel data={data} onChange={onChange} />}
                         {selectedSection === 'gallery'       && <GalleryPanel data={data} onChange={onChange} />}
                         {selectedSection === 'bank'          && <BankPanel data={data} onChange={onChange} />}
                         {selectedSection === 'rsvp'          && <RSVPPanel data={data} onChange={onChange} />}
                         {selectedSection === 'guestbook'     && <GuestbookPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'thankyou'      && <ThankYouPanel data={data} onChange={onChange} />}
+                        {selectedSection === 'envelope'      && <EnvelopePanel data={data} onChange={onChange} />}
+                        {selectedSection === 'dresscode'     && <DressCodePanel data={data} onChange={onChange} />}
                         {/* Phase-3 sections */}
                         {selectedSection === 'calendar'      && (
                             <div className="space-y-3">
                                 <PanelLabel label="Lịch Ngày Cưới" />
                                 <p className="text-xs text-gray-400">Lịch tự động tạo từ <strong>Ngày &amp; Giờ</strong> trong phần Bìa Thiệp. Chỉnh sửa ngày trong phần <span className="font-medium text-rose-500">Hero → Ngày &amp; Giờ</span>.</p>
                                 <PanelLabel label="Ghi Chú Lịch (tùy chọn)" />
-                                <PInput placeholder="VD: Ngày lành tháng tốt..." value={data.calendarNote || ''} onChange={e => onChange({ calendarNote: e.target.value })} />
-                            </div>
-                        )}
-                        {selectedSection === 'coupleProfile' && (
-                            <div className="space-y-3">
-                                <PanelLabel label="Tiêu Đề Section" />
-                                <PInput placeholder="Cô Dâu & Chú Rể" value={data.coupleProfileTitle || ''} onChange={e => onChange({ coupleProfileTitle: e.target.value })} />
-                                <PanelLabel label="Bio Chú Rể" />
-                                <PTextarea rows={3} placeholder="Giới thiệu bản thân chú rể..." value={data.groomProfile?.bio || ''} onChange={e => onChange({ groomProfile: { ...(data.groomProfile || {}), bio: e.target.value } as any })} />
-                                <PanelLabel label="Bio Cô Dâu" />
-                                <PTextarea rows={3} placeholder="Giới thiệu bản thân cô dâu..." value={data.brideProfile?.bio || ''} onChange={e => onChange({ brideProfile: { ...(data.brideProfile || {}), bio: e.target.value } as any })} />
+                                <PInput placeholder="VD: Ngày lành tháng tốt..." value={stripHtml(data.calendarNote || '')} onChange={e => onChange({ calendarNote: e.target.value })} />
                             </div>
                         )}
                         {selectedSection === 'opening'       && (
                             <div className="space-y-3">
                                 <PanelLabel label="Tiêu Đề Lời Ngỏ" />
-                                <PInput placeholder="Lời Ngỏ" value={data.openingTitle || ''} onChange={e => onChange({ openingTitle: e.target.value })} />
+                                <PInput placeholder="Lời Ngỏ" value={stripHtml(data.openingTitle || '')} onChange={e => onChange({ openingTitle: e.target.value })} />
                                 <PanelLabel label="Nội Dung Lời Ngỏ" />
-                                <PTextarea rows={6} placeholder="Lời mở đầu cho thiệp cưới..." value={data.openingMessage || ''} onChange={e => onChange({ openingMessage: e.target.value })} />
+                                <PTextarea rows={6} placeholder="Lời mở đầu cho thiệp cưới..." value={stripHtml(data.openingMessage || '')} onChange={e => onChange({ openingMessage: e.target.value })} />
                             </div>
                         )}
                     </div>

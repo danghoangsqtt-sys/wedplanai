@@ -609,7 +609,14 @@ const InvitationManager: React.FC = () => {
                                 <div className="relative">
                                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     <input className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:border-rose-500 outline-none text-blue-600 underline"
-                                        value={invitation.mapLink || ''} onChange={e => handleChange('mapLink', e.target.value)} placeholder="https://maps.google.com/..." />
+                                        value={invitation.mapLink || ''} onChange={e => {
+                                            let val = e.target.value;
+                                            if (val.includes('<iframe') && val.includes('src="')) {
+                                                const match = val.match(/src="([^"]+)"/);
+                                                if (match && match[1]) val = match[1];
+                                            }
+                                            handleChange('mapLink', val);
+                                        }} placeholder="https://maps.google.com/..." />
                                 </div>
                             </div>
 

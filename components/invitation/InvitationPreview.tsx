@@ -553,75 +553,6 @@ const Gallery3DCarousel: React.FC<{ images: string[]; positions?: string[]; conf
     );
 };
 
-// ─── COUPLE PROFILE CARD ───
-interface CoupleProfileCardProps {
-    label: string;     // 'Chú Rể' | 'Cô Dâu'
-    name: string;
-    profile: {
-        photo?: string;
-        fatherName?: string;
-        motherName?: string;
-        bio?: string;
-        bioColor?: string;
-        bioExpandable?: boolean;
-    };
-}
-const CoupleProfileCard: React.FC<CoupleProfileCardProps> = ({ label, name, profile }) => {
-    const [expanded, setExpanded] = useState(false);
-    const bioColor = profile.bioColor || '#4A90D9';
-    const BIO_LIMIT = 120;
-    const bioText = profile.bio || '';
-    const showToggle = profile.bioExpandable && bioText.length > BIO_LIMIT;
-    const displayedBio = showToggle && !expanded ? bioText.slice(0, BIO_LIMIT) + '...' : bioText;
-    return (
-        <div className="rv" style={{ textAlign: 'center', padding: '0 0.5rem' }}>
-            {/* Circular photo */}
-            {profile.photo && (
-                <div style={{
-                    width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden',
-                    margin: '0 auto 1rem', border: '3px solid #eee',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                }}>
-                    <img src={profile.photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-            )}
-            {/* Role label */}
-            <p style={{ fontSize: '0.7rem', color: '#aaa', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                ✦ {label} ✦
-            </p>
-            {/* Name in display font */}
-            <h3 style={{ fontSize: '1.4rem', fontFamily: 'var(--t-font-display)', color: 'var(--t-on-surface)', marginBottom: '0.75rem', fontWeight: 400 }}>{name}</h3>
-            {/* Parents */}
-            {profile.fatherName && (
-                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: '0.2rem' }}>
-                    Con ông: <strong>{profile.fatherName}</strong>
-                </p>
-            )}
-            {profile.motherName && (
-                <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: '0.75rem' }}>
-                    Con bà: <strong>{profile.motherName}</strong>
-                </p>
-            )}
-            {/* Bio */}
-            {bioText && (
-                <div>
-                    <p style={{ fontSize: '0.88rem', color: bioColor, lineHeight: 1.8, textAlign: 'center', margin: '0 auto', maxWidth: '340px' }}>
-                        {displayedBio}
-                    </p>
-                    {showToggle && (
-                        <button
-                            onClick={() => setExpanded(e => !e)}
-                            style={{ color: '#888', fontSize: '0.8rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.5rem', textDecoration: 'underline' }}
-                        >
-                            {expanded ? 'Thu gọn' : 'Xem thêm'}
-                        </button>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
-
 // ─── ADD TO CALENDAR BUTTON ───
 interface AddToCalendarProps {
     title: string;
@@ -875,7 +806,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     const hasGallery = data.galleryImages && data.galleryImages.length > 0;
     const bankList = data.bankAccounts || (data.bankInfo?.bankId ? [data.bankInfo] : []);
     const hasBank = bankList.length > 0 && bankList.some(b => b.bankId && b.accountNumber);
-    const hasLoveStory = data.loveStory && data.loveStory.length > 0;
+
     const hasRSVP = data.rsvpEnabled;
     const gp = data.groomParents;
     const bp = data.brideParents;
@@ -902,7 +833,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
     }, [tid, data.themeColor, data.fontTitle, data.fontBody, data.titleColor, data.bodyColor, data.titleSize, data.bodySize]);
 
     // Lightweight reveal key — re-observe only when the set of sections changes.
-    const revealKey = [tid, hasParents, hasVenue, hasEvents, hasLoveStory, hasGallery, hasBank, hasRSVP, !!data.guestbookEnabled, (data.guestWishes || []).length].join('|');
+    const revealKey = [tid, hasParents, hasVenue, hasEvents, hasGallery, hasBank, hasRSVP, !!data.guestbookEnabled, (data.guestWishes || []).length].join('|');
     useScrollReveal(revealKey);
 
     // Format date
@@ -1199,7 +1130,12 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                                     let embedUrl = '';
                                     const isUrl = (str: string) => str.trim().startsWith('http');
                                     
-                                    if (rawLink.includes('pb=') || rawLink.includes('embed')) {
+                                    if (rawLink.includes('<iframe') && rawLink.includes('src="')) {
+                                        const match = rawLink.match(/src="([^"]+)"/);
+                                        if (match && match[1]) {
+                                            embedUrl = match[1];
+                                        }
+                                    } else if (rawLink.includes('pb=') || rawLink.includes('embed')) {
                                         embedUrl = rawLink;
                                     } else {
                                         // Use just location for the search query to trigger the Google Maps Place Card
@@ -1276,7 +1212,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
                 {/* ══════ CHƯƠNG TRÌNH (Events) ══════ */}
                 {hasEvents && (
-                    <section className="iv-sec rv" {...secProps('timeline', { paddingBottom: '40px' })}>
+                    <section className="iv-sec rv" {...secProps('events', { paddingBottom: '40px' })}>
                         <InlineRichText tagName="h2" field="eventsSectionTitle" value={data.eventsSectionTitle || 'Lịch trình ngày cưới'} ec={ec} style={{ textAlign: 'center', color: 'var(--t-primary)', fontFamily: 'var(--t-font-display)', fontSize: 'calc(var(--t-title-scale, 1.75rem) * 0.8)', fontWeight: 'bold', margin: '0 0 40px 0', textTransform: 'uppercase', letterSpacing: '1px' }} />
                         
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '400px', margin: '0 auto' }}>
@@ -1532,23 +1468,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     );
                 })()}
 
-                {/* ══════ CÔ DÂU & CHÚ RỂ PROFILES ══════ */}
-                {data.coupleProfileEnabled && (data.groomProfile || data.brideProfile) && (() => {
-                    const profiles: Array<{ label: string; name: string; profile: NonNullable<typeof data.groomProfile> }> = [];
-                    if (data.groomProfile) profiles.push({ label: 'Chú Rể', name: data.groomName || 'Chú Rể', profile: data.groomProfile });
-                    if (data.brideProfile) profiles.push({ label: 'Cô Dâu', name: data.brideName || 'Cô Dâu', profile: data.brideProfile });
-                    return (
-                        <section className="iv-sec rv" {...secProps('coupleProfile')}>
-                            <h2 className="iv-sec-title">{data.coupleProfileTitle || 'Cô Dâu & Chú Rể'}</h2>
-                            <Divider glyph={dividerSticker} />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '400px', margin: '0 auto' }}>
-                                {profiles.map(({ label, name, profile }) => (
-                                    <CoupleProfileCard key={label} label={label} name={name} profile={profile} />
-                                ))}
-                            </div>
-                        </section>
-                    );
-                })()}
+
 
                 {/* ══════ FOOTER ══════ */}
                 <footer className="iv-footer rv">

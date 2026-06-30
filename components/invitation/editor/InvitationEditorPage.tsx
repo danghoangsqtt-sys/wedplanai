@@ -4,7 +4,6 @@ import { InvitationData, SectionId } from '../../../types';
 import { useEditorHistory } from '../../../hooks/useEditorHistory';
 import InvitationPreview from '../InvitationPreview';
 import EditorTopBar from './EditorTopBar';
-import EditorFormPanel from './EditorFormPanel';
 import EditorLeftSidebar from './EditorLeftSidebar';
 import EditorContextPanel from './EditorContextPanel';
 import TemplateGalleryModal from '../TemplateGalleryModal';
@@ -143,12 +142,9 @@ const InvitationEditorPage: React.FC = () => {
                 <EditorLeftSidebar
                     data={data}
                     selectedSection={selectedSection}
-                    onSectionClick={handleSectionClick as (id: SectionId) => void}
+                    onSectionClick={handleSectionClick}
                     onChange={handleChange}
                 />
-
-                {/* Left Form Panel: detailed accordion editing */}
-                <EditorFormPanel data={data} onChange={handleChange} selectedSection={selectedSection} />
 
                 {/* Canvas area */}
                 <div
