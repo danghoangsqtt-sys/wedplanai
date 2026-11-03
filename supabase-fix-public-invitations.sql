@@ -116,9 +116,13 @@ CREATE POLICY owner_profiles ON public.profiles FOR ALL TO authenticated
   USING (public.can_manage_plan(id)) WITH CHECK (public.can_manage_plan(id));
 CREATE POLICY members_data ON public.user_data FOR ALL TO authenticated
   USING (public.can_access_plan(id)) WITH CHECK (public.can_access_plan(id));
+CREATE POLICY owner_only_delete_data ON public.user_data AS RESTRICTIVE FOR DELETE TO authenticated
+  USING (public.can_manage_plan(id));
 CREATE POLICY public_invite_read ON public.public_invitations FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY members_invite_write ON public.public_invitations FOR ALL TO authenticated
   USING (public.can_access_plan(uid)) WITH CHECK (public.can_access_plan(uid));
+CREATE POLICY owner_only_delete_invitation ON public.public_invitations AS RESTRICTIVE FOR DELETE TO authenticated
+  USING (public.can_manage_plan(uid));
 CREATE POLICY owner_share ON public.plan_shares FOR ALL TO authenticated
   USING (public.can_manage_plan(owner_uid)) WITH CHECK (public.can_manage_plan(owner_uid));
 CREATE POLICY partner_share_read ON public.plan_shares FOR SELECT TO authenticated USING (partner_uid = auth.uid());
@@ -159,7 +163,7 @@ DECLARE previous TIMESTAMPTZ; revision TIMESTAMPTZ := clock_timestamp(); BEGIN
   IF FOUND AND previous IS DISTINCT FROM expected_updated_at THEN
     RAISE EXCEPTION 'Plan changed on another device; reload before saving' USING ERRCODE='40001';
   END IF;
-  IF jsonb_typeof(plan_data->'guests') <> 'array' OR jsonb_typeof(plan_data->'budgetItems') <> 'array' THEN
+  IF coalesce(jsonb_typeof(plan_data->'guests'),'') <> 'array' OR coalesce(jsonb_typeof(plan_data->'budgetItems'),'') <> 'array' THEN
     RAISE EXCEPTION 'Invalid plan payload' USING ERRCODE='22023';
   END IF;
   INSERT INTO public.user_data(id,guests,budget_items,procedures,fengshui_profile,fengshui_results,invitation,wedding_date,last_updated)

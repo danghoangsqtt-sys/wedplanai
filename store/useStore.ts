@@ -9,6 +9,7 @@ import { INITIAL_GUESTS, INITIAL_BUDGET_ITEMS, DEFAULT_GUEST_USER, INITIAL_USERS
 import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
 import { supabase, TABLES } from '../lib/supabase';
 import { OWNER_UID } from '../lib/constants';
+import { restoreBackup } from '../lib/backup';
 
 export interface GuestUsage {
   fengShuiCount: number;
@@ -45,6 +46,11 @@ interface AppState {
   // triggerCloudSync blocks writes until this is true, preventing INITIAL_INVITATION
   // from accidentally overwriting real cloud data during app startup.
   isCloudLoaded: boolean;
+  cloudRevision: string | null;
+  hasUnsyncedChanges: boolean;
+  localEditVersion: number;
+  syncStatus: 'idle' | 'loading' | 'pending' | 'saving' | 'saved' | 'error' | 'conflict';
+  syncError: string | null;
 
   // App Data
   guests: Guest[];
@@ -137,49 +143,26 @@ interface AppState {
   removeNotification: (id: string) => void;
 
   // Cloud Actions
-  loadFromCloud: () => Promise<void>;
+  loadFromCloud: (options?: { discardLocalChanges?: boolean }) => Promise<void>;
+  syncToCloud: () => Promise<void>;
 }
 
 let syncTimeout: ReturnType<typeof setTimeout>;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
-
+let syncPromise: Promise<void> | null = null;
+let loadPromise: Promise<void> | null = null;
+const messageOf = (error: unknown) => error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Kh?ng th? ??ng b? d? li?u.';
 const getEffectiveUidFromState = (state: AppState): string | null => {
   if (!state.user) return null;
-  if (state.sharedPlan?.status === 'active' && !state.isSharedPlanOwner) {
-    return state.sharedPlan.ownerUid; // Partner saves to owner's document
-  }
-  return state.user.uid;
+  return state.sharedPlan?.status === 'active' && !state.isSharedPlanOwner ? state.sharedPlan.ownerUid : state.user.uid;
 };
-
 const triggerCloudSync = (get: () => AppState) => {
-  // GUARD: Never write to cloud before loadFromCloud() has completed at least once.
-  // This prevents INITIAL_INVITATION (demo data) from overwriting real cloud data
-  // during app startup when localStorage is empty (e.g., after a persist-key change).
-  if (!get().isCloudLoaded) {
-    storeLog.info('cloud sync skipped — waiting for initial cloud load');
-    return;
-  }
+  const state = get();
+  useStore.setState({ hasUnsyncedChanges: true, localEditVersion: state.localEditVersion + 1,
+    syncStatus: state.isCloudLoaded ? 'pending' : state.syncStatus });
   clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(async () => {
-    const state = get();
-    // Double-check: don't sync while loadFromCloud is in progress
-    if (!state.isCloudLoaded || state.isSyncing) return;
-    const uid = getEffectiveUidFromState(state) || OWNER_UID;
-    storeLog.info('cloud sync triggered', { uid });
-    try {
-      await saveUserDataToCloud(uid, {
-        guests: state.guests,
-        budgetItems: state.budgetItems,
-        procedures: state.procedures,
-        fengShuiProfile: state.fengShuiProfile ?? undefined,
-        fengShuiResults: state.fengShuiResults ?? undefined,
-        invitation: state.invitation,
-        weddingDate: state.invitation?.date ?? null,
-      });
-    } catch (e) {
-      storeLog.warn('cloud sync failed (will retry on next change)', e);
-    }
-  }, 2000);
+  if (!get().isCloudLoaded) return;
+  syncTimeout = setTimeout(() => { void get().syncToCloud().catch(e => storeLog.warn('autosave pending retry', e)); }, 2000);
 };
 
 export const useStore = create<AppState>()(
@@ -197,6 +180,11 @@ export const useStore = create<AppState>()(
       procedures: WEDDING_PROCEDURES,
       isSyncing: false,
       isCloudLoaded: false,
+      cloudRevision: null,
+      hasUnsyncedChanges: false,
+      localEditVersion: 0,
+      syncStatus: 'idle',
+      syncError: null,
       fengShuiProfile: null,
       fengShuiResults: { harmony: null, dates: [] },
       notifications: [],
@@ -243,7 +231,9 @@ export const useStore = create<AppState>()(
       updateUser: async (uid, data) => {
         const currentUser = get().user;
         if (currentUser && currentUser.uid === uid) {
-          set({ user: { ...currentUser, ...data } });
+          set({ user: { ...currentUser, ...data }, ...('weddingDate' in data ? {
+            invitation: { ...get().invitation, date: data.weddingDate || '' }
+          } : {}) });
         }
         const updatedUsers = get().users.map(u => u.uid === uid ? { ...u, ...data } : u);
         set({ users: updatedUsers });
@@ -384,7 +374,8 @@ export const useStore = create<AppState>()(
           procedures: WEDDING_PROCEDURES,
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] },
-          invitation: INITIAL_INVITATION
+          invitation: INITIAL_INVITATION,
+          ...(get().user ? { user: { ...get().user!, weddingDate: INITIAL_INVITATION.date || null } } : {})
         });
         get().addNotification('WARNING', 'Dữ liệu đã được đặt lại về mặc định.');
         // Sync the reset state to cloud so cloud and local stay consistent.
@@ -392,16 +383,11 @@ export const useStore = create<AppState>()(
         triggerCloudSync(get);
       },
 
-      importData: (data: any) => {
-        set({
-          guests: data.guests || [],
-          budgetItems: sanitizeBudgetIds(data.budgetItems || []),
-          procedures: data.procedures || WEDDING_PROCEDURES,
-          fengShuiProfile: data.fengShuiProfile || null,
-          fengShuiResults: data.fengShuiResults || { harmony: null, dates: [] },
-          invitation: data.invitation || INITIAL_INVITATION
-        });
-        get().addNotification('SUCCESS', 'Khôi phục dữ liệu thành công.');
+      importData: (data: unknown) => {
+        const restored = restoreBackup(data, get());
+        set({ ...restored, budgetItems: sanitizeBudgetIds(restored.budgetItems),
+          ...(get().user ? { user: { ...get().user!, weddingDate: restored.invitation.date || null } } : {}) });
+        get().addNotification('SUCCESS', '?? kh?i ph?c d? li?u c?c b?.');
         triggerCloudSync(get);
       },
 
@@ -416,15 +402,10 @@ export const useStore = create<AppState>()(
       },
 
       updateInvitation: (data) => {
-        set((state) => ({ invitation: { ...state.invitation, ...data } }));
-        // Mirror invitation to localStorage so PublicInvitationView can load it
-        // even when cloud save fails (no-auth local mode).
-        try {
-          const state = get();
-          const uid = getEffectiveUidFromState(state) || OWNER_UID;
-          const merged = { ...state.invitation, ...data };
-          localStorage.setItem(`wedplan_pub_inv_${uid}`, JSON.stringify(merged));
-        } catch { /* storage full — ignore */ }
+        const merged = { ...get().invitation, ...data };
+        if (JSON.stringify(merged) === JSON.stringify(get().invitation)) return;
+        set(state => ({ invitation: merged,
+          ...(state.user ? { user: { ...state.user, weddingDate: merged.date || null } } : {}) }));
         triggerCloudSync(get);
       },
 
@@ -558,12 +539,16 @@ export const useStore = create<AppState>()(
       pollSharedData: async () => {
         const { sharedPlan, user, isSharedPlanOwner } = get();
         if (!sharedPlan || sharedPlan.status !== 'active' || !user?.enableCloudStorage) return;
+        if (get().hasUnsyncedChanges || get().isSyncing) return;
+        const startRevision = get().cloudRevision;
         try {
           const effectiveUid = getEffectiveUidFromState(get());
           if (!effectiveUid) return;
           const cloudData = await loadUserDataFromCloud(effectiveUid);
+          if (get().hasUnsyncedChanges || get().isSyncing || get().cloudRevision !== startRevision || get().sharedPlan?.id !== sharedPlan.id) return;
           if (cloudData) {
             set({
+              cloudRevision: cloudData.revision,
               guests: cloudData.guests,
               budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
               procedures: cloudData.procedures || WEDDING_PROCEDURES,
@@ -604,39 +589,72 @@ export const useStore = create<AppState>()(
         set((state) => ({ notifications: state.notifications.filter(n => n.id !== id) }));
       },
 
-      loadFromCloud: async () => {
-        set({ isSyncing: true });
-        try {
-          const cloudData = await loadUserDataFromCloud(OWNER_UID);
-          if (cloudData) {
-            // Smart merge: only overwrite invitation if cloud has real data
-            const cloudInvitation = cloudData.invitation;
-            const hasRealInvitation = cloudInvitation && cloudInvitation.groomName && cloudInvitation.groomName.trim() !== '';
-
-            set({
-              guests: cloudData.guests ?? get().guests,
-              budgetItems: sanitizeBudgetIds(cloudData.budgetItems ?? get().budgetItems),
-              procedures: cloudData.procedures ?? get().procedures,
-              fengShuiProfile: cloudData.fengShuiProfile ?? get().fengShuiProfile,
-              fengShuiResults: cloudData.fengShuiResults ?? get().fengShuiResults,
-              invitation: hasRealInvitation ? cloudInvitation : get().invitation,
-            });
-          }
-        } catch (e) {
-          storeLog.warn('load from cloud failed, using local data', e);
-        } finally {
-          // Mark cloud load as attempted — unblocks triggerCloudSync for future mutations.
-          // Always set this, even on failure, so user changes after login still sync.
-          set({ isSyncing: false, isCloudLoaded: true });
-          // Seed localStorage public invitation mirror so PublicInvitationView
-          // can load the invitation even when cloud save is unavailable.
+      syncToCloud: () => {
+        clearTimeout(syncTimeout);
+        if (syncPromise) return syncPromise;
+        if (!get().isCloudLoaded) return Promise.reject(new Error('Ch?a x?c minh d? li?u cloud. H?y t?i l?i tr??c khi ??ng b?.'));
+        syncPromise = (async () => {
+          set({ isSyncing: true, syncError: null });
           try {
-            const inv = get().invitation;
-            if (inv && inv.groomName && inv.groomName.trim() !== '') {
-              localStorage.setItem(`wedplan_pub_inv_${OWNER_UID}`, JSON.stringify(inv));
+            while (get().hasUnsyncedChanges && get().isCloudLoaded) {
+              const snapshot = get();
+              set({ syncStatus: 'saving' });
+              const revision = await saveUserDataToCloud(getEffectiveUidFromState(snapshot) || OWNER_UID, {
+                guests: snapshot.guests, budgetItems: snapshot.budgetItems, procedures: snapshot.procedures,
+                fengShuiProfile: snapshot.fengShuiProfile ?? undefined, fengShuiResults: snapshot.fengShuiResults,
+                invitation: snapshot.invitation, weddingDate: snapshot.invitation.date || null,
+              }, snapshot.cloudRevision);
+              const unchanged = snapshot.localEditVersion === get().localEditVersion;
+              set({ cloudRevision: revision, hasUnsyncedChanges: !unchanged,
+                syncStatus: unchanged ? 'saved' : 'pending' });
             }
-          } catch { /* storage full */ }
-        }
+          } catch (error: unknown) {
+            const conflict = !!error && typeof error === 'object' && 'code' in error && ['40001','23505'].includes(String(error.code));
+            set({ syncStatus: conflict ? 'conflict' : 'error', syncError: messageOf(error),
+              ...(conflict ? { isCloudLoaded: false } : {}) });
+            throw error;
+          } finally { set({ isSyncing: false }); }
+        })().finally(() => { syncPromise = null; });
+        return syncPromise;
+      },
+
+      loadFromCloud: (options = {}) => {
+        if (loadPromise) return loadPromise;
+        loadPromise = (async () => {
+          // Do not start a read that races an acknowledged write.
+          if (syncPromise) await syncPromise.catch(() => {});
+          set({ isSyncing: true, isCloudLoaded: false, syncStatus: 'loading', syncError: null });
+          try {
+            const cloudData = await loadUserDataFromCloud(getEffectiveUidFromState(get()) || OWNER_UID);
+            const current = get();
+            const remoteRevision = cloudData?.revision ?? null;
+            if (current.hasUnsyncedChanges && !options.discardLocalChanges && remoteRevision !== current.cloudRevision) {
+              set({ syncStatus: 'conflict' });
+              throw new Error('Cloud ?? thay ??i tr?n thi?t b? kh?c. H?y xu?t backup c?c b? tr??c khi ch?n d?ng b?n cloud.');
+            }
+            if (cloudData && (!current.hasUnsyncedChanges || options.discardLocalChanges)) {
+              const invitation = cloudData.invitation || current.invitation;
+              const date = invitation.date || cloudData.weddingDate || '';
+              set({ guests: cloudData.guests, budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
+                procedures: cloudData.procedures ?? current.procedures,
+                fengShuiProfile: cloudData.fengShuiProfile ?? null,
+                fengShuiResults: cloudData.fengShuiResults ?? { harmony: null, dates: [] },
+                invitation: { ...invitation, date },
+                ...(current.user ? { user: { ...current.user, weddingDate: date || null } } : {}) });
+            }
+            const dirty = options.discardLocalChanges ? false : get().hasUnsyncedChanges;
+            set({ cloudRevision: remoteRevision, isCloudLoaded: true, hasUnsyncedChanges: dirty,
+              syncStatus: dirty ? 'pending' : 'saved', syncError: null });
+          } catch (error) {
+            set({ isCloudLoaded: false, syncStatus: get().syncStatus === 'conflict' ? 'conflict' : 'error', syncError: messageOf(error) });
+            throw error;
+          } finally { set({ isSyncing: false }); }
+          if (get().hasUnsyncedChanges) {
+            clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => { void get().syncToCloud().catch(e => storeLog.warn('retry save failed', e)); }, 2000);
+          }
+        })().finally(() => { loadPromise = null; });
+        return loadPromise;
       },
     }),
     {
@@ -665,11 +683,14 @@ export const useStore = create<AppState>()(
         localProvince: state.localProvince,
         localDistrict: state.localDistrict,
         localMarketReport: state.localMarketReport,
+        cloudRevision: state.cloudRevision,
+        hasUnsyncedChanges: state.hasUnsyncedChanges,
         // isCloudLoaded intentionally NOT persisted — always starts false on page load
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.budgetItems = sanitizeBudgetIds(state.budgetItems);
+        if (state.user) state.user.weddingDate = state.invitation?.date || null;
         // isCloudLoaded must always start as false — never persist this flag
         state.isCloudLoaded = false;
       },

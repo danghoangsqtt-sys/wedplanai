@@ -16,6 +16,7 @@ export interface UserCloudData {
   invitation?: InvitationData;
   weddingDate?: string | null;
   lastUpdated: number;
+  revision: string | null;
 }
 
 // --- UTILS ---
@@ -35,98 +36,38 @@ export const getPublicIP = async (): Promise<string | null> => {
 
 export const saveUserDataToCloud = async (
   uid: string,
-  data: Omit<UserCloudData, 'lastUpdated'>
-) => {
-  if (!isValidUid(uid)) {
-    cloudLog.error('saveUserDataToCloud: invalid uid', { uid });
-    return;
+  data: Omit<UserCloudData, 'lastUpdated' | 'revision'>,
+  expectedRevision: string | null = null,
+): Promise<string> => {
+  if (!isValidUid(uid) || !Array.isArray(data.guests) || !Array.isArray(data.budgetItems)) {
+    throw new Error('Invalid plan data');
   }
-  if (!Array.isArray(data.guests)) {
-    cloudLog.error('saveUserDataToCloud: guests is not an array');
-    return;
-  }
-  cloudLog.info('save start', { uid });
-  cloudLog.time('cloud-save');
-  try {
-    // NOTE: Skip profiles upsert — it has FK → auth.users(id) which fails
-    // in no-auth single-user mode (OWNER_UID not in auth.users).
-    // profiles is only needed for multi-user auth features.
-
-    const payload = {
-      id: uid,
-      guests: data.guests,
-      budget_items: data.budgetItems,
-      procedures: data.procedures ?? {},
-      fengshui_profile: data.fengShuiProfile ?? null,
-      fengshui_results: data.fengShuiResults ?? { harmony: null, dates: [] },
-      invitation: data.invitation ?? null,
-      wedding_date: data.weddingDate ?? null,
-      last_updated: new Date().toISOString(),
-    };
-
-    const { error } = await supabase
-      .from(TABLES.USER_DATA)
-      .upsert(payload, { onConflict: 'id' });
-
-    if (error) throw error;
-
-    // Also sync public invitation if present
-    if (data.invitation) {
-      const { error: invError } = await supabase
-        .from(TABLES.PUBLIC_INVITATIONS)
-        .upsert({
-          uid,
-          invitation_json: data.invitation,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'uid' });
-
-      if (invError) cloudLog.warn('sync public invitation failed', invError);
-    }
-
-    cloudLog.timeEnd('cloud-save');
-    cloudLog.info('save complete', { uid });
-    // BUG-008 fix: removed updateLastActive() - profiles table has FK → auth.users
-    // which always fails in no-auth single-user mode (OWNER_UID not in auth.users).
-  } catch (error) {
-    cloudLog.timeEnd('cloud-save');
-    cloudLog.error('save to cloud failed', error);
-  }
+  // The database commits private data and its public invitation in one transaction.
+  const { data: revision, error } = await supabase.rpc('save_plan', {
+    plan_uid: uid, plan_data: data, expected_updated_at: expectedRevision,
+  });
+  if (error) { cloudLog.error('save failed', error); throw error; }
+  if (typeof revision !== 'string') throw new Error('Missing cloud acknowledgement');
+  return revision;
 };
 
 export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData | null> => {
-  cloudLog.info('load start', { uid });
-  cloudLog.time('cloud-load');
-  try {
-    const { data: doc, error } = await supabase
-      .from(TABLES.USER_DATA)
-      .select('*')
-      .eq('id', uid)
-      .maybeSingle();
-
-    if (error) {
-      cloudLog.timeEnd('cloud-load');
-      cloudLog.error('load from cloud failed', error);
-      return null;
-    }
-    cloudLog.timeEnd('cloud-load');
-    cloudLog.info('load complete', { uid, hasData: !!doc });
-    if (!doc) return null;
-
-    return {
-      guests: doc.guests ?? [],
-      budgetItems: doc.budget_items ?? [],
-      procedures: doc.procedures ?? undefined,
-      fengShuiProfile: doc.fengshui_profile ?? undefined,
-      fengShuiResults: doc.fengshui_results ?? undefined,
-      invitation: doc.invitation ?? undefined,
-      weddingDate: doc.wedding_date ?? null,
-      lastUpdated: new Date(doc.last_updated).getTime(),
-    };
-  } catch (e) {
-    cloudLog.timeEnd('cloud-load');
-    cloudLog.error('load from cloud failed', e);
-    return null;
-  }
+  if (!isValidUid(uid)) throw new Error('Invalid plan identifier');
+  const { data: doc, error } = await supabase.from(TABLES.USER_DATA).select('*').eq('id', uid).maybeSingle();
+  // null means a successful empty read only. A failed read must lock cloud writes.
+  if (error) { cloudLog.error('load failed', error); throw error; }
+  if (!doc) return null;
+  if (!Array.isArray(doc.guests) || !Array.isArray(doc.budget_items)) throw new Error('Invalid cloud data');
+  return {
+    guests: doc.guests, budgetItems: doc.budget_items,
+    procedures: doc.procedures ?? undefined,
+    fengShuiProfile: doc.fengshui_profile ?? undefined,
+    fengShuiResults: doc.fengshui_results ?? undefined,
+    invitation: doc.invitation ?? undefined,
+    weddingDate: doc.wedding_date ?? null,
+    lastUpdated: new Date(doc.last_updated).getTime(),
+    revision: doc.last_updated ?? null,
+  };
 };
 
 // --- INVITATION RESPONSES (RSVP + GUESTBOOK) ---

@@ -227,7 +227,7 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
   }, []);
 
   // ── Wedding date ──
-  const weddingDateStr = user?.weddingDate || invitation?.date || '';
+  const weddingDateStr = invitation?.date || '';
   const daysUntil = useMemo(() => {
     if (!weddingDateStr) return null;
     return Math.ceil((new Date(weddingDateStr).getTime() - Date.now()) / 86_400_000);

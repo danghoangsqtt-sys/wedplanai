@@ -86,8 +86,16 @@ describe('actual PostgreSQL schema and authorization', () => {
     await expect(db.query('select public.leave_shared_plan($1)',[share.id])).rejects.toThrow(/Access denied/);
     await db.query("select * from public.join_plan_by_code('WED-ABCDEF')");
     expect((await db.query('select id from public.user_data')).rows).toHaveLength(1);
+    await db.exec('delete from public.user_data');
+    expect((await db.query('select id from public.user_data')).rows).toHaveLength(1);
     await db.query('select public.leave_shared_plan($1)',[share.id]);
     expect((await db.query('select id from public.user_data')).rows).toHaveLength(0);
+  });
+  it('rejects malformed save payloads without replacing valid rows', async()=>{
+    await role('authenticated',owner);
+    const previous=(await db.query<{last_updated:string}>('select last_updated from public.user_data')).rows[0].last_updated;
+    await expect(db.query('select public.save_plan($1,$2,$3)',[plan,'{}',previous])).rejects.toThrow(/Invalid plan payload/);
+    expect((await db.query('select guests from public.user_data')).rows[0]).toEqual({guests:[{name:'Private Guest'}]});
   });
   it('limits AI usage atomically and denies another account', async () => {
     await role('authenticated',owner);

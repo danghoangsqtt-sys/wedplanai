@@ -40,9 +40,9 @@ function getStage(daysUntil: number): StageInfo {
 }
 
 const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActiveTab, onMenuClick }) => {
-  const { user, sharedPlan } = useStore();
+  const { user, sharedPlan, invitation, syncStatus, syncError, syncToCloud, loadFromCloud, addNotification } = useStore();
 
-  const weddingDate = user?.weddingDate || '';
+  const weddingDate = invitation.date || '';
   const daysUntil = weddingDate
     ? Math.ceil((new Date(weddingDate).getTime() - Date.now()) / 86_400_000)
     : null;
@@ -54,6 +54,22 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActi
 
   return (
     <header className="h-14 bg-white border-b border-rose-100 flex items-center px-3 md:px-4 flex-shrink-0 z-30 gap-2 md:gap-3 shadow-sm">
+
+      <div className="fixed right-3 top-16 z-40 max-w-xs" aria-live="polite">
+        {['pending','saving'].includes(syncStatus) && <span className="rounded-lg bg-white px-2 py-1 text-xs text-gray-500 shadow">{syncStatus==='saving'?'Đang lưu cloud...':'Có thay đổi chưa đồng bộ'}</span>}
+        {['error','conflict'].includes(syncStatus) && <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 shadow">
+          <p>{syncStatus==='conflict'?'Cloud đã thay đổi. Xuất backup cục bộ trước khi chọn bản muốn giữ.':'Chưa đồng bộ được. Thay đổi vẫn được giữ trên thiết bị.'}</p>
+          {syncError && <p className="mt-1 break-words">{syncError}</p>}
+          <button className="mt-2 underline font-semibold" onClick={async()=>{
+            try { if(useStore.getState().isCloudLoaded) await syncToCloud(); else await loadFromCloud(); }
+            catch { addNotification('ERROR','Chưa đồng bộ được. Dữ liệu cục bộ vẫn được giữ.'); }
+          }}>Thử lại</button>
+          {syncStatus==='conflict' && <button className="ml-3 underline" onClick={async()=>{
+            if(!confirm('Dùng dữ liệu cloud và thay thế các thay đổi cục bộ chưa đồng bộ? Hãy xuất backup trước nếu muốn giữ bản cục bộ.')) return;
+            try { await loadFromCloud({discardLocalChanges:true}); } catch { addNotification('ERROR','Không tải được dữ liệu cloud.'); }
+          }}>Dùng bản cloud</button>}
+        </div>}
+      </div>
 
       {/* Mobile: Hamburger + Logo */}
       <div className="lg:hidden flex items-center gap-1.5">

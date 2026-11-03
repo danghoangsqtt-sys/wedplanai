@@ -73,7 +73,9 @@ const InvitationEditorPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data]);
     useEffect(() => {
-        return () => { updateInvitation(latestData.current); };
+        const flush = () => { updateInvitation(latestData.current); };
+        window.addEventListener('pagehide', flush);
+        return () => { window.removeEventListener('pagehide', flush); flush(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -97,9 +99,14 @@ const InvitationEditorPage: React.FC = () => {
         });
     }, [push]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         updateInvitation(data);
-        addNotification('SUCCESS', 'Đã lưu thiết kế thiệp thành công');
+        try {
+            await useStore.getState().syncToCloud();
+            addNotification('SUCCESS', 'Đã lưu thiết kế thiệp lên cloud.');
+        } catch {
+            addNotification('ERROR', 'Thiết kế đã giữ trên thiết bị, nhưng chưa lưu được lên cloud.');
+        }
     };
 
     const handleBack = () => {

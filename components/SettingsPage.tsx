@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { validateGeminiKey } from '../services/aiService';
 import { supabase } from '../lib/supabase';
+import { createBackup, restoreBackup } from '../lib/backup';
 import SharedPlanSection from './SharedPlanSection';
 import {
    User, Calendar, Settings as SettingsIcon, Database,
@@ -45,14 +46,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
    // --- Handlers ---
 
    const handleExportData = () => {
-      const data = {
-         guests,
-         budgetItems,
-         fengShuiProfile,
-         fengShuiResults,
-         exportedAt: new Date().toISOString(),
-         appVersion: '2.1.0'
-      };
+      const data = createBackup(useStore.getState());
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -68,14 +62,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
    const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      if (file.size > 10 * 1024 * 1024) { addNotification('ERROR', 'Backup quá lớn (tối đa 10 MB).'); return; }
       const reader = new FileReader();
       reader.onload = (event) => {
          try {
             const json = JSON.parse(event.target?.result as string);
-            if (!json.guests && !json.budgetItems) {
-               addNotification('ERROR', 'File không hợp lệ. Vui lòng chọn file backup từ WedPlan AI.');
-               return;
-            }
+            restoreBackup(json, useStore.getState());
             setPendingImportData(json);
             setShowImportConfirm(true);
          } catch {
@@ -88,10 +80,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
    const handleConfirmImport = () => {
       if (!pendingImportData) return;
-      importData(pendingImportData);
-      setPendingImportData(null);
-      setShowImportConfirm(false);
-      addNotification('SUCCESS', 'Khôi phục dữ liệu thành công!');
+      try {
+         importData(pendingImportData);
+         setPendingImportData(null);
+         setShowImportConfirm(false);
+      } catch (error) {
+         addNotification('ERROR', error instanceof Error ? error.message : 'Backup không hợp lệ.');
+      }
    };
 
    const handleConfirmReset = () => {
@@ -116,7 +111,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
          const fileName = `${user!.uid}_avatar_${Date.now()}.${fileExt}`;
          const { data: uploadData, error: uploadError } = await supabase.storage
             .from('wedkho')
-            .upload(`avatars/${fileName}`, file, { upsert: true });
+            .upload(`${user!.uid}/avatars/${fileName}`, file, { upsert: true });
 
          if (uploadError) throw uploadError;
 
@@ -147,6 +142,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
    const dateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
    const [tempWeddingDate, setTempWeddingDate] = useState(user?.weddingDate || '');
    const savedDateRef = useRef(user?.weddingDate || '');
+   const deadlinePromptDateRef = useRef(user?.weddingDate || '');
 
    const isValidWeddingDate = (date: string) => {
       const year = parseInt(date.split('-')[0]);
@@ -167,11 +163,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ defaultTab = 'ACCOUNT' }) =
 
    const handleDateBlur = () => {
       const date = tempWeddingDate;
-      if (!isValidWeddingDate(date) || date === savedDateRef.current) return;
+      if (!isValidWeddingDate(date)) return;
       // Cancel pending debounce and save immediately
       if (dateTimeoutRef.current) clearTimeout(dateTimeoutRef.current);
       updateUser(user!.uid, { weddingDate: date });
       savedDateRef.current = date;
+      if (date === deadlinePromptDateRef.current) return;
+      deadlinePromptDateRef.current = date;
       // Safe to show confirm now — user has left the field, picker is closed
       if (confirm("Bạn có muốn tự động cập nhật lại hạn chót (deadline) cho các công việc dựa trên ngày cưới mới không?")) {
          recalculateDeadlines(date);
