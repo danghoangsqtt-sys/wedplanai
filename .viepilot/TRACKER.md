@@ -103,10 +103,10 @@ Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilo
 ## Current State
 
 - Milestone: audit remediation, target 2.2.1.
-- Last verified task: 6.1.
-- Current task: 6.2; 6/7 tasks verified.
+- Last verified task: 6.2.
+- Current task: none; 7/7 tasks verified.
 - Branch: fix/audit-2026-11-03.
-- Evidence: 10 React DOM editor tests pass: Undo/Redo after autosave, ordered/hidden public sections, inline composition/paste safety, pagehide flush and back navigation; lint/typecheck/build pass.
+- Evidence: 61 tests across 11 files, 2 Chrome browser smoke tests, typecheck/lint/build and Deno check passed; npm audit reports 0 vulnerabilities. All 20 findings mapped to fixes and evidence; source c800fb4 pushed with clean upstream. Live Supabase deployment pending.
 - Deployment: live SQL/function/Auth setup remains to be applied with actual configuration.
 
 ## Historical checkpoint reconciliation
