@@ -1,14 +1,14 @@
 {
   "updated": "2026-11-03",
-  "current_phase": 4,
-  "current_task": "4.3",
+  "current_phase": 5,
+  "current_task": "5.1",
   "status": "in_progress",
   "target_version": "2.2.1",
   "branch": "fix/audit-2026-11-03",
   "tasks_total": 7,
-  "tasks_completed": 2,
-  "last_verified": "4.2",
-  "evidence": "12 Auth and PostgreSQL tests pass, including fresh/legacy migration, private RSVP protection, stale revision and sharing checks; lint and build pass.",
+  "tasks_completed": 3,
+  "last_verified": "4.3",
+  "evidence": "24 tests pass; Deno check, lint and build pass; dummy system key absent from public chunks; owner AI quota verified in PostgreSQL.",
   "notes": [
     "No live Supabase migration or function deployment performed"
   ]

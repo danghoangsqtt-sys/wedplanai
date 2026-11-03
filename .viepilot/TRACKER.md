@@ -103,8 +103,8 @@ Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilo
 ## Current State
 
 - Milestone: audit remediation, target 2.2.1.
-- Last verified task: 4.2.
-- Current task: 4.3; 2/7 tasks verified.
+- Last verified task: 4.3.
+- Current task: 5.1; 3/7 tasks verified.
 - Branch: fix/audit-2026-11-03.
-- Evidence: 12 Auth and PostgreSQL tests pass, including fresh/legacy migration, private RSVP protection, stale revision and sharing checks; lint and build pass.
+- Evidence: 24 tests pass; Deno check, lint and build pass; dummy system key absent from public chunks; owner AI quota verified in PostgreSQL.
 - Deployment: live SQL/function/Auth setup remains to be applied with actual configuration.

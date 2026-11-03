@@ -1,13 +1,13 @@
 # Audit Phase 4 state
 
-**Status:** in_progress
+**Status:** complete
 **Updated:** 2026-11-03
 
 | Task | Description | Status |
 |---|---|---|
 | 4.1 | Quality foundation | done |
 | 4.2 | Secure identity and schema | done |
-| 4.3 | Private Gemini service | in_progress |
+| 4.3 | Private Gemini service | done |
 
 ## Evidence
 Task 4.1 started with contract and guardrails read; no application implementation changes yet.
@@ -19,3 +19,5 @@ Task 4.1 started with contract and guardrails read; no application implementatio
 - 4.2: 12 Auth and PostgreSQL tests pass, including fresh/legacy migration, private RSVP protection, stale revision and sharing checks; lint and build pass. Branch persistence checked before this state update; state changes are committed and pushed in the following checkpoint.
 
 - 4.3: contract and audit guardrails read; task started before implementation.
+
+- 4.3: 24 tests pass; Deno check, lint and build pass; dummy system key absent from public chunks; owner AI quota verified in PostgreSQL. Branch persistence checked before this state update; state changes are committed and pushed in the following checkpoint.
