@@ -1,6 +1,7 @@
 
 
 import { Guest, GuestGroup, AttendanceProbability, BudgetItem, TaskStatus, UserProfile, InvitationData, TimelinePhase } from '../types';
+import { OWNER_UID } from '../lib/constants';
 
 // Centralized admin contact info — single source of truth
 export const ADMIN_CONTACT = {
@@ -118,7 +119,7 @@ export const INITIAL_USERS: UserProfile[] = [
 ];
 
 export const DEFAULT_GUEST_USER: UserProfile = {
-  uid: 'e8a57bf1-58c2-45ae-b1ab-65c1e6921ad9',
+  uid: OWNER_UID,
   email: null,
   displayName: 'Chủ nhân',
   photoURL: null,

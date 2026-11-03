@@ -61,7 +61,7 @@ const SHARE_CODE_PATTERN = /^WED-[A-Z2-9]{4,6}$/;
 
 export async function joinPlanByCode(
   code: string,
-  partner: UserProfile
+  _partner: UserProfile
 ): Promise<SharedPlan> {
   const normalizedCode = code.trim().toUpperCase();
 
@@ -69,46 +69,10 @@ export async function joinPlanByCode(
     throw new Error('Mã mời không hợp lệ. Định dạng đúng: WED-XXXXXX (4-6 ký tự chữ/số).');
   }
 
-  // Find the plan share document by code
-  const { data: rows, error } = await supabase
-    .from(TABLES.PLAN_SHARES)
-    .select('*')
-    .eq('share_code', normalizedCode);
-
+  const { data: rows, error } = await supabase.rpc('join_plan_by_code', { invite_code: normalizedCode });
   if (error) throw new Error(error.message);
-  if (!rows || rows.length === 0) {
-    throw new Error('Mã mời không tồn tại. Vui lòng kiểm tra lại.');
-  }
-
-  const doc = rows[0];
-
-  if (doc.status === 'revoked') {
-    throw new Error('Mã mời này đã bị hủy bởi chủ kế hoạch.');
-  }
-
-  if (doc.status === 'active' && doc.partner_uid && doc.partner_uid !== partner.uid) {
-    throw new Error('Kế hoạch này đã có người tham gia.');
-  }
-
-  if (doc.owner_uid === partner.uid) {
-    throw new Error('Bạn không thể tham gia kế hoạch của chính mình.');
-  }
-
-  // Update the document to add partner
-  const { data: updated, error: updateErr } = await supabase
-    .from(TABLES.PLAN_SHARES)
-    .update({
-      partner_uid: partner.uid,
-      partner_email: partner.email || '',
-      status: 'active',
-    })
-    .eq('id', doc.id)
-    .select()
-    .single();
-
-  if (updateErr) throw new Error(updateErr.message);
-
-  return rowToSharedPlan(updated);
+  if (!rows?.[0]) throw new Error('Kh?ng th? tham gia k? ho?ch.');
+  return rowToSharedPlan(rows[0]);
 }
 
 // --- QUERY PLANS ---
@@ -174,16 +138,6 @@ export async function revokeShare(planId: string): Promise<void> {
 }
 
 export async function leavePlan(planId: string, _partnerUid: string, _ownerUid: string): Promise<void> {
-  // Remove partner from plan
-  const { error } = await supabase
-    .from(TABLES.PLAN_SHARES)
-    .update({
-      partner_uid: null,
-      partner_email: '',
-      status: 'pending', // Reset to pending so owner can re-invite
-    })
-    .eq('id', planId);
-
+  const { error } = await supabase.rpc('leave_shared_plan', { share_id: planId });
   if (error) throw new Error(error.message);
-  // Note: RLS handles data access — no need to manually update permissions
 }

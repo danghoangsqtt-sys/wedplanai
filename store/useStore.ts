@@ -221,6 +221,8 @@ export const useStore = create<AppState>()(
       },
 
       logout: async () => {
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (error) { get().addNotification('ERROR', 'Chưa thể đăng xuất. Vui lòng thử lại.'); return; }
         // Clear any pending cloud sync and shared plan polling before state reset
         clearTimeout(syncTimeout);
         if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
@@ -230,6 +232,7 @@ export const useStore = create<AppState>()(
           guestUsage: { fengShuiCount: 0, aiChatCount: 0, speechCount: 0 },
           sharedPlan: null,
           isSharedPlanOwner: false,
+          isCloudLoaded: false,
         });
       },
 

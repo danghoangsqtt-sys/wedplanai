@@ -23,7 +23,7 @@ if(next){
  s+=`\n- ${next}: contract and audit guardrails read; task started before implementation.\n`; fs.writeFileSync(statePath(p),s);
 }
 const trackerPath=path.join(root,'.viepilot/TRACKER.md');
-let tracker=fs.readFileSync(trackerPath,'utf8');
+let tracker=fs.readFileSync(trackerPath,'utf8').replace(/\r\n/g,'\n');
 tracker=tracker.replace(/## Current State\n[\s\S]*?(?=\n## |$)/,`## Current State\n\n- Milestone: audit remediation, target 2.2.1.\n- Last verified task: ${current}.\n- Current task: ${next||'none'}; ${pos+1}/7 tasks verified.\n- Branch: fix/audit-2026-11-03.\n- Evidence: ${evidence}\n- Deployment: live SQL/function/Auth setup remains to be applied with actual configuration.\n`);
 fs.writeFileSync(trackerPath,tracker);
 const handoff={updated:'2026-11-03',current_phase:next?Number(next.split('.')[0]):6,current_task:next||null,status:next?'in_progress':'code_complete_deployment_pending',target_version:'2.2.1',branch:'fix/audit-2026-11-03',tasks_total:7,tasks_completed:pos+1,last_verified:current,evidence,notes:['No live Supabase migration or function deployment performed']};

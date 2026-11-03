@@ -103,7 +103,7 @@ Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilo
 ## Current State
 
 - Milestone: audit remediation, target 2.2.1.
-- Phase: 4/6; Task: 4.1 quality foundation, in_progress.
+- Phase: 4/6; Task: 4.2 secure identity and schema, in_progress; 4.1 verified.
 - Branch: fix/audit-2026-11-03.
 - Authorized: plan and implement all audited findings.
 - Deployment: no production credentials configured; migrations/functions will be prepared and locally verified.

@@ -1,167 +1,118 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Heart, Lock, AlertTriangle } from 'lucide-react';
-import { PIN_HASH, SESSION_UNLOCKED_KEY } from '../lib/constants';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Heart, Lock, Loader2, AlertTriangle } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { OWNER_UID } from '../lib/constants';
+import { useStore } from '../store/useStore';
 
-interface PasswordGateProps {
-  children: React.ReactNode;
-  onUnlock: () => Promise<void>;
-}
+interface PasswordGateProps { children: React.ReactNode; onUnlock: () => Promise<void> }
 
-const hashPin = async (pin: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(pin);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
+// RLS independently authorizes each database call; browser state grants no access.
 export default function PasswordGate({ children, onUnlock }: PasswordGateProps) {
   const [unlocked, setUnlocked] = useState(false);
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [shake, setShake] = useState(false);
-  // BUG-002 fix: track cloud load failure to show warning
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(isSupabaseConfigured);
   const [cloudWarning, setCloudWarning] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const generation = useRef(0);
+  const authenticating = useRef(false);
 
-  // BUG-001 fix: wrap in useCallback with proper dependency
-  const handleUnlock = useCallback(async () => {
-    setIsLoading(true);
+  const validateAccess = useCallback(async () => {
+    const request = ++generation.current;
+    setLoading(true);
+    setUnlocked(false);
     try {
-      await onUnlock();
-      sessionStorage.setItem(SESSION_UNLOCKED_KEY, 'true');
-      setUnlocked(true);
+      const { data, error: authError } = await supabase.auth.getUser();
+      if (request !== generation.current) return;
+      if (authError || !data.user) return;
+      const { data: allowed, error: permissionError } = await supabase.rpc('can_manage_plan', { plan_uid: OWNER_UID });
+      if (request !== generation.current) return;
+      if (permissionError || !allowed) {
+        setError('Tài khoản này chưa được cấp quyền quản lý kế hoạch cưới.');
+        return;
+      }
+      await useStore.getState().login({ ...useStore.getState().user!, uid: OWNER_UID, email: data.user.email || null });
+      try {
+        await onUnlock();
+        if (request === generation.current) setCloudWarning(false);
+      } catch {
+        if (request === generation.current) setCloudWarning(true);
+      }
+      if (request === generation.current) setUnlocked(true);
     } catch {
-      // BUG-002 fix: set warning flag, still unlock (cloud may be unavailable)
-      setCloudWarning(true);
-      sessionStorage.setItem(SESSION_UNLOCKED_KEY, 'true');
-      setUnlocked(true);
+      if (request === generation.current) setError('Không thể xác minh phiên đăng nhập. Vui lòng thử lại.');
     } finally {
-      setIsLoading(false);
+      if (request === generation.current) setLoading(false);
     }
   }, [onUnlock]);
 
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_UNLOCKED_KEY) === 'true') {
-      handleUnlock();
-    } else {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [handleUnlock]);
+    if (!isSupabaseConfigured) return;
+    void validateAccess();
+    let timer: ReturnType<typeof setTimeout>;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        generation.current++;
+        useStore.setState({ isCloudLoaded: false });
+        setUnlocked(false);
+        setLoading(false);
+      } else if (event === 'SIGNED_IN' && !authenticating.current) {
+        // Defer auth methods until the SDK releases its Auth callback lock.
+        clearTimeout(timer);
+        timer = setTimeout(() => { void validateAccess(); }, 0);
+      }
+    });
+    return () => { generation.current++; clearTimeout(timer); subscription.unsubscribe(); };
+  }, [validateAccess]);
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!pin || isLoading) return;
-
-    const inputHash = await hashPin(pin);
-    if (inputHash === PIN_HASH) {
-      await handleUnlock();
-    } else {
-      setError(true);
-      setShake(true);
-      setPin('');
-      setTimeout(() => { setError(false); setShake(false); }, 600);
-      setTimeout(() => inputRef.current?.focus(), 100);
+  const signIn = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (authenticating.current) return;
+    authenticating.current = true;
+    setLoading(true);
+    setError('');
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (signInError) { setError('Email hoặc mật khẩu không đúng.'); return; }
+      setPassword('');
+      await validateAccess();
+    } catch {
+      setError('Không thể đăng nhập. Kiểm tra kết nối và thử lại.');
+    } finally {
+      authenticating.current = false;
+      setLoading(false);
     }
   };
 
-  if (unlocked) return (
-    <>
-      {children}
-      {/* BUG-002 fix: show cloud warning banner after unlock if load failed */}
-      {cloudWarning && (
-        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-sm z-50 bg-amber-50 border border-amber-200 rounded-xl shadow-lg p-3 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-800">Không thể tải dữ liệu cloud</p>
-            <p className="text-xs text-amber-600 mt-0.5">Đang hiển thị dữ liệu cục bộ. Kiểm tra kết nối mạng và tải lại trang.</p>
-          </div>
-          <button onClick={() => setCloudWarning(false)} className="text-amber-400 hover:text-amber-600 p-1 flex-shrink-0" aria-label="Đóng">
-            ×
-          </button>
-        </div>
-      )}
-    </>
-  );
+  if (unlocked) return <>
+    {children}
+    {cloudWarning && <div role="alert" className="fixed bottom-4 left-4 right-4 md:left-auto md:max-w-sm z-50 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-lg">
+      <AlertTriangle className="w-5 h-5 text-amber-600" />
+      <p className="text-sm text-amber-800">Chưa tải được dữ liệu cloud. Tự động lưu đang tạm dừng để bảo vệ dữ liệu.</p>
+      <button className="mt-2 text-sm font-semibold text-amber-900 underline" onClick={async () => {
+        try { await onUnlock(); setCloudWarning(false); } catch { setCloudWarning(true); }
+      }}>Thử tải lại</button>
+    </div>}
+  </>;
 
-  if (isLoading && sessionStorage.getItem(SESSION_UNLOCKED_KEY) === 'true') {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-pink-50">
-        <div className="flex flex-col items-center gap-3">
-          <Heart className="w-10 h-10 text-rose-400 animate-pulse" />
-          <p className="text-sm text-rose-400">Đang tải dữ liệu...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50">
-      <div
-        className={`bg-white rounded-2xl shadow-xl border border-rose-100 p-8 w-full max-w-sm mx-4 transition-all ${shake ? 'animate-shake' : ''}`}
-        style={{ animation: shake ? 'shake 0.5s ease-in-out' : undefined }}
-      >
-        {/* Icon */}
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-rose-400 to-pink-500 rounded-full flex items-center justify-center shadow-md">
-            <Lock className="w-7 h-7 text-white" />
-          </div>
-        </div>
-
-        {/* Title */}
-        <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-gray-800 mb-1">WedPlan AI</h1>
-          <p className="text-sm text-gray-400">Nhập mật khẩu để tiếp tục</p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input
-              ref={inputRef}
-              type="password"
-              value={pin}
-              onChange={e => { setPin(e.target.value); setError(false); }}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              placeholder="••••••"
-              maxLength={8}
-              autoComplete="current-password"
-              className={`w-full px-4 py-3 rounded-xl border text-center text-lg tracking-widest font-mono transition-all outline-none focus:ring-2 ${
-                error
-                  ? 'border-red-300 bg-red-50 focus:ring-red-200 text-red-600'
-                  : 'border-gray-200 focus:border-rose-400 focus:ring-rose-100 text-gray-700'
-              }`}
-            />
-            {error && (
-              <p className="text-xs text-red-500 text-center mt-2">Mật khẩu không đúng. Thử lại.</p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={!pin || isLoading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm shadow-md hover:shadow-lg hover:from-rose-600 hover:to-pink-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Đang xác thực...' : 'Vào ứng dụng'}
-          </button>
-        </form>
-
-        <p className="text-center text-xs text-gray-300 mt-5">
-          <Heart className="inline w-3 h-3 text-rose-300 mr-1" />
-          Công cụ cá nhân riêng tư
-        </p>
-      </div>
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20%       { transform: translateX(-8px); }
-          40%       { transform: translateX(8px); }
-          60%       { transform: translateX(-6px); }
-          80%       { transform: translateX(6px); }
-        }
-      `}</style>
+  return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-pink-50 px-4">
+    <div className="w-full max-w-sm rounded-2xl border border-rose-100 bg-white p-8 shadow-xl">
+      <div className="flex justify-center mb-5"><Lock className="w-10 h-10 text-rose-500" /></div>
+      <h1 className="text-center text-xl font-bold text-gray-800">WedPlan AI</h1>
+      {!isSupabaseConfigured ? <p role="status" className="mt-5 text-sm text-gray-600">Ứng dụng chưa được kết nối máy chủ. Vui lòng liên hệ người quản trị để hoàn tất thiết lập.</p> : <form onSubmit={signIn} className="mt-5 space-y-4">
+        <p className="text-sm text-gray-500 text-center">Đăng nhập tài khoản quản lý kế hoạch cưới</p>
+        <label className="block text-sm text-gray-700">Email
+          <input type="email" required autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 p-3" />
+        </label>
+        <label className="block text-sm text-gray-700">Mật khẩu
+          <input type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 p-3" />
+        </label>
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <button disabled={loading} type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 p-3 font-semibold text-white disabled:opacity-50">
+          {loading && <Loader2 className="w-4 h-4 animate-spin" />}{loading ? 'Đang xác minh...' : 'Đăng nhập'}
+        </button>
+      </form>}
+      <p className="mt-5 text-center text-xs text-gray-400"><Heart className="inline w-3 h-3 mr-1" />Kế hoạch cưới riêng tư của bạn</p>
     </div>
-  );
+  </div>;
 }

@@ -12,6 +12,7 @@ import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import PasswordGate from './components/PasswordGate';
 import { OWNER_UID } from './lib/constants';
+import { isSupabaseConfigured } from './lib/supabase';
 import { logAppVisit } from './services/cloudService';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
@@ -139,7 +140,7 @@ function App() {
 
   // BUG-016 fix: log app visit for analytics (once per day, per session)
   useEffect(() => {
-    if (!isPublicView) {
+    if (!isPublicView && isSupabaseConfigured) {
       logAppVisit(OWNER_UID);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
