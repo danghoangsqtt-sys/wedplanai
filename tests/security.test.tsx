@@ -8,7 +8,7 @@ vi.mock('../lib/supabase', () => ({ isSupabaseConfigured:true, supabase:{
     onAuthStateChange:(listener: typeof mocks.listener) => { mocks.listener=listener; return {data:{subscription:{unsubscribe:vi.fn()}}}; } },
 }}));
 vi.mock('../store/useStore', () => ({ useStore:{ getState:() => ({user:{uid:'owner'},login:mocks.login}),setState:mocks.setState } }));
-import PasswordGate from '../components/PasswordGate';
+import PasswordGate from '../components/AccountGate';
 
 beforeEach(() => {
   mocks.getUser.mockResolvedValue({data:{user:null},error:null});

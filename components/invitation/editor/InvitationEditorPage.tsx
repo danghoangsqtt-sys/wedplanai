@@ -105,9 +105,9 @@ const InvitationEditorPage: React.FC<{onBack?:()=>void}> = ({onBack}) => {
         writeToStore(data);
         try {
             await useStore.getState().syncToCloud();
-            addNotification('SUCCESS', 'Đã lưu thiết kế thiệp lên cloud.');
+            addNotification('SUCCESS', useStore.getState().isLocalOnly ? 'Đã lưu thiết kế thiệp trên thiết bị này.' : 'Đã lưu thiết kế thiệp lên cloud.');
         } catch {
-            addNotification('ERROR', 'Thiết kế đã giữ trên thiết bị, nhưng chưa lưu được lên cloud.');
+            addNotification('ERROR', useStore.getState().isLocalOnly ? 'Chưa lưu được trên thiết bị. Hãy kiểm tra dung lượng trình duyệt và xuất backup.' : 'Thiết kế đã giữ trên thiết bị, nhưng chưa lưu được lên cloud.');
         }
     };
 

@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-03",
+  "version": "2.3.1",
+  "user_preference": "Personal PIN is the default; account login only when explicitly enabled",
+  "checks": {
+    "npm run check": {
+      "exit_code": 0,
+      "files": 13,
+      "tests": 75
+    },
+    "Chrome browser smoke": {
+      "exit_code": 0,
+      "tests": 4
+    },
+    "Live localhost 3000": {
+      "exit_code": 0,
+      "mock_auth": false,
+      "correct_pin_opens_dashboard": true,
+      "email_form": false,
+      "screenshots_reviewed": true
+    }
+  },
+  "storage": "Local-only without separately verified cloud session; existing data key preserved",
+  "backend": "No SQL changes, private RLS unchanged",
+  "persistence": "Local code only; no remote push attempted in this follow-up"
+}

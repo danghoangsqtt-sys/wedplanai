@@ -1,6 +1,10 @@
-# Thiết lập WedPlan AI 2.3.0
+# Thiết lập WedPlan AI 2.3.1
 
-Backend hiện dùng **Supabase**, không dùng Appwrite. Các biến `VITE_APPWRITE_*` và cách mở khóa bằng PIN trong tài liệu/phiên bản cũ không còn là cấu hình hợp lệ cho bản này.
+Mặc định dùng **PIN cá nhân** theo yêu cầu chủ sở hữu để dùng thử cùng vợ, chưa yêu cầu đăng nhập tài khoản. Chạy `npm ci` rồi `npm run dev`, nhập PIN đã chọn. Không cần cấu hình Supabase cho cách dùng này; dữ liệu lưu tại trình duyệt, nút Lưu thông báo lưu trên thiết bị. Cùng PIN trên hai máy chưa tạo đồng bộ dữ liệu giữa hai máy; xuất/nhập backup để chuyển bản kế hoạch khi chưa có cloud.
+
+`VITE_ACCESS_MODE=pin` là mặc định; `VITE_ACCESS_MODE=account` mới bật màn hình email/mật khẩu. PIN chỉ khóa giao diện, không phải credential database. Một phiên cloud có sẵn chỉ được dùng sau khi xác minh quyền; không có phiên đó thì vẫn vào app cục bộ bình thường.
+
+Các bước dưới đây dành cho **cloud tùy chọn**. Backend dùng Supabase, không dùng Appwrite; biến `VITE_APPWRITE_*` cũ không phù hợp. Không mở rộng policy sang anon để khiến PIN thành quyền truy cập dữ liệu riêng.
 
 ## 1. Cấu hình frontend
 
@@ -67,7 +71,7 @@ Không tự đổi bucket private thành public khi chưa rà nội dung đang c
 
 ### Key cá nhân
 
-Sau khi đăng nhập, vào Cài Đặt, nhập và kiểm tra key Gemini. Key cá nhân được dùng cho các lời gọi AI của tài khoản trên thiết bị đó. Backup không xuất key hay phiên Auth. Không chia sẻ key cá nhân qua file backup.
+Sau khi mở app bằng PIN hoặc đăng nhập ở chế độ account, vào Cài Đặt, nhập và kiểm tra key Gemini. Key cá nhân được dùng cho các lời gọi AI của tài khoản trên thiết bị đó. Backup không xuất key hay phiên Auth. Không chia sẻ key cá nhân qua file backup.
 
 ### Key hệ thống qua Edge Function
 
@@ -105,7 +109,7 @@ npm ci
 npm run dev
 ```
 
-Mở `http://localhost:3000`, đăng nhập và kiểm tra dữ liệu cloud trước khi sửa. Nút Lưu chỉ báo đã lưu cloud sau khi có xác nhận. Khi đọc cloud lỗi, tự động ghi bị khóa; thay đổi cục bộ vẫn được giữ. Khi xung đột phiên bản, xuất backup trước khi bấm dùng bản cloud.
+Mở `http://localhost:3000` và nhập PIN để dùng cục bộ. Nếu chủ động bật chế độ account/cloud, đăng nhập và kiểm tra dữ liệu cloud trước khi sửa. Nút Lưu chỉ báo đã lưu cloud sau khi có xác nhận. Khi đọc cloud lỗi, tự động ghi bị khóa; thay đổi cục bộ vẫn được giữ. Khi xung đột phiên bản, xuất backup trước khi bấm dùng bản cloud.
 
 ```sh
 npm run check

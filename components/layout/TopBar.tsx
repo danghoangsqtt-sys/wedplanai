@@ -161,6 +161,7 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActi
       )}
 
       {/* Profile / Login */}
+      {syncStatus==='local'&&<span title="Dữ liệu đang ở trình duyệt này. Xuất backup để chuyển sang thiết bị khác." className="shrink-0 rounded-full border border-rose-100 bg-rose-50 px-2 py-1 text-[10px] text-gray-500 md:text-xs"><span className="hidden md:inline">Lưu trên thiết bị</span><span className="md:hidden">Cục bộ</span></span>}
       {user?.role === 'GUEST' ? (
         <button
           onClick={onLoginClick}

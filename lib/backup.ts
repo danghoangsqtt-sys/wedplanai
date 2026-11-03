@@ -9,7 +9,7 @@ export interface PlanSnapshot {
   invitation:InvitationData;
 }
 export function createBackup(state:PlanSnapshot) {
-  return {schemaVersion:2,appVersion:'2.3.0',exportedAt:new Date().toISOString(),
+  return {schemaVersion:2,appVersion:'2.3.1',exportedAt:new Date().toISOString(),
     guests:state.guests,budgetItems:state.budgetItems,procedures:state.procedures,
     milestoneTasks:state.milestoneTasks,
     fengShuiProfile:state.fengShuiProfile,fengShuiResults:state.fengShuiResults,

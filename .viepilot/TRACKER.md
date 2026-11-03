@@ -1,5 +1,5 @@
 # WedPlan AI — TRACKER
-Version: 2.3.0
+Version: 2.3.1
 Updated: 2026-11-03
 
 ## Historical milestone - invitation upgrade
@@ -102,14 +102,13 @@ Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilo
 
 ## Current State
 
-- Milestone: planning workflow, version 2.3.0.
-- Phase 7: dashboard persistence and guest management; code and checks complete; mock preview restart and remote persistence blocked.
-- Branch: feat/planning-workflow-2026-11-03; based on audit branch ff6d1e1.
-- Evidence: 70 tests and 3 Chrome flows passed; typecheck/lint/build passed; npm audit zero.
-- Local web: standard server at http://127.0.0.1:3000 requires Supabase setup. Initial isolated preview opened, then its server stopped; automatic restart was rejected.
-- Automatic review also rejected the combined commit/push command (blocked by policy); remote branch persistence is not claimed.
-- Phase 8: budget deposits/payments/balances planned, not implemented.
-- Deployment: run updated SQL even if 2.2.1 was installed; real Supabase configuration remains pending.
+- Current follow-up: phase 9, personal PIN restored by explicit owner preference; version 2.3.1.
+- Default access: PIN, no immediate account login; account mode is opt-in.
+- Data: local-only without separately verified cloud session. Existing browser data retained; separate devices do not synchronize from PIN alone.
+- Evidence: 75 tests, 4 Chrome flows, typecheck/lint/build and real localhost PIN entry passed.
+- Local web: http://127.0.0.1:3000.
+- Branch: feat/planning-workflow-2026-11-03; final local commit checkpoint follows. Remote push is not claimed.
+- Phase 8 budget deposits/payment balances remain planned only. Live Supabase setup is unchanged.
 
 ## Historical checkpoint reconciliation
 

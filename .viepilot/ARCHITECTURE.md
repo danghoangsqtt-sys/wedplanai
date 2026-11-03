@@ -1,4 +1,4 @@
-# Architecture — WedPlan AI 2.3.0
+# Architecture — WedPlan AI 2.3.1
 
 Updated: 2026-11-03. Planning workflow changes build on the audit fix branch; production application of SQL/secrets remains a deployment gate.
 
@@ -54,3 +54,4 @@ flowchart TB
 - Dashboard milestones live in the same persisted plan and private JSONB snapshot as guests/budget. The old browser-only key is read only for migration after a verified remote read; server tasks take precedence. Explicit column selection fails safely against an outdated schema.
 - Guest phone, invitation status, notes and table names stay in private plan JSON, never in the public invitation projection. Attendee totals include companions and children once.
 - The optional local-preview tool intercepts API calls in a separate Chrome context with sample data. It adds no authentication bypass or demo mode to production app code.
+- Owner preference: personal PIN gate is the frontend default; account login is opt-in. PIN unlock is not a database credential. Missing cloud session/configuration selects explicit local-only persistence with accurate Save messaging; private RLS still requires a separately verified owner session.

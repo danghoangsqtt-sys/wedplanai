@@ -52,7 +52,9 @@ interface AppState {
   cloudRevision: string | null;
   hasUnsyncedChanges: boolean;
   localEditVersion: number;
-  syncStatus: 'idle' | 'loading' | 'pending' | 'saving' | 'saved' | 'error' | 'conflict';
+  syncStatus: 'idle' | 'local' | 'loading' | 'pending' | 'saving' | 'saved' | 'error' | 'conflict';
+  isLocalOnly: boolean;
+  enableLocalMode: () => void;
   syncError: string | null;
 
   // App Data
@@ -164,7 +166,7 @@ const getEffectiveUidFromState = (state: AppState): string | null => {
 const triggerCloudSync = (get: () => AppState) => {
   const state = get();
   useStore.setState({ hasUnsyncedChanges: true, localEditVersion: state.localEditVersion + 1,
-    syncStatus: state.isCloudLoaded ? 'pending' : state.syncStatus });
+    syncStatus: state.isLocalOnly ? 'local' : state.isCloudLoaded ? 'pending' : state.syncStatus });
   clearTimeout(syncTimeout);
   if (!get().isCloudLoaded) return;
   syncTimeout = setTimeout(() => { void get().syncToCloud().catch(e => storeLog.warn('autosave pending retry', e)); }, 2000);
@@ -191,6 +193,12 @@ export const useStore = create<AppState>()(
       },
       isSyncing: false,
       isCloudLoaded: false,
+      isLocalOnly: false,
+      enableLocalMode: () => {
+        clearTimeout(syncTimeout);
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        set({ isLocalOnly: true, isCloudLoaded: false, syncStatus: 'local', syncError: null });
+      },
       cloudRevision: null,
       hasUnsyncedChanges: false,
       localEditVersion: 0,
@@ -607,12 +615,18 @@ export const useStore = create<AppState>()(
 
       syncToCloud: () => {
         clearTimeout(syncTimeout);
+        if (get().isLocalOnly) {
+          // Zustand persists synchronously. This local write must complete
+          // before Save resolves; retain dirty data for future cloud sync.
+          set({ syncStatus: 'local' });
+          return Promise.resolve();
+        }
         if (syncPromise) return syncPromise;
         if (!get().isCloudLoaded) return Promise.reject(new Error('Chưa xác minh dữ liệu cloud. Hãy tải lại trước khi đồng bộ.'));
         syncPromise = (async () => {
           set({ isSyncing: true, syncError: null });
           try {
-            while (get().hasUnsyncedChanges && get().isCloudLoaded) {
+            while (get().hasUnsyncedChanges && get().isCloudLoaded && !get().isLocalOnly) {
               const snapshot = get();
               set({ syncStatus: 'saving' });
               const revision = await saveUserDataToCloud(getEffectiveUidFromState(snapshot) || OWNER_UID, {

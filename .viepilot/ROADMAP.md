@@ -1,5 +1,5 @@
 # WedPlan AI — ROADMAP
-Version: 2.3.0
+Version: 2.3.1
 Updated: 2026-11-03
 
 ---
@@ -141,3 +141,7 @@ Scope: A01-A16, S01/S02, D01/D02. Existing feature-expansion backlogs remain out
 | 8 | Deposits, staged payments and outstanding balances | 3 | planned (plan only requested) |
 
 Specs: `.viepilot/phases/planning-phase-7/SPEC.md`, `.viepilot/phases/planning-phase-8/SPEC.md`. The user selected both visual RSVP/table management and detailed contact/group management. Budget payments are documented as a separate future implementation, not included in 2.3.0.
+
+## Personal access correction - 2.3.1
+
+Phase 9 restores the owner-requested personal PIN by default, with local-only persistence and optional existing verified cloud session. Three tasks are code verified locally; remote persistence is not claimed. See `.viepilot/phases/personal-access-phase-9/SPEC.md` and SUMMARY.md. Phase 8 budget remains planned only.

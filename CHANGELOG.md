@@ -2,6 +2,14 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [v2.3.1] - 2026-11-03: Restore personal PIN access
+
+- Restore the owner's existing PIN as the default way to open the app; email/password is opt-in through `VITE_ACCESS_MODE=account`.
+- Allow normal personal use without Supabase configuration or an account session. Keep edits in the existing browser storage and acknowledge local editor saves accurately.
+- Preserve same-tab unlock and add Lock app without deleting plan data. Keep public invitation routing independent of the private gate.
+- An existing cloud session is optional and must pass Auth/plan permission checks. No private anonymous database policies were added.
+- Verify incorrect/correct PIN, relock, immediate reload, local save, authorized cloud regression and public mobile invitation flow.
+
 ## [v2.3.0] - 2026-11-03: Guest management and dashboard persistence
 
 - Save dashboard milestone ticks, notes, custom tasks and deletions through the shared persisted store, revision-protected cloud RPC and backup; preserve legacy browser-only checklists.

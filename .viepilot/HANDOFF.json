@@ -1,25 +1,20 @@
 {
   "updated": "2026-11-03",
-  "current_phase": 7,
-  "current_task": "7.3",
-  "status": "code_verified_remote_persistence_and_demo_restart_blocked",
-  "target_version": "2.3.0",
+  "current_phase": 9,
+  "current_task": null,
+  "status": "code_verified_local_only",
+  "target_version": "2.3.1",
   "branch": "feat/planning-workflow-2026-11-03",
-  "base": "ff6d1e1",
-  "scope": [
-    "dashboard persistence",
-    "detailed guest management",
-    "visible local sample preview"
-  ],
+  "user_preference": "Default personal PIN until owner explicitly asks for account login",
+  "evidence": "75 tests; 4 Chrome flows; typecheck/lint/build; actual localhost PIN flow passed",
+  "local_web": "http://127.0.0.1:3000 (personal PIN, no Supabase required)",
   "planned_only": [
     "phase 8 budget deposits and payments"
   ],
   "notes": [
-    "User selected both guest management directions",
-    "No live Supabase migration or Edge deployment performed"
-  ],
-  "evidence": "70 tests and 3 Chrome flows passed; typecheck/lint/build passed; audit zero",
-  "local_web": "http://127.0.0.1:3000 (standard dev server, requires real Supabase setup)",
-  "runtime_blocker": "Automatic approval review denied restarting the mock preview; manual alternate port command documented",
-  "persistence_blocker": "Combined commit/push command rejected: blocked by policy; remote persistence is not claimed"
+    "Local changes require their final local commit checkpoint",
+    "Remote push previously denied; not retried for this follow-up",
+    "No live Supabase migration, data access or deployment performed",
+    "PIN alone does not synchronize separate devices"
+  ]
 }

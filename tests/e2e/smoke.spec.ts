@@ -29,10 +29,30 @@ async function backend(page:Page,signedIn:boolean){
   const token=[Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url'),Buffer.from(JSON.stringify({sub:authUid,aud:'authenticated',role:'authenticated',exp:now+3600,iat:now})).toString('base64url'),'audit-only-signature'].join('.');
   await page.addInitScript(({signedIn,token,now,authUid})=>{
     localStorage.setItem('wedplan_onboarding_done','1');
+    if(signedIn)sessionStorage.setItem('wedplan_personal_pin_v1','1');
     if(signedIn)localStorage.setItem('sb-audit-auth-token',JSON.stringify({access_token:token,refresh_token:'audit-only-refresh',expires_in:3600,expires_at:now+3600,token_type:'bearer',user:{id:authUid,aud:'authenticated',role:'authenticated',email:'owner@example.test',app_metadata:{provider:'email'},user_metadata:{}}}));
   },{signedIn,token,now,authUid});
   return {errors,get privateReads(){return privateReads;},get saved(){return saved;}};
 }
+
+test('personal PIN opens local use, retains edits after reload and locks again',async({page})=>{
+  await page.setViewportSize({width:1440,height:1000});const state=await backend(page,false);
+  await page.goto('/');await expect(page.getByLabel('Mã PIN')).toBeVisible();
+  await expect(page.getByLabel('Email',{exact:true})).toHaveCount(0);
+  await page.screenshot({path:test.info().outputPath('personal-pin.png'),animations:'disabled'});
+  await page.getByLabel('Mã PIN').fill('123456');await page.getByRole('button',{name:'Mở kế hoạch',exact:true}).click();
+  await expect(page.getByRole('alert')).toContainText('Mã PIN chưa đúng');
+  await page.getByLabel('Mã PIN').fill('201020');await page.getByRole('button',{name:'Mở kế hoạch',exact:true}).click();
+  await expect(page.getByText('Lưu trên thiết bị',{exact:true})).toBeVisible();
+  const task=page.getByRole('checkbox',{name:'Chọn & chốt ngày cưới'});await task.click();
+  await page.reload();await expect(page.getByRole('checkbox',{name:'Chọn & chốt ngày cưới'})).toHaveAttribute('aria-checked','true');
+  await page.locator('aside').getByRole('button',{name:'Thiệp Cưới',exact:true}).click();
+  const field=page.locator('[data-field="groomName"]').first();await field.fill('Personal Groom');await field.press('Tab');
+  await page.getByRole('button',{name:'Lưu Thiết Kế',exact:true}).click();await expect(page.getByText('Đã lưu thiết kế thiệp trên thiết bị này.',{exact:true})).toBeVisible();
+  await page.screenshot({path:test.info().outputPath('personal-local-editor.png'),animations:'disabled'});
+  await page.locator('aside').getByRole('button',{name:'Khóa ứng dụng',exact:true}).click();await expect(page.getByLabel('Mã PIN')).toBeVisible();
+  expect(state.privateReads).toBe(0);expect(state.saved).toBeUndefined();expect(state.errors).toEqual([]);
+});
 
 test('owner edits, saves, undoes and returns from the desktop editor',async({page})=>{
   await page.setViewportSize({width:1440,height:1000});const state=await backend(page,true);

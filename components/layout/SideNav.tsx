@@ -1,3 +1,4 @@
+import { USE_ACCOUNT_ACCESS, lockPersonalAccess } from '../../lib/personalAccess';
 
 import React from 'react';
 import {
@@ -93,12 +94,12 @@ const SideNav: React.FC<SideNavProps> = ({ activeTab, setActiveTab, isCollapsed,
 
         {/* Logout */}
         <button
-          onClick={logout}
-          title={isCollapsed ? 'Đăng xuất' : undefined}
+          onClick={USE_ACCOUNT_ACCESS ? logout : lockPersonalAccess}
+          title={isCollapsed ? (USE_ACCOUNT_ACCESS ? 'Đăng xuất' : 'Khóa ứng dụng') : undefined}
           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors text-sm ${isCollapsed ? 'justify-center' : ''}`}
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
-          {!isCollapsed && <span>Đăng xuất</span>}
+          {!isCollapsed && <span>{USE_ACCOUNT_ACCESS ? 'Đăng xuất' : 'Khóa ứng dụng'}</span>}
         </button>
 
         {/* Collapse toggle */}

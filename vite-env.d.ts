@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_OWNER_UID?: string;
+  readonly VITE_ACCESS_MODE?: 'pin' | 'account';
   readonly VITE_SUPABASE_URL: string;
   readonly VITE_SUPABASE_ANON_KEY: string;
 }
