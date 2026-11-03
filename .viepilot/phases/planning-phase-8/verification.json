@@ -1,0 +1,23 @@
+{
+  "date": "2026-11-03",
+  "version": "2.4.0",
+  "status": "code_verified_locally",
+  "checks": {
+    "npm run check": { "exit_code": 0, "files": 16, "tests": 102, "typecheck": true, "lint": true, "build": true },
+    "Chrome E2E": { "exit_code": 0, "flows": 6, "real_supabase": false },
+    "npm audit": { "exit_code": 0, "vulnerabilities": 0 },
+    "actual localhost 3000": { "http_status": 200, "pin_access": true, "mocked_auth": false, "isolated_context": true, "reconciliation_paid_and_deposit_fields": true, "page_errors": 0 },
+    "visual_review": ["dashboard desktop", "budget list desktop", "payment mobile", "localhost legacy reconciliation"]
+  },
+  "invariants": [
+    "Deposit is part of paid, never counted twice",
+    "Work status and legacy actualCost do not create cash transactions",
+    "Confirmed debt and provisional balances remain separate",
+    "Overpayment does not offset another supplier debt",
+    "Planned due dates are wedding-relative only; actual dates remain independent",
+    "Schedules, allocations and void history survive backup and optional cloud round-trip"
+  ],
+  "storage": "Existing browser storage and private budget_items JSONB; no new SQL for this feature",
+  "remote_push": "not attempted; prior automatic review denial retained",
+  "deployment": "not performed; real Supabase unchanged"
+}

@@ -2,6 +2,14 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [v2.4.0] - 2026-11-03: Cọc, thanh toán nhiều đợt và công nợ sau cưới
+
+- Thêm giá chốt, nhà cung cấp, ghi nhận cọc/thực trả và lịch hẹn chỉ theo mốc trước/đúng/sau ngày cưới. Cọc nằm trong tổng đã trả; trạng thái công việc độc lập với thanh toán.
+- Dashboard có tám thẻ tài chính, lịch chi theo mốc, ưu tiên thanh toán, nợ sau cưới và click để lọc. Dùng cùng nguồn tính cho danh sách, CSV và dữ kiện AI; không bù trả dư giữa các nhà cung cấp hoặc tự trừ tiền mừng dự kiến.
+- Đối chiếu rõ các khoản cũ, giữ nguyên `actualCost`, không tự suy diễn tiền đã trả. Tách số tạm tính khỏi công nợ đã chốt; giữ lịch sử hủy giao dịch kèm lý do.
+- Giữ đầy đủ giao dịch/phân bổ qua lưu cục bộ, backup và cloud có revision. Dùng JSONB hiện có, không cần SQL mới nếu đã nâng cấp schema 2.3.0.
+- Giữ PIN cá nhân và local mode. Kiểm tra form, phép tính, reload PIN, cloud giả lập, PostgreSQL và mobile; chưa triển khai backend thật hay xuất bản bản mới.
+
 ## [v2.3.1] - 2026-11-03: Restore personal PIN access
 
 - Restore the owner's existing PIN as the default way to open the app; email/password is opt-in through `VITE_ACCESS_MODE=account`.

@@ -1,19 +1,23 @@
 {
   "updated": "2026-11-03",
   "current_phase": 8,
-  "current_task": "8.2",
-  "status": "in_progress",
+  "current_task": "8.3",
+  "status": "code_verified_locally",
   "target_version": "2.4.0",
   "branch": "feat/planning-workflow-2026-11-03",
-  "user_preference": "PIN remains default; payment due dates only T-minus/on/T-plus wedding day",
-  "evidence": "8.1: 21 ledger/persistence tests and typecheck/lint passed",
+  "user_preference": "Personal PIN remains default; planned payment dates only T-minus/on/T-plus wedding day",
+  "evidence": "102 tests in 16 files; six Chrome flows; typecheck, lint, build, npm audit and actual localhost PIN/reconciliation verified",
   "local_web": "http://127.0.0.1:3000 (personal PIN, no Supabase required)",
   "planned_only": [],
+  "local_code_reference": "latest phase 8 release checkpoint on feat/planning-workflow-2026-11-03",
+  "local_checkpoints": { "8.1": "10b9e2f", "8.2": "bfa4b93" },
+  "summary": ".viepilot/phases/planning-phase-8/SUMMARY.md",
   "notes": [
-    "Implementation and checks committed locally at 22d137f",
-    "Remote push previously denied; not retried for this follow-up",
+    "Approved budget model, forms and dashboard are implemented in the real app",
+    "Legacy records need explicit reconciliation; actualCost is preserved",
+    "Remote push previously denied; not retried",
     "No live Supabase migration, data access or deployment performed",
-    "PIN alone does not synchronize separate devices"
-  ],
-  "local_code_commit": "22d137f"
+    "PIN alone does not synchronize separate devices",
+    "No new SQL needed for this feature if the current 2.3.0 schema is already applied"
+  ]
 }

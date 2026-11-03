@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-03",
+  "url": "http://127.0.0.1:3000/",
+  "pin_access": true,
+  "mocked_auth": false,
+  "isolated_context": true,
+  "personal_browser_data_touched": false,
+  "reconcile_fields_visible": true,
+  "budget_dashboard_visible": true,
+  "page_errors": []
+}

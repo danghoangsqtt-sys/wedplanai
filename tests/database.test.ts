@@ -126,6 +126,13 @@ describe('actual PostgreSQL schema and authorization', () => {
     expect((await db.query('select milestone_tasks from public.user_data')).rows[0]).toEqual({milestone_tasks:tasks});
     await role('anon');await expect(db.query('select milestone_tasks from public.user_data')).rejects.toThrow();
   });
+  it('preserves financial metadata in the existing budget JSONB RPC',async()=>{
+    await role('authenticated',owner);
+    const previous=(await db.query<{last_updated:string}>('select last_updated from public.user_data')).rows[0].last_updated;
+    const budget={id:'ledger',itemName:'Restaurant',estimatedCost:120000000,actualCost:0,agreedCost:110000000,paymentSchedule:[{id:'final',offsetDays:3,amount:110000000,label:'After wedding'}],payments:[{id:'p',kind:'deposit',amount:30000000,paidAt:'2026-11-03',allocations:[{scheduleId:'final',amount:30000000}]}]};
+    await db.query('select public.save_plan($1,$2,$3)',[plan,JSON.stringify({guests:[],budgetItems:[budget]}),previous]);
+    expect((await db.query('select budget_items from public.user_data')).rows[0]).toEqual({budget_items:[budget]});
+  });
   it('resolves share codes privately and revokes partner access on leave', async () => {
     const share=(await db.query<{id:string}>(`insert into public.plan_shares(owner_uid,share_code) values('${plan}','WED-ABCDEF') returning id`)).rows[0];
     await role('authenticated',other);

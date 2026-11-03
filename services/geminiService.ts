@@ -1,5 +1,6 @@
 
 import { guestAdults } from '../lib/guestStats';
+import { getBudgetPaymentSummary } from '../lib/budgetPayments';
 import { generateAIContent } from "./aiService";
 import { DashboardStats, GuestGroup } from "../types";
 import { useStore } from "../store/useStore";
@@ -75,6 +76,7 @@ export const getFinancialAdvice = async (
 ) => {
   const user = useStore.getState().user;
   const { guests, budgetItems } = useStore.getState();
+  const paymentSummary = getBudgetPaymentSummary(budgetItems, useStore.getState().invitation.date);
 
   // --- Build rich context from real data ---
   const guestByGroup = {
@@ -97,9 +99,9 @@ export const getFinancialAdvice = async (
     .map(i => `${i.itemName}: ${i.estimatedCost.toLocaleString('vi-VN')} VNĐ (${i.status})`)
     .join('\n    ');
 
-  const overBudgetItems = budgetItems.filter(i => i.actualCost > i.estimatedCost && i.actualCost > 0);
+  const overBudgetItems = budgetItems.filter(i => i.agreedCost !== undefined && i.agreedCost > i.estimatedCost);
   const overBudgetWarning = overBudgetItems.length > 0
-    ? `\n    ⚠️ VƯỢT NGÂN SÁCH: ${overBudgetItems.map(i => `${i.itemName} (dự kiến ${i.estimatedCost.toLocaleString('vi-VN')} → thực tế ${i.actualCost.toLocaleString('vi-VN')})`).join(', ')}`
+    ? `\n    ⚠️ VƯỢT DỰ TOÁN: ${overBudgetItems.map(i => `${i.itemName} (dự kiến ${i.estimatedCost.toLocaleString('vi-VN')} → giá chốt ${i.agreedCost!.toLocaleString('vi-VN')})`).join(', ')}`
     : '';
 
   const contextData = `
@@ -107,9 +109,10 @@ export const getFinancialAdvice = async (
 
     📊 TỔNG QUAN:
     - Tổng ngân sách dự kiến: ${stats.totalBudget.toLocaleString('vi-VN')} VNĐ
-    - Đã chi thực tế: ${stats.totalActual.toLocaleString('vi-VN')} VNĐ
-    - Còn lại: ${(stats.totalBudget - stats.totalActual).toLocaleString('vi-VN')} VNĐ
-    - % đã chi: ${stats.totalBudget > 0 ? Math.round((stats.totalActual / stats.totalBudget) * 100) : 0}%
+    - Tổng tiền thực đã trả: ${paymentSummary.paid.toLocaleString('vi-VN')} VNĐ (đã bao gồm cọc ${paymentSummary.deposits.toLocaleString('vi-VN')})
+    - Công nợ đã xác định: ${paymentSummary.remaining.toLocaleString('vi-VN')} VNĐ; trong đó sau cưới ${paymentSummary.after.toLocaleString('vi-VN')} VNĐ
+    - Còn tạm tính: ${paymentSummary.provisionalRemaining.toLocaleString('vi-VN')} VNĐ; ${paymentSummary.unreconciledCount} khoản chưa đối chiếu và ${paymentSummary.unpricedCount} khoản chưa chốt giá.
+    - Không suy diễn actualCost lịch sử hoặc trạng thái công việc là số tiền đã trả. Không trừ tiền mừng dự kiến vào công nợ nhà cung cấp.
     - Nhiệm vụ chưa hoàn thành: ${stats.pendingTasks}
 
     👥 KHÁCH MỜI:

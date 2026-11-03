@@ -1,6 +1,6 @@
 # Phase 8 — Ngân sách đặt cọc và công nợ
 
-Trạng thái: in_progress. Người dùng đã duyệt bản phác và yêu cầu triển khai ngày 2026-11-03. Nguồn: docs/brainstorm/session-2026-11-03.md và hai workspace 2026-11-03-budget-payments.
+Trạng thái: code verified locally (2.4.0). Người dùng đã duyệt bản phác và yêu cầu triển khai ngày 2026-11-03. Nguồn: docs/brainstorm/session-2026-11-03.md và hai workspace 2026-11-03-budget-payments. Xem SUMMARY.md và verification.json; chưa xuất bản hoặc triển khai backend thật.
 
 ## Quy ước số liệu
 
@@ -22,7 +22,7 @@ Trạng thái: in_progress. Người dùng đã duyệt bản phác và yêu c�
 | 8.2 | Form khoản chi và lịch sử thanh toán: thêm cọc, trả nhiều đợt, sửa/xóa, hạn thanh toán/nhà cung cấp | `components/DetailedBudgetPlanner.tsx`, `components/budget/PaymentDialog.tsx`, tests |
 | 8.3 | Dashboard tổng dự toán/giá chốt/đã cọc/đã trả/còn trả; lọc sắp đến hạn/quá hạn; CSV, responsive, regression | `components/CommandCenter.tsx`, `App.tsx`, `lib/csv.ts`, tests/e2e, docs |
 
-Thông tin ngân sách nằm trong JSONB `budget_items` đã có RLS và save_plan atomic revision; dự kiến không cần bảng/cột riêng. DTO, backup và AI phải bảo toàn các trường mới. Trước triển khai sẽ viết contract cho từng task và xác nhận các file phụ thuộc thực tế.
+Thông tin ngân sách nằm trong JSONB `budget_items` đã có RLS và save_plan atomic revision; kiểm thử PostgreSQL xác nhận không cần bảng/cột riêng. DTO, backup và AI bảo toàn/sử dụng các trường mới. Contract từng task đã được viết trước khi sửa các file phụ thuộc.
 
 ## Ví dụ nghiệm thu
 

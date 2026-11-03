@@ -1,5 +1,5 @@
 # WedPlan AI — TRACKER
-Version: 2.3.1
+Version: 2.4.0
 Updated: 2026-11-03
 
 ## Historical milestone - invitation upgrade
@@ -102,13 +102,13 @@ Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilo
 
 ## Current State
 
-- Current follow-up: phase 9, personal PIN restored by explicit owner preference; version 2.3.1.
+- Current follow-up: phase 8, approved budget ledger implementation; version 2.4.0, code verified locally.
 - Default access: PIN, no immediate account login; account mode is opt-in.
 - Data: local-only without separately verified cloud session. Existing browser data retained; separate devices do not synchronize from PIN alone.
-- Evidence: 75 tests, 4 Chrome flows, typecheck/lint/build and real localhost PIN entry passed.
+- Evidence: 102 tests in 16 files, six Chrome flows, typecheck/lint/build and actual localhost PIN/reconciliation screen passed. npm audit: zero vulnerabilities. See phase 8 SUMMARY.md and verification.json.
 - Local web: http://127.0.0.1:3000.
-- Branch: feat/planning-workflow-2026-11-03; implementation committed locally at 22d137f. Remote push is not claimed.
-- Phase 8 budget deposits/payment balances remain planned only. Live Supabase setup is unchanged.
+- Branch: feat/planning-workflow-2026-11-03; 8.1 and 8.2 checkpointed at 10b9e2f and bfa4b93. Remote push is not claimed.
+- Phase 8 implements deposits, relative schedules, actual payment history, reconciliation, filters/CSV and dashboard debt. Existing private JSONB is used; live Supabase setup is unchanged.
 
 ## Historical checkpoint reconciliation
 

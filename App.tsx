@@ -1,3 +1,5 @@
+import { getBudgetPaymentSummary } from './lib/budgetPayments';
+import { useBudgetDate } from './hooks/useBudgetDate';
 
 import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { AttendanceProbability, DashboardStats, TaskStatus } from './types';
@@ -148,7 +150,10 @@ function App() {
   }, []);
 
   // --- Statistics Calculation Logic ---
+  const invitation = useStore(state => state.invitation);
+  const budgetToday = useBudgetDate();
   const stats: DashboardStats = useMemo(() => {
+    const budgetPayments = getBudgetPaymentSummary(budgetItems, invitation.date, budgetToday);
     const totalGuests = guests.reduce((sum,g)=>sum+guestAdults(g),0);
     const weightedGuestCount = guests.reduce((acc, guest) => {
       const totalPeople = guestPartySize(guest);
@@ -159,11 +164,11 @@ function App() {
     const confirmedGuests = guests.filter(g => g.probability === AttendanceProbability.CONFIRMED).reduce((sum,g)=>sum+guestAdults(g),0);
     const expectedGiftMoney = guests.reduce((acc, guest) => acc + (guest.redEnvelope * (guest.probability / 100)), 0);
     const totalBudget = budgetItems.reduce((acc, item) => acc + item.estimatedCost, 0);
-    const totalActual = budgetItems.reduce((acc, item) => acc + item.actualCost, 0);
+    const totalActual = budgetPayments.paid;
     const pendingTasks = budgetItems.filter(item => item.status !== TaskStatus.DONE && item.status !== TaskStatus.PAID).length;
 
-    return { totalGuests, weightedGuestCount, totalChildren, confirmedGuests, totalBudget, totalActual, expectedGiftMoney, pendingTasks };
-  }, [guests, budgetItems]);
+    return { totalGuests, weightedGuestCount, totalChildren, confirmedGuests, totalBudget, totalActual, expectedGiftMoney, pendingTasks, budgetPayments };
+  }, [guests, budgetItems, invitation.date, budgetToday]);
 
 
 

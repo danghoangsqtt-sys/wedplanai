@@ -1,5 +1,5 @@
 # WedPlan AI — ROADMAP
-Version: 2.3.1
+Version: 2.4.0
 Updated: 2026-11-03
 
 ---
@@ -137,11 +137,15 @@ Scope: A01-A16, S01/S02, D01/D02. Existing feature-expansion backlogs remain out
 
 | Phase | Name | Tasks | Status |
 |---|---|---:|---|
-| 7 | Dashboard persistence, detailed guests, local preview | 3 | code verified; runtime/persistence follow-up blocked |
-| 8 | Deposits, staged payments and outstanding balances | 3 | planned (plan only requested) |
+| 7 | Dashboard persistence, detailed guests, local preview | 3 | code verified locally; browser regression passed in phases 9/8 |
+| 8 | Deposits, staged payments and outstanding balances | 3 | code verified locally; remote/deployment not performed |
 
-Specs: `.viepilot/phases/planning-phase-7/SPEC.md`, `.viepilot/phases/planning-phase-8/SPEC.md`. The user selected both visual RSVP/table management and detailed contact/group management. Budget payments are documented as a separate future implementation, not included in 2.3.0.
+Specs: `.viepilot/phases/planning-phase-7/SPEC.md`, `.viepilot/phases/planning-phase-8/SPEC.md`. The user selected both visual RSVP/table management and detailed contact/group management. Budget payments were not included in 2.3.0; the approved implementation ships locally in 2.4.0.
 
 ## Personal access correction - 2.3.1
 
-Phase 9 restores the owner-requested personal PIN by default, with local-only persistence and optional existing verified cloud session. Three tasks are code verified locally; remote persistence is not claimed. See `.viepilot/phases/personal-access-phase-9/SPEC.md` and SUMMARY.md. Phase 8 budget remains planned only.
+Phase 9 restores the owner-requested personal PIN by default, with local-only persistence and optional existing verified cloud session. Three tasks are code verified locally; remote persistence is not claimed. See `.viepilot/phases/personal-access-phase-9/SPEC.md` and SUMMARY.md. Phase 8 retains this access preference.
+
+## Budget ledger — 2.4.0
+
+The user approved both prototype workspaces and requested implementation with “okey làm đi” on 2026-11-03. Phase 8 covers the canonical model, actual forms and dashboard together. Planned due dates are exclusively T−N/T/T+N; actual payments keep calendar dates. Deposits are part of paid, legacy records require reconciliation, and provisional amounts stay separate from confirmed supplier debt. Existing JSONB supports the feature without a new migration. Local evidence and remaining remote/deployment limits are recorded in phase 8 SUMMARY.md.

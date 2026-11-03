@@ -48,8 +48,9 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActi
     : null;
   const stage = daysUntil !== null ? getStage(daysUntil) : null;
 
-  const budgetPct = stats.totalBudget > 0
-    ? Math.round((stats.totalActual / stats.totalBudget) * 100)
+  const budgetForecast = stats.budgetPayments?.forecast ?? stats.totalBudget;
+  const budgetPct = budgetForecast > 0
+    ? Math.round((stats.totalActual / budgetForecast) * 100)
     : 0;
 
   return (
@@ -132,7 +133,7 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActi
       <div className="flex-1" />
 
       {/* Desktop: Budget quick indicator */}
-      {stats.totalBudget > 0 && (
+      {budgetForecast > 0 && (
         <div className="hidden xl:flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-full px-3 py-1.5">
           <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
             <div
@@ -140,7 +141,7 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActi
               style={{ width: `${Math.min(budgetPct, 100)}%` }}
             />
           </div>
-          <span className="text-xs text-gray-500 font-medium">{budgetPct}% NS</span>
+          <span className="text-xs text-gray-500 font-medium">{budgetPct}% đã trả</span>
         </div>
       )}
 

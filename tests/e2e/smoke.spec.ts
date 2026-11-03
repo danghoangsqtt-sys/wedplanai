@@ -4,9 +4,9 @@ const planUid='e8a57bf1-58c2-45ae-b1ab-65c1e6921ad9';
 const authUid='11111111-1111-4111-8111-111111111111';
 const invitation=JSON.parse(readFileSync('tests/fixtures/invitation.json','utf8'));
 
-async function backend(page:Page,signedIn:boolean){
+async function backend(page:Page,signedIn:boolean,initialBudget:any[]=[]){
   const errors:string[]=[];let privateReads=0;let saved:any;
-  let cloud={guests:[],budgetItems:[],procedures:{NORTH:[],CENTRAL:[],SOUTH:[]},invitation} as any;
+  let cloud={guests:[],budgetItems:initialBudget,procedures:{NORTH:[],CENTRAL:[],SOUTH:[]},invitation} as any;
   let revision='2026-11-03T00:00:00Z';
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
@@ -52,6 +52,67 @@ test('personal PIN opens local use, retains edits after reload and locks again',
   await page.screenshot({path:test.info().outputPath('personal-local-editor.png'),animations:'disabled'});
   await page.locator('aside').getByRole('button',{name:'Khóa ứng dụng',exact:true}).click();await expect(page.getByLabel('Mã PIN')).toBeVisible();
   expect(state.privateReads).toBe(0);expect(state.saved).toBeUndefined();expect(state.errors).toEqual([]);
+});
+
+test('PIN budget records deposit, relative dates, partial payment and dashboard after reload',async({page})=>{
+  const state=await backend(page,false);await page.setViewportSize({width:1440,height:1080});
+  await page.addInitScript(invitation=>{
+    if(!localStorage.getItem('wedplan-storage-v14'))localStorage.setItem('wedplan-storage-v14',JSON.stringify({version:1,state:{budgetItems:[],guests:[],invitation:{...invitation,date:'2026-12-20'},milestoneTasks:{},hasUnsyncedChanges:false,cloudRevision:null}}));
+  },invitation);
+  await page.goto('/');await page.getByLabel('Mã PIN').fill('201020');await page.getByRole('button',{name:'Mở kế hoạch',exact:true}).click();
+  await page.locator('aside').getByRole('button',{name:'Ngân Sách',exact:true}).click();
+  await page.getByRole('button',{name:'Thêm khoản chi',exact:true}).click();
+  await page.getByRole('textbox',{name:'Tên khoản chi',exact:true}).fill('Nhà hàng thanh toán');
+  await page.getByRole('spinbutton',{name:'Dự toán (VNĐ)',exact:true}).fill('120000000');
+  await page.getByRole('spinbutton',{name:'Giá đã chốt (VNĐ)',exact:true}).fill('110000000');
+  await page.getByRole('textbox',{name:'Nhà cung cấp',exact:true}).fill('Nhà hàng mẫu');
+  await page.getByRole('button',{name:'Lưu khoản chi',exact:true}).click();
+  await page.getByRole('button',{name:'Ghi nhận cọc',exact:true}).click();
+  await page.getByRole('spinbutton',{name:'Số tiền mới thực trả (VNĐ)',exact:true}).fill('30000000');
+  await page.getByRole('button',{name:'Xác nhận đã trả',exact:true}).click();
+  await page.getByRole('button',{name:'Chi tiết thanh toán',exact:true}).click();
+  for(const stage of [{label:'Cọc giữ sảnh',amount:'30000000',side:'before',days:'30'},{label:'Trước tiệc',amount:'20000000',side:'before',days:'7'},{label:'Quyết toán sau tiệc',amount:'60000000',side:'after',days:'3'}]){
+    await page.getByRole('button',{name:'＋ Thêm đợt',exact:true}).click();
+    await page.getByRole('textbox',{name:'Tên đợt',exact:true}).fill(stage.label);
+    await page.getByRole('spinbutton',{name:'Số tiền phải trả của đợt (VNĐ)',exact:true}).fill(stage.amount);
+    await page.getByRole('combobox',{name:'Mốc hẹn',exact:true}).selectOption(stage.side);
+    await page.getByRole('spinbutton',{name:'Số ngày',exact:true}).fill(stage.days);
+    await page.getByRole('button',{name:'Lưu đợt thanh toán',exact:true}).click();
+  }
+  await page.getByRole('row').filter({hasText:'Trước tiệc'}).getByRole('button',{name:'Ghi nhận trả',exact:true}).click();
+  await page.getByRole('button',{name:'Xác nhận đã trả',exact:true}).click();
+  await page.getByRole('button',{name:'Đóng thanh toán · nhà hàng thanh toán',exact:true}).click();
+  await page.locator('aside').getByRole('button',{name:'Tổng Quan',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Tổng đã trả: 50.000.000 ₫',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Sau đám cưới: 60.000.000 ₫',exact:true})).toBeVisible();
+  await page.screenshot({path:test.info().outputPath('budget-dashboard-desktop.png'),animations:'disabled'});
+  await page.reload();await expect(page.getByRole('button',{name:'Còn phải trả: 60.000.000 ₫',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Sau đám cưới: 60.000.000 ₫',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Trả sau cưới',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByRole('article',{name:'Khoản chi: Nhà hàng thanh toán',exact:true})).toContainText('30.000.000 ₫');
+  await page.screenshot({path:test.info().outputPath('budget-list-desktop.png'),animations:'disabled'});
+  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Chi tiết thanh toán',exact:true}).click();
+  await page.getByRole('button',{name:'Ghi nhận thanh toán',exact:true}).click();
+  await page.getByRole('spinbutton',{name:'Số tiền mới thực trả (VNĐ)',exact:true}).fill('10000000');
+  await page.screenshot({path:test.info().outputPath('budget-payment-mobile.png'),animations:'disabled'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect(state.saved).toBeUndefined();expect(state.privateReads).toBe(0);expect(state.errors).toEqual([]);
+});
+
+test('authorized cloud round-trip preserves financial transactions and allocations',async({page})=>{
+  const item={id:'cloud-budget',itemName:'Nhà hàng cloud',category:'Tiệc',side:'BOTH',assignee:'',status:'Chưa làm',estimatedCost:120000000,actualCost:0,agreedCost:110000000,payments:[],paymentSchedule:[{id:'final',label:'Quyết toán',amount:110000000,offsetDays:3}]};
+  const state=await backend(page,true,[item]);await page.goto('/');
+  await expect(page.getByRole('button',{name:'Còn phải trả: 110.000.000 ₫',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Ghi nhận thanh toán →',exact:true}).click();
+  await page.getByRole('combobox',{name:'Loại khoản trả',exact:true}).selectOption('deposit');
+  await page.getByRole('spinbutton',{name:'Số tiền mới thực trả (VNĐ)',exact:true}).fill('30000000');
+  await page.getByRole('button',{name:'Xác nhận đã trả',exact:true}).click();
+  await expect.poll(()=>state.saved?.plan_data?.budgetItems?.[0]?.payments?.[0]?.amount).toBe(30000000);
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('wedplan-storage-v14')!).state.hasUnsyncedChanges)).toBe(false);
+  await page.evaluate(()=>localStorage.removeItem('wedplan-storage-v14'));await page.reload();
+  await expect(page.getByRole('button',{name:'Tổng đã trả: 30.000.000 ₫',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Sau đám cưới: 80.000.000 ₫',exact:true})).toBeVisible();
+  expect(state.saved.plan_data.budgetItems[0].payments[0].allocations).toEqual([{scheduleId:'final',amount:30000000}]);expect(state.errors).toEqual([]);
 });
 
 test('owner edits, saves, undoes and returns from the desktop editor',async({page})=>{

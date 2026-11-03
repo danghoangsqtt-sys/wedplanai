@@ -1,4 +1,4 @@
-# Architecture — WedPlan AI 2.3.1
+# Architecture — WedPlan AI 2.4.0
 
 Updated: 2026-11-03. Planning workflow changes build on the audit fix branch; production application of SQL/secrets remains a deployment gate.
 
@@ -55,3 +55,27 @@ flowchart TB
 - Guest phone, invitation status, notes and table names stay in private plan JSON, never in the public invitation projection. Attendee totals include companions and children once.
 - The optional local-preview tool intercepts API calls in a separate Chrome context with sample data. It adds no authentication bypass or demo mode to production app code.
 - Owner preference: personal PIN gate is the frontend default; account login is opt-in. PIN unlock is not a database credential. Missing cloud session/configuration selects explicit local-only persistence with accurate Save messaging; private RLS still requires a separately verified owner session.
+
+## Budget ledger — 2.4.0
+
+Diagram source: `.viepilot/architecture/budget-payments.mermaid`.
+
+```mermaid
+flowchart LR
+  Forms[Budget and payment forms] --> Mutation[Validated current-item mutation]
+  Mutation --> Store[Persisted private plan]
+  Store --> Local[(Browser storage)]
+  Store --> Backup[Version 2 backup]
+  Store --> RPC[Verified revision-protected save_plan]
+  RPC --> JSON[(budget_items JSONB)]
+  Store --> Calc[lib/budgetPayments.ts]
+  Wedding[Wedding date and Bangkok calendar day] --> Calc
+  Calc --> Views[Budget list and dashboard]
+  Calc --> Export[CSV and AI facts]
+```
+
+- `agreedCost?` distinguishes no price from explicit zero. Legacy `actualCost` is retained for reconciliation, never treated automatically as paid cash or contract price. Missing ledger arrays require explicit reconciliation; no automatic payments from task status.
+- `paymentSchedule[]` stores stable stage IDs, integer VND, labels and `offsetDays` relative to the wedding. Settled stages retain their historical due-date snapshot; pending due dates move with the wedding. `payments[]` stores stable IDs, deposit/payment kind, actual paid date, allocations, notes and optional void time/reason. Actual cash dates never move with the wedding.
+- One pure validated helper derives all totals. Deposits are a subset of paid. Confirmed debt sums per-item nonnegative balances of reconciled, priced items; provisional balances and overpayments are separate. Before/on + after + unscheduled reconciles to confirmed debt. Overdue/next-seven-days are overlapping views of that debt, not additional liabilities.
+- Current-item store mutations avoid overwriting concurrent new payment history with a stale metadata form. Validation precedes state replacement/backup import/cloud saves and reads. Failed cloud writes retain dirty state; existing revision checks prevent stale writes.
+- Existing private JSONB and `save_plan` round-trip the extensions without SQL changes. No fields are added to public invitations. There is no banking/payment execution API, refund workflow or automatic reminder service; void only corrects entered records and retains history.

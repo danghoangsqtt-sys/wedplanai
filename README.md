@@ -1,10 +1,10 @@
 # WedPlan AI
 
-![Version 2.3.1](https://img.shields.io/badge/Version-2.3.1-blue)
+![Version 2.4.0](https://img.shields.io/badge/Version-2.4.0-blue)
 
 Ứng dụng lập kế hoạch cưới: quản lý khách mời, ngân sách, quy trình, thiệp điện tử, RSVP và tư vấn AI.
 
-Phiên bản 2.3.0 bổ sung hồ sơ khách mời, bộ lọc, tổng quan bàn tiệc và sửa lưu lộ trình dashboard. Kế thừa các bản sửa audit 2.2.1 về phân quyền, đồng bộ, backup, RSVP và editor. **Cần áp dụng SQL hiện tại theo [SETUP.md](SETUP.md) trước khi dùng frontend mới với backend thật**, kể cả khi đã chạy SQL 2.2.1.
+Phiên bản 2.4.0 bổ sung tiền cọc, thanh toán nhiều đợt và dashboard công nợ trước/sau cưới. Giữ hồ sơ khách mời, lưu lộ trình dashboard và cách vào bằng PIN cá nhân. **Backend thật cần schema hiện tại theo [SETUP.md](SETUP.md)**; nếu đã áp dụng migration 2.3.0 thì phần ngân sách 2.4.0 không cần SQL mới.
 
 ## Chạy dự án
 
@@ -44,7 +44,19 @@ Cần Chrome đã cài và cổng 3000 còn trống. Công cụ mở một cửa
 
 Nếu máy chủ thường đang dùng cổng 3000, chạy `node .viepilot/tools/local-preview.cjs --port 3001` để mở bản mẫu ở cổng riêng.
 
-Kế hoạch ngân sách cọc/thanh toán nhiều đợt/còn phải trả: [phase 8](.viepilot/phases/planning-phase-8/SPEC.md). Phần này mới lập kế hoạch, chưa triển khai.
+## Cọc, thanh toán và công nợ
+
+1. Vào **Ngân Sách → Thêm khoản chi**, nhập dự toán, giá đã chốt và nhà cung cấp. Giá chốt có thể để trống khi chưa thống nhất.
+2. Bấm **Ghi nhận cọc** để nhập số tiền và ngày thực trả. Cọc đã nằm trong tổng đã trả, không được cộng thêm lần nữa.
+3. Mở **Chi tiết thanh toán → ＋ Thêm đợt**, nhập số tiền và mốc trước/đúng/sau ngày cưới. Ngày hẹn được tính từ ngày cưới; đổi ngày cưới sẽ dời các đợt chưa trả, giữ ngày thực trả và mốc lịch sử của đợt đã xong.
+4. Ghi nhận từng lần thanh toán. Có xem trước phân bổ và xác nhận nếu trả dư. Bản ghi nhập nhầm được hủy hiệu lực kèm lý do và vẫn giữ trong lịch sử; thao tác này không phải hoàn tiền thực tế.
+5. Xem **Tổng Quan** để biết tổng đã trả, còn nợ, trả sau cưới, quá hạn, trong 7 ngày tới và lịch chi tiền theo mốc. Bấm thẻ để lọc danh sách; xuất CSV công nợ hoặc lịch sử trả từ Ngân Sách.
+
+**Khoản cũ:** bấm **Đối chiếu số liệu**, xác nhận giá chốt và tổng thực đã trả, trong đó có tiền cọc. Số “Thực tế” cũ được giữ nguyên để đối chiếu; ứng dụng không tự coi nó hoặc trạng thái công việc là giao dịch. Có thể đối chiếu 0 đồng rồi nhập các lần trả đúng ngày riêng biệt.
+
+“Còn phải trả” trên dashboard chỉ gồm khoản đã đối chiếu và chốt giá. Phần chưa chốt/chưa đối chiếu được ghi rõ là tạm tính. Trả dư cho một nhà cung cấp không tự bù nợ của nhà cung cấp khác; tiền mừng dự kiến không tự trừ vào công nợ. Lịch trả sau cưới là một phần của tổng còn nợ, không phải khoản cộng thêm.
+
+Dữ liệu mới được giữ trong lưu cục bộ, backup và cloud tùy chọn. Thiết lập PIN và chế độ lưu không đổi. Đặc tả và bằng chứng: [phase 8](.viepilot/phases/planning-phase-8/SUMMARY.md).
 
 ## Kiểm tra
 
@@ -75,7 +87,7 @@ deno check supabase/functions/gemini/index.ts
 | `App.tsx`, `components/` | Giao diện và các màn hình nghiệp vụ |
 | `store/useStore.ts` | Trạng thái cục bộ, hàng đợi lưu, revision và phục hồi |
 | `services/` | Supabase, AI và nghiệp vụ |
-| `lib/` | Backup, thống kê khách, section rendering và bộ lọc nội dung |
+| `lib/` | Tính tiền dùng chung (`budgetPayments.ts`), backup, thống kê khách, section rendering và bộ lọc nội dung |
 | `supabase-migration.sql` | Cài mới/nâng cấp database không xóa bảng dữ liệu |
 | `supabase/functions/gemini/` | AI phía máy chủ có Auth, phân quyền và quota |
 | `tests/` | Kiểm tra hành vi, SQL, bảo mật và trình duyệt |

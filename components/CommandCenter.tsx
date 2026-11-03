@@ -1,3 +1,6 @@
+import BudgetPaymentDashboard from './budget/BudgetPaymentDashboard';
+import { getBudgetPaymentSummary } from '../lib/budgetPayments';
+import { useBudgetDate } from '../hooks/useBudgetDate';
 
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
@@ -112,8 +115,10 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
   const taskPct     = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
   const overdueList = useMemo(() => budgetItems.filter(isOverdue),    [budgetItems]);
   const thisWeekList= useMemo(() => budgetItems.filter(isDueThisWeek),[budgetItems]);
-  const remaining   = stats.totalBudget - stats.totalActual;
-  const spentPct    = stats.totalBudget > 0 ? Math.round((stats.totalActual / stats.totalBudget) * 100) : 0;
+  const budgetToday = useBudgetDate();
+  const paymentStats = useMemo(() => getBudgetPaymentSummary(budgetItems, invitation.date, budgetToday), [budgetItems, invitation.date, budgetToday]);
+  const remaining = paymentStats.remaining;
+  const spentPct = paymentStats.forecast > 0 ? Math.round((paymentStats.paid / paymentStats.forecast) * 100) : 0;
 
   // ── Guest stats ──
   const confirmedCount = guests.filter(g => g.probability === 100).reduce((sum,g) => sum + guestPartySize(g),0);
@@ -215,8 +220,9 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
                 <p className="text-white/70 text-[10px] font-semibold mb-1">NGÂN SÁCH</p>
                 <p className="text-base font-black">{fmtMoney(stats.totalBudget)}</p>
                 <p className={`text-[10px] mt-0.5 font-semibold ${spentPct > 100 ? 'text-red-300' : 'text-white/70'}`}>
-                  Đã chi {spentPct}% · Còn {fmtMoney(Math.max(remaining, 0))}
+                  Đã trả {fmtMoney(paymentStats.paid)} · Nợ đã chốt {fmtMoney(remaining)}
                 </p>
+                {(paymentStats.unreconciledCount > 0 || paymentStats.unpricedCount > 0) && <p className="text-[10px] text-white/70">Còn khoản chưa đối chiếu / chốt giá</p>}
               </div>
             )}
           </div>
@@ -258,6 +264,8 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
           </span>
         </div>
       )}
+
+      <BudgetPaymentDashboard onOpenBudget={() => setActiveTab('budget')} />
 
       {/* ══ 2. MILESTONE TIMELINE ══════════════════════════════════════════ */}
       {milestones.length > 0 && (
@@ -496,59 +504,10 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ stats, setActiveTab }) =>
         </div>
       )}
 
-      {/* ══ 3. STATS ROW — 6 cards ═════════════════════════════════════════ */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-        {[
-          {
-            label: 'Tổng ngân sách', value: fmtMoney(stats.totalBudget),
-            sub: `${totalItems} hạng mục`, icon: Wallet, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600',
-            onClick: () => setActiveTab('budget'),
-          },
-          {
-            label: 'Đã chi tiêu', value: fmtMoney(stats.totalActual),
-            sub: spentPct > 100 ? '⚠️ Vượt ngân sách!' : `${spentPct}% ngân sách`,
-            icon: Banknote, iconBg: spentPct > 100 ? 'bg-red-50' : 'bg-blue-50',
-            iconColor: spentPct > 100 ? 'text-red-500' : 'text-blue-600',
-            onClick: () => setActiveTab('budget'),
-          },
-          {
-            label: 'Còn cần chi', value: fmtMoney(Math.max(remaining, 0)),
-            sub: remaining < 0 ? `Thiếu ${fmtMoney(-remaining)}` : `${100 - spentPct}% còn lại`,
-            icon: Target, iconBg: remaining < 0 ? 'bg-red-50' : 'bg-violet-50',
-            iconColor: remaining < 0 ? 'text-red-500' : 'text-violet-600',
-            onClick: () => setActiveTab('budget'),
-          },
-          {
-            label: 'Tổng khách mời', value: `${stats.totalGuests + stats.totalChildren}`,
-            sub: `${confirmedCount} người xác nhận`,
-            icon: Users, iconBg: 'bg-sky-50', iconColor: 'text-sky-600',
-            onClick: () => setActiveTab('guests'),
-          },
-          {
-            label: 'Quà phong bì', value: fmtMoney(expectedEnvelope),
-            sub: 'Dự kiến nhận',
-            icon: Gift, iconBg: 'bg-pink-50', iconColor: 'text-pink-600',
-            onClick: () => setActiveTab('guests'),
-          },
-          {
-            label: 'Cảnh báo', value: `${overdueList.length}`,
-            sub: overdueList.length > 0 ? 'hạng mục quá hạn' : 'Không có cảnh báo ✓',
-            icon: AlertTriangle,
-            iconBg: overdueList.length > 0 ? 'bg-red-50' : 'bg-gray-50',
-            iconColor: overdueList.length > 0 ? 'text-red-500' : 'text-gray-400',
-            onClick: () => setActiveTab('budget'),
-          },
-        ].map(({ label, value, sub, icon: Icon, iconBg, iconColor, onClick }) => (
-          <button key={label} type="button" title={label} onClick={onClick}
-            className="bg-white rounded-xl border border-gray-100 p-3 text-left hover:shadow-md hover:border-rose-200 transition-all group active:scale-95">
-            <div className={`w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center mb-2`}>
-              <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
-            </div>
-            <p className="text-[10px] text-gray-400 font-medium leading-tight">{label}</p>
-            <p className="text-base font-black text-gray-900 leading-tight mt-0.5">{value}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{sub}</p>
-          </button>
-        ))}
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={() => setActiveTab('guests')} className="rounded-xl border bg-white p-3 text-left"><p className="text-xs text-gray-500">Tổng khách mời</p><p className="mt-1 text-lg font-bold">{stats.totalGuests + stats.totalChildren}</p><p className="text-[10px] text-gray-400">{confirmedCount} người xác nhận</p></button>
+        <button onClick={() => setActiveTab('guests')} className="rounded-xl border bg-white p-3 text-left"><p className="text-xs text-gray-500">Quà phong bì</p><p className="mt-1 text-lg font-bold">{fmtMoney(expectedEnvelope)}</p><p className="text-[10px] text-gray-400">Dự kiến, không trừ công nợ</p></button>
+        <button onClick={() => setActiveTab('budget')} className="rounded-xl border bg-white p-3 text-left"><p className="text-xs text-gray-500">Công việc quá hạn</p><p className="mt-1 text-lg font-bold">{overdueList.length}</p><p className="text-[10px] text-gray-400">Hạn công việc, tách hạn trả tiền</p></button>
       </div>
 
       {/* ══ 4. MAIN GRID ═══════════════════════════════════════════════════ */}

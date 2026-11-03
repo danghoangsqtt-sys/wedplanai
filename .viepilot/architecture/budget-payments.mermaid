@@ -1,0 +1,11 @@
+flowchart LR
+  Forms[Budget and payment forms] --> Mutation[Validated current-item mutation]
+  Mutation --> Store[Persisted private plan]
+  Store --> Local[(Browser storage)]
+  Store --> Backup[Version 2 backup]
+  Store --> RPC[Verified revision-protected save_plan]
+  RPC --> JSON[(budget_items JSONB)]
+  Store --> Calc[lib/budgetPayments.ts]
+  Wedding[Wedding date and Bangkok calendar day] --> Calc
+  Calc --> Views[Budget list and dashboard]
+  Calc --> Export[CSV and AI facts]

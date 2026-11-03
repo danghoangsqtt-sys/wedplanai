@@ -1,10 +1,18 @@
-# Thiết lập WedPlan AI 2.3.1
+# Thiết lập WedPlan AI 2.4.0
 
 Mặc định dùng **PIN cá nhân** theo yêu cầu chủ sở hữu để dùng thử cùng vợ, chưa yêu cầu đăng nhập tài khoản. Chạy `npm ci` rồi `npm run dev`, nhập PIN đã chọn. Không cần cấu hình Supabase cho cách dùng này; dữ liệu lưu tại trình duyệt, nút Lưu thông báo lưu trên thiết bị. Cùng PIN trên hai máy chưa tạo đồng bộ dữ liệu giữa hai máy; xuất/nhập backup để chuyển bản kế hoạch khi chưa có cloud.
 
 `VITE_ACCESS_MODE=pin` là mặc định; `VITE_ACCESS_MODE=account` mới bật màn hình email/mật khẩu. PIN chỉ khóa giao diện, không phải credential database. Một phiên cloud có sẵn chỉ được dùng sau khi xác minh quyền; không có phiên đó thì vẫn vào app cục bộ bình thường.
 
 Các bước dưới đây dành cho **cloud tùy chọn**. Backend dùng Supabase, không dùng Appwrite; biến `VITE_APPWRITE_*` cũ không phù hợp. Không mở rộng policy sang anon để khiến PIN thành quyền truy cập dữ liệu riêng.
+
+## Nâng cấp ngân sách 2.4.0
+
+Phần cọc/lịch hẹn/thực trả dùng các trường mở rộng trong `budget_items` JSONB và RPC `save_plan` hiện có. Nếu backend đã có migration 2.3.0 trong repo, không cần SQL mới cho phần này. Backend còn ở 2.2.1 hoặc cũ hơn vẫn cần migration ở mục 2 để có lộ trình dashboard và các bảo vệ đã sửa trước đó.
+
+Backup vẫn dùng `schemaVersion: 2`, bổ sung đầy đủ giá chốt, nhà cung cấp, lịch T±N, giao dịch, phân bổ và thông tin hủy hiệu lực. Backup cũ không bị tự chuyển `actualCost` thành tiền đã trả. Sau nâng cấp, vào Ngân Sách để đối chiếu các khoản cũ trước khi theo dõi công nợ chính thức. Không mở bản frontend cũ để sửa kế hoạch có lịch sử thanh toán mới vì client cũ không hiểu các trường này.
+
+Kiểm thử local, cloud giả lập và PostgreSQL/PGlite không có nghĩa đã triển khai hoặc xác minh project Supabase thật. Phiên làm việc này không thay đổi cấu hình cloud.
 
 ## 1. Cấu hình frontend
 
