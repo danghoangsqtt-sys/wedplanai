@@ -1,4 +1,4 @@
--- WedPlan 2.2.1: fresh install OR non-destructive upgrade.
+-- WedPlan 2.3.0: fresh install OR non-destructive upgrade.
 -- Run the entire file as one transaction. Never DROP existing application tables.
 -- After migration, bind the legacy plan to its real Auth account using SETUP.md.
 BEGIN;
@@ -67,6 +67,9 @@ ALTER TABLE public.plan_shares ALTER COLUMN owner_uid TYPE TEXT USING owner_uid:
 ALTER TABLE public.invitation_responses ALTER COLUMN uid TYPE TEXT USING uid::text;
 ALTER TABLE public.invitation_responses ADD COLUMN IF NOT EXISTS selected_event_ids TEXT[] DEFAULT '{}';
 ALTER TABLE public.invitation_responses ADD COLUMN IF NOT EXISTS email TEXT;
+-- Nullable distinguishes an old plan that has not migrated its browser-only
+-- milestones yet from an explicitly saved empty/default checklist.
+ALTER TABLE public.user_data ADD COLUMN IF NOT EXISTS milestone_tasks JSONB;
 
 CREATE TABLE IF NOT EXISTS private.plan_owners (
   plan_uid TEXT PRIMARY KEY, auth_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
@@ -195,14 +198,18 @@ DECLARE previous TIMESTAMPTZ; revision TIMESTAMPTZ := clock_timestamp(); BEGIN
   IF coalesce(jsonb_typeof(plan_data->'guests'),'') <> 'array' OR coalesce(jsonb_typeof(plan_data->'budgetItems'),'') <> 'array' THEN
     RAISE EXCEPTION 'Invalid plan payload' USING ERRCODE='22023';
   END IF;
-  INSERT INTO public.user_data(id,guests,budget_items,procedures,fengshui_profile,fengshui_results,invitation,wedding_date,last_updated)
+  IF plan_data ? 'milestoneTasks' AND jsonb_typeof(plan_data->'milestoneTasks') <> 'object' THEN
+    RAISE EXCEPTION 'Invalid milestone tasks' USING ERRCODE='22023';
+  END IF;
+  INSERT INTO public.user_data(id,guests,budget_items,procedures,fengshui_profile,fengshui_results,invitation,wedding_date,last_updated,milestone_tasks)
   VALUES (plan_uid,plan_data->'guests',plan_data->'budgetItems',coalesce(plan_data->'procedures','{}'),
     plan_data->'fengShuiProfile',plan_data->'fengShuiResults',plan_data->'invitation',
-    nullif(plan_data->>'weddingDate','')::date,revision)
+    nullif(plan_data->>'weddingDate','')::date,revision,plan_data->'milestoneTasks')
   ON CONFLICT(id) DO UPDATE SET guests=EXCLUDED.guests,budget_items=EXCLUDED.budget_items,
     procedures=EXCLUDED.procedures,fengshui_profile=EXCLUDED.fengshui_profile,
     fengshui_results=EXCLUDED.fengshui_results,invitation=EXCLUDED.invitation,
-    wedding_date=EXCLUDED.wedding_date,last_updated=revision
+    wedding_date=EXCLUDED.wedding_date,last_updated=revision,
+    milestone_tasks=coalesce(EXCLUDED.milestone_tasks,public.user_data.milestone_tasks)
   WHERE public.user_data.last_updated IS NOT DISTINCT FROM expected_updated_at;
   -- SELECT FOR UPDATE cannot lock a missing row. Recheck the winning revision
   -- inside ON CONFLICT so simultaneous first saves cannot overwrite each other.

@@ -6,6 +6,8 @@ const invitation=JSON.parse(readFileSync('tests/fixtures/invitation.json','utf8'
 
 async function backend(page:Page,signedIn:boolean){
   const errors:string[]=[];let privateReads=0;let saved:any;
+  let cloud={guests:[],budgetItems:[],procedures:{NORTH:[],CENTRAL:[],SOUTH:[]},invitation} as any;
+  let revision='2026-11-03T00:00:00Z';
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
   await page.route('https://api.ipify.org/**',r=>r.fulfill({json:{ip:'192.0.2.1'}}));
@@ -16,8 +18,8 @@ async function backend(page:Page,signedIn:boolean){
     let body:unknown=[];
     if(pathname==='/auth/v1/user')body={id:authUid,email:'owner@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{}};
     else if(pathname.endsWith('/rpc/can_manage_plan'))body=signedIn;
-    else if(pathname.endsWith('/user_data')){privateReads++;body=[{id:planUid,guests:[],budget_items:[],procedures:{NORTH:[],CENTRAL:[],SOUTH:[]},invitation,last_updated:'2026-11-03T00:00:00Z'}];}
-    else if(pathname.endsWith('/rpc/save_plan')){saved=request.postDataJSON();body='2026-11-03T00:00:01Z';}
+    else if(pathname.endsWith('/user_data')){privateReads++;body=[{id:planUid,guests:cloud.guests,budget_items:cloud.budgetItems,procedures:cloud.procedures,invitation:cloud.invitation,milestone_tasks:cloud.milestoneTasks,last_updated:revision}];}
+    else if(pathname.endsWith('/rpc/save_plan')){saved=request.postDataJSON();cloud=structuredClone(saved.plan_data);revision=new Date().toISOString();body=revision;}
     else if(pathname.endsWith('/public_invitations'))body=[{invitation_json:invitation}];
     else if(pathname.endsWith('/rpc/get_public_wishes'))body=[];
     else if(pathname.endsWith('/rpc/submit_invitation_response'))body=true;
@@ -44,6 +46,45 @@ test('owner edits, saves, undoes and returns from the desktop editor',async({pag
   await page.getByTitle('Hoàn tác (Ctrl+Z)').click();await expect(field).toHaveText('Audit Groom');
   await page.getByRole('button',{name:'Quay lại',exact:true}).click();
   await expect(page.getByRole('button',{name:'Lưu Thiết Kế',exact:true})).toHaveCount(0);
+  expect(state.errors).toEqual([]);
+});
+
+test('dashboard ticks survive reload and guest details persist through a clean cloud reload',async({page})=>{
+  await page.setViewportSize({width:1440,height:1000});const state=await backend(page,true);
+  await page.goto('/');const checkbox=page.getByRole('checkbox',{name:'Chọn & chốt ngày cưới'});
+  await checkbox.click();await expect(checkbox).toHaveAttribute('aria-checked','true');
+  // Reload before the autosave debounce: the persisted pending edit must survive.
+  await page.reload();await expect(page.getByRole('checkbox',{name:'Chọn & chốt ngày cưới'})).toHaveAttribute('aria-checked','true');
+  await expect.poll(()=>state.saved?.plan_data?.milestoneTasks?.m12?.[0]?.done).toBe(true);
+  await page.locator('aside').getByRole('button',{name:'Khách Mời',exact:true}).click();
+  await page.getByRole('button',{name:'Thêm khách mời',exact:true}).click();
+  await page.getByRole('textbox',{name:'Tên khách / đại diện'}).pressSequentially('Browser Family');
+  await page.getByRole('textbox',{name:'Số điện thoại'}).fill('0901234567');
+  await page.getByRole('spinbutton',{name:'Tổng số người',exact:true}).fill('4');
+  await page.getByRole('spinbutton',{name:'Trong đó trẻ em'}).fill('1');
+  await page.getByRole('combobox',{name:'Phản hồi tham dự',exact:true}).selectOption('100');
+  await page.getByRole('combobox',{name:'Tình trạng gửi thiệp',exact:true}).selectOption('sent');
+  await page.getByRole('textbox',{name:'Bàn dự kiến'}).fill('Bàn 02');
+  await page.getByRole('textbox',{name:'Ghi chú',exact:true}).fill('Ăn chay');
+  await page.getByRole('button',{name:'Lưu khách mời',exact:true}).click();
+  await expect(page.getByRole('article',{name:'Khách: Browser Family'})).toBeVisible();
+  await expect.poll(()=>state.saved?.plan_data?.guests?.[0]?.tableName).toBe('Bàn 02');
+  // Remove only the plan cache, preserving Auth: this read must come from cloud.
+  await page.evaluate(()=>localStorage.removeItem('wedplan-storage-v14'));await page.reload();
+  await expect(page.getByRole('checkbox',{name:'Chọn & chốt ngày cưới'})).toHaveAttribute('aria-checked','true');
+  await page.locator('aside').getByRole('button',{name:'Khách Mời',exact:true}).click();
+  const card=page.getByRole('article',{name:'Khách: Browser Family'});await expect(card).toContainText('4 người (gồm 1 trẻ em)');await expect(card).toContainText('Bàn 02');await expect(card).toContainText('0901234567');
+  await page.screenshot({path:test.info().outputPath('guest-desktop.png'),animations:'disabled'});
+  await page.setViewportSize({width:390,height:844});
+  await expect(page.getByText('Tính năng khác',{exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Thêm',exact:true}).click();
+  await expect(page.getByText('Tính năng khác',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Đóng tính năng khác'}).click();
+  await expect(page.getByText('Tính năng khác',{exact:true})).toHaveCount(0);
+  await page.screenshot({path:test.info().outputPath('guest-mobile.png'),animations:'disabled'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.getByRole('button',{name:'Sửa Browser Family'}).click();await expect(page.getByRole('dialog')).toBeVisible();
+  await page.screenshot({path:test.info().outputPath('guest-mobile-form.png'),animations:'disabled'});
   expect(state.errors).toEqual([]);
 });
 

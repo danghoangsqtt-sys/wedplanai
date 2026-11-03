@@ -1,10 +1,10 @@
 # WedPlan AI
 
-![Version 2.2.1](https://img.shields.io/badge/Version-2.2.1-blue)
+![Version 2.3.0](https://img.shields.io/badge/Version-2.3.0-blue)
 
 Ứng dụng lập kế hoạch cưới: quản lý khách mời, ngân sách, quy trình, thiệp điện tử, RSVP và tư vấn AI.
 
-Phiên bản 2.2.1 sửa các lỗi được ghi nhận trong audit: phân quyền, đồng bộ dữ liệu, backup, RSVP và trình chỉnh sửa thiệp. **Bản nâng cấp cần áp dụng SQL, liên kết tài khoản chủ sở hữu và cấu hình Edge Function theo [SETUP.md](SETUP.md) trước khi sử dụng với backend thật.**
+Phiên bản 2.3.0 bổ sung hồ sơ khách mời, bộ lọc, tổng quan bàn tiệc và sửa lưu lộ trình dashboard. Kế thừa các bản sửa audit 2.2.1 về phân quyền, đồng bộ, backup, RSVP và editor. **Cần áp dụng SQL hiện tại theo [SETUP.md](SETUP.md) trước khi dùng frontend mới với backend thật**, kể cả khi đã chạy SQL 2.2.1.
 
 ## Chạy dự án
 
@@ -25,10 +25,24 @@ Mở `http://localhost:3000`. Nếu chưa cấu hình máy chủ, ứng dụng h
 ## Cách hoạt động
 
 - Chủ sở hữu đăng nhập bằng Supabase Auth. Database kiểm tra quyền cho từng truy vấn; cờ trình duyệt hoặc PIN cũ không cấp quyền truy cập.
+- Lộ trình dashboard dùng chung lưu cục bộ, cloud revision và backup; checklist cũ tự chuyển sau khi tải cloud thành công. Mục đã xóa và ghi chú được giữ nguyên.
+- Khách mời có điện thoại, địa chỉ, số người/trẻ em, gửi thiệp, phản hồi, bàn và ghi chú; lọc/tìm kiếm/CSV theo danh sách đang xem. Gửi thiệp và xác nhận tham dự là hai trạng thái riêng.
 - Thiệp công khai dùng `/?view=invitation&uid=PLAN_UID`. Khách xem thiệp và gửi phản hồi mà không cần tài khoản; số điện thoại RSVP và email không thuộc dữ liệu lời chúc công khai.
 - Tự lưu phân biệt thay đổi trên thiết bị với dữ liệu đã được cloud xác nhận. Khi có xung đột giữa thiết bị, ứng dụng giữ bản cục bộ và yêu cầu chọn bản muốn giữ.
 - Backup phiên bản 2 chứa khách, ngân sách, quy trình, thiệp, phong thủy và ngày cưới. Backup cũ giữ lại các phần không có trong file, thay vì đặt về mặc định.
 - Gemini key hệ thống chỉ nằm trong Edge Function. Key cá nhân do chủ sở hữu nhập được ưu tiên khi có; không đưa key hệ thống vào biến `VITE_*`.
+
+## Xem thử tại máy khi chưa có Supabase
+
+```sh
+node .viepilot/tools/local-preview.cjs
+```
+
+Cần Chrome đã cài và cổng 3000 còn trống. Công cụ mở một cửa sổ Chrome riêng tại `http://127.0.0.1:3000`, dùng API giả lập và dữ liệu mẫu; app production vẫn yêu cầu Auth thật. Thay đổi mẫu giữ trong phiên xem thử, không ghi Supabase. Đóng cửa sổ này để kết thúc; không dùng bản mẫu để lưu dữ liệu đám cưới thật.
+
+Nếu máy chủ thường đang dùng cổng 3000, chạy `node .viepilot/tools/local-preview.cjs --port 3001` để mở bản mẫu ở cổng riêng.
+
+Kế hoạch ngân sách cọc/thanh toán nhiều đợt/còn phải trả: [phase 8](.viepilot/phases/planning-phase-8/SPEC.md). Phần này mới lập kế hoạch, chưa triển khai.
 
 ## Kiểm tra
 

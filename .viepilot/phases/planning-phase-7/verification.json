@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-03",
+  "version": "2.3.0",
+  "base": "ff6d1e1",
+  "branch": "feat/planning-workflow-2026-11-03",
+  "checks": {
+    "npm run check": {"exit_code": 0, "test_files": 12, "tests_passed": 70, "includes": ["typecheck", "lint", "tests", "production build"]},
+    "PLAYWRIGHT_CHANNEL=chrome npm run test:e2e": {"exit_code": 0, "tests_passed": 3, "backend": "mocked", "screenshots_reviewed": true},
+    "npm audit": {"exit_code": 0, "total_vulnerabilities": 0},
+    "node --check .viepilot/tools/local-preview.cjs": {"exit_code": 0}
+  },
+  "verified_behaviors": [
+    "Dashboard tick survives immediate reload before autosave",
+    "Clean cloud reload restores tick and detailed guest record",
+    "Legacy checklist import after verified read; cloud checklist takes precedence",
+    "Backup retains task notes/deletions and guest contact/table fields",
+    "PostgreSQL migration and old-client saves preserve milestone data",
+    "Guest edit form retains keyboard focus",
+    "Guest filters and safe CSV export",
+    "Mobile More sheet is absent when closed"
+  ],
+  "runtime_preview": {
+    "initial_launch": "Visible Chrome opened at http://127.0.0.1:3000 and logged VISIBLE_PREVIEW_READY",
+    "current_state": "Mock preview Vite child stopped and automatic restart was denied; a standard server without injected mocks subsequently started at port 3000",
+    "rejected_action": "Start-Process Vite with local mock Supabase environment",
+    "stated_reason": "blocked by policy",
+    "manual_command": "node .viepilot/tools/local-preview.cjs --port 3001"
+  },
+  "persistence": "Combined evidence/commit/push command was rejected by automatic approval review: blocked by policy. Do not claim remote branch persistence.",
+  "deployment": "No live Supabase changes; updated SQL required before frontend 2.3.0",
+  "planned_only": "Phase 8: deposits, staged payments and outstanding balances"
+}

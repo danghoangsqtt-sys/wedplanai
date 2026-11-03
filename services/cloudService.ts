@@ -1,3 +1,4 @@
+import { isMilestoneTaskStore } from '../lib/milestoneTasks';
 import { supabase, TABLES } from '../lib/supabase';
 import { Guest, BudgetItem, UserProfile, ProcedureStep, WeddingRegion, InvitationData } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
@@ -9,6 +10,7 @@ export interface UserCloudData {
   guests: Guest[];
   budgetItems: BudgetItem[];
   procedures?: Record<WeddingRegion, ProcedureStep[]>;
+  milestoneTasks?: import('../types').MilestoneTaskStore;
   fengShuiProfile?: CoupleProfile;
   fengShuiResults?: {
     harmony: HarmonyResult | null;
@@ -54,14 +56,18 @@ export const saveUserDataToCloud = async (
 
 export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData | null> => {
   if (!isValidUid(uid)) throw new Error('Invalid plan identifier');
-  const { data: doc, error } = await supabase.from(TABLES.USER_DATA).select('*').eq('id', uid).maybeSingle();
+  const { data: doc, error } = await supabase.from(TABLES.USER_DATA)
+    .select('id,guests,budget_items,procedures,milestone_tasks,fengshui_profile,fengshui_results,invitation,wedding_date,last_updated')
+    .eq('id', uid).maybeSingle();
   // null means a successful empty read only. A failed read must lock cloud writes.
   if (error) { cloudLog.error('load failed', error); throw error; }
   if (!doc) return null;
   if (!Array.isArray(doc.guests) || !Array.isArray(doc.budget_items)) throw new Error('Invalid cloud data');
+  if (doc.milestone_tasks != null && !isMilestoneTaskStore(doc.milestone_tasks)) throw new Error('Invalid cloud milestones');
   return {
     guests: doc.guests, budgetItems: doc.budget_items,
     procedures: doc.procedures ?? undefined,
+    milestoneTasks: doc.milestone_tasks ?? undefined,
     fengShuiProfile: doc.fengshui_profile ?? undefined,
     fengShuiResults: doc.fengshui_results ?? undefined,
     invitation: doc.invitation ?? undefined,

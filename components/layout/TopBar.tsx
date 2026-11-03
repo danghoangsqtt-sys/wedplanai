@@ -156,7 +156,7 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, stats, onLoginClick, setActi
       {stats.totalGuests > 0 && (
         <div className="hidden lg:flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-full">
           <Users className="w-3.5 h-3.5 text-rose-400" />
-          <span className="font-medium">{stats.totalGuests} khách</span>
+          <span className="font-medium">{stats.totalGuests + stats.totalChildren} khách</span>
         </div>
       )}
 

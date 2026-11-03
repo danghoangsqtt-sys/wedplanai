@@ -11,6 +11,8 @@ import { supabase, TABLES } from '../lib/supabase';
 import { OWNER_UID } from '../lib/constants';
 import { restoreBackup } from '../lib/backup';
 import { guestPartySize } from '../lib/guestStats';
+import type { MilestoneTaskStore } from '../types';
+import { isMilestoneTaskStore, readLegacyMilestoneTasks } from '../lib/milestoneTasks';
 
 export interface GuestUsage {
   fengShuiCount: number;
@@ -43,7 +45,7 @@ interface AppState {
 
   notifications: Notification[];
 
-  // Set to true once loadFromCloud() has been attempted (success or failure).
+  // Set to true only after loadFromCloud() verifies a successful read.
   // triggerCloudSync blocks writes until this is true, preventing INITIAL_INVITATION
   // from accidentally overwriting real cloud data during app startup.
   isCloudLoaded: boolean;
@@ -57,6 +59,8 @@ interface AppState {
   guests: Guest[];
   budgetItems: BudgetItem[];
   procedures: Record<WeddingRegion, ProcedureStep[]>;
+  milestoneTasks: MilestoneTaskStore;
+  setMilestoneTasks: (tasks: MilestoneTaskStore) => void;
   isSyncing: boolean;
 
   // Feng Shui Data
@@ -179,6 +183,12 @@ export const useStore = create<AppState>()(
       guests: INITIAL_GUESTS,
       budgetItems: INITIAL_BUDGET_ITEMS,
       procedures: WEDDING_PROCEDURES,
+      milestoneTasks: {},
+      setMilestoneTasks: (tasks) => {
+        if (!isMilestoneTaskStore(tasks) || JSON.stringify(tasks) === JSON.stringify(get().milestoneTasks)) return;
+        set({ milestoneTasks: tasks });
+        triggerCloudSync(get);
+      },
       isSyncing: false,
       isCloudLoaded: false,
       cloudRevision: null,
@@ -374,6 +384,7 @@ export const useStore = create<AppState>()(
           guests: INITIAL_GUESTS,
           budgetItems: INITIAL_BUDGET_ITEMS,
           procedures: WEDDING_PROCEDURES,
+          milestoneTasks: {},
           fengShuiProfile: null,
           fengShuiResults: { harmony: null, dates: [] },
           invitation: INITIAL_INVITATION,
@@ -476,6 +487,7 @@ export const useStore = create<AppState>()(
                 guests: cloudData.guests,
                 budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
                 procedures: cloudData.procedures || WEDDING_PROCEDURES,
+                milestoneTasks: cloudData.milestoneTasks ?? {},
                 fengShuiProfile: cloudData.fengShuiProfile || null,
                 fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
                 invitation: cloudData.invitation || INITIAL_INVITATION,
@@ -513,6 +525,7 @@ export const useStore = create<AppState>()(
                 guests: ownData.guests,
                 budgetItems: sanitizeBudgetIds(ownData.budgetItems),
                 procedures: ownData.procedures || WEDDING_PROCEDURES,
+                milestoneTasks: ownData.milestoneTasks ?? {},
                 fengShuiProfile: ownData.fengShuiProfile || null,
                 fengShuiResults: ownData.fengShuiResults || { harmony: null, dates: [] },
                 invitation: ownData.invitation || INITIAL_INVITATION,
@@ -554,6 +567,7 @@ export const useStore = create<AppState>()(
               guests: cloudData.guests,
               budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
               procedures: cloudData.procedures || WEDDING_PROCEDURES,
+              milestoneTasks: cloudData.milestoneTasks ?? get().milestoneTasks,
               fengShuiProfile: cloudData.fengShuiProfile || null,
               fengShuiResults: cloudData.fengShuiResults || { harmony: null, dates: [] },
               invitation: cloudData.invitation || INITIAL_INVITATION,
@@ -603,6 +617,7 @@ export const useStore = create<AppState>()(
               set({ syncStatus: 'saving' });
               const revision = await saveUserDataToCloud(getEffectiveUidFromState(snapshot) || OWNER_UID, {
                 guests: snapshot.guests, budgetItems: snapshot.budgetItems, procedures: snapshot.procedures,
+                milestoneTasks: snapshot.milestoneTasks,
                 fengShuiProfile: snapshot.fengShuiProfile ?? undefined, fengShuiResults: snapshot.fengShuiResults,
                 invitation: snapshot.invitation, weddingDate: snapshot.invitation.date || null,
               }, snapshot.cloudRevision);
@@ -639,6 +654,7 @@ export const useStore = create<AppState>()(
               const date = invitation.date || cloudData.weddingDate || '';
               set({ guests: cloudData.guests, budgetItems: sanitizeBudgetIds(cloudData.budgetItems),
                 procedures: cloudData.procedures ?? current.procedures,
+                milestoneTasks: cloudData.milestoneTasks ?? current.milestoneTasks,
                 fengShuiProfile: cloudData.fengShuiProfile ?? null,
                 fengShuiResults: cloudData.fengShuiResults ?? { harmony: null, dates: [] },
                 invitation: { ...invitation, date },
@@ -647,6 +663,13 @@ export const useStore = create<AppState>()(
             const dirty = options.discardLocalChanges ? false : get().hasUnsyncedChanges;
             set({ cloudRevision: remoteRevision, isCloudLoaded: true, hasUnsyncedChanges: dirty,
               syncStatus: dirty ? 'pending' : 'saved', syncError: null });
+            // Import browser-only tasks after verifying the remote plan, and
+            // never replace an authoritative checklist already on the server.
+            if (cloudData?.milestoneTasks === undefined && !Object.keys(get().milestoneTasks).length &&
+              !options.discardLocalChanges && getEffectiveUidFromState(get()) === OWNER_UID) {
+              const legacy = readLegacyMilestoneTasks();
+              if (legacy) get().setMilestoneTasks(legacy);
+            }
           } catch (error) {
             set({ isCloudLoaded: false, syncStatus: get().syncStatus === 'conflict' ? 'conflict' : 'error', syncError: messageOf(error) });
             throw error;
@@ -677,6 +700,7 @@ export const useStore = create<AppState>()(
         guests: state.guests,
         budgetItems: state.budgetItems,
         procedures: state.procedures,
+        milestoneTasks: state.milestoneTasks,
         fengShuiProfile: state.fengShuiProfile,
         fengShuiResults: state.fengShuiResults,
         invitation: state.invitation,
@@ -692,6 +716,7 @@ export const useStore = create<AppState>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.budgetItems = sanitizeBudgetIds(state.budgetItems);
+        if (!isMilestoneTaskStore(state.milestoneTasks)) state.milestoneTasks = {};
         if (state.user) state.user.weddingDate = state.invitation?.date || null;
         // isCloudLoaded must always start as false — never persist this flag
         state.isCloudLoaded = false;

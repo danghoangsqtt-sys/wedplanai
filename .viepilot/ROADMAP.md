@@ -1,5 +1,5 @@
 # WedPlan AI — ROADMAP
-Version: 2.2.1
+Version: 2.3.0
 Updated: 2026-11-03
 
 ---
@@ -132,3 +132,12 @@ Scope: A01-A16, S01/S02, D01/D02. Existing feature-expansion backlogs remain out
 - Canvas historical checkpoint: `wedplanai-legacy-canvas-vp-p1-complete` -> `08f7cad`.
 - Invitation historical checkpoint: `wedplanai-legacy-invitation-vp-p3-complete` -> `9121d88`.
 - Historical tag annotations distinguish declared completion from independently rerun verification. Current fixes have new tested checkpoints.
+
+## Planning workflow - 2.3.0
+
+| Phase | Name | Tasks | Status |
+|---|---|---:|---|
+| 7 | Dashboard persistence, detailed guests, local preview | 3 | code verified; runtime/persistence follow-up blocked |
+| 8 | Deposits, staged payments and outstanding balances | 3 | planned (plan only requested) |
+
+Specs: `.viepilot/phases/planning-phase-7/SPEC.md`, `.viepilot/phases/planning-phase-8/SPEC.md`. The user selected both visual RSVP/table management and detailed contact/group management. Budget payments are documented as a separate future implementation, not included in 2.3.0.

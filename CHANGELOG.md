@@ -2,6 +2,16 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [v2.3.0] - 2026-11-03: Guest management and dashboard persistence
+
+- Save dashboard milestone ticks, notes, custom tasks and deletions through the shared persisted store, revision-protected cloud RPC and backup; preserve legacy browser-only checklists.
+- Add detailed guest records (contact, invitation status, table, notes), people-based summaries, combined filters, stable add/edit dialog and complete filtered CSV export.
+- Preserve RSVP source deduplication, party sizes, phone and notes; keep invitation delivery separate from attendance confirmation.
+- Count children in displayed attendee totals and remove the closed mobile More sheet from the viewport.
+- Add an isolated local Chrome sample preview; no production authentication bypass.
+- Plan deposit/payment/balance functionality in phase 8; it is not implemented in this release.
+- Database upgrade required even from 2.2.1: apply current SQL before frontend deployment. No live Supabase configuration changed in this session.
+
 ## [v2.2.1] - 2026-11-03: Audit remediation
 
 - Require verified Supabase Auth and per-plan RLS; preserve legacy plan data through explicit owner mapping.

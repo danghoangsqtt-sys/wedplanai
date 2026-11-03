@@ -51,7 +51,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
       )}
 
       {/* "More" bottom sheet */}
-      <div
+      {showMore && <div
         className={`
           fixed left-0 right-0 bg-white rounded-t-2xl shadow-2xl border-t border-rose-100
           z-50 lg:hidden transition-transform duration-300 ease-out
@@ -63,6 +63,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
           <span className="font-bold text-gray-800 text-sm">Tính năng khác</span>
           <button
             onClick={() => setShowMore(false)}
+            aria-label="Đóng tính năng khác"
             className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
@@ -90,7 +91,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
         </div>
         {/* iOS safe area */}
         <div className="h-2" />
-      </div>
+      </div>}
 
       {/* Bottom Nav Bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-rose-100 z-30 safe-area-inset-bottom">

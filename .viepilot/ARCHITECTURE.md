@@ -1,6 +1,6 @@
-# Architecture — WedPlan AI 2.2.1
+# Architecture — WedPlan AI 2.3.0
 
-Updated: 2026-11-03. Runtime changes are implemented on the audit fix branch; production application of SQL/secrets remains a deployment gate.
+Updated: 2026-11-03. Planning workflow changes build on the audit fix branch; production application of SQL/secrets remains a deployment gate.
 
 ## Diagram applicability
 
@@ -51,3 +51,6 @@ flowchart TB
 - System AI requests require a verified Auth user and permission for the server-configured owner plan. No service-role key is required in frontend or Edge handler.
 - Private/public invitation saves share a transaction. Exact database revisions are retained as strings; failed reads and stale revisions cannot enable silent replacement.
 - Export/import validates a complete versioned plan snapshot. Auth tokens and personal keys are excluded.
+- Dashboard milestones live in the same persisted plan and private JSONB snapshot as guests/budget. The old browser-only key is read only for migration after a verified remote read; server tasks take precedence. Explicit column selection fails safely against an outdated schema.
+- Guest phone, invitation status, notes and table names stay in private plan JSON, never in the public invitation projection. Attendee totals include companions and children once.
+- The optional local-preview tool intercepts API calls in a separate Chrome context with sample data. It adds no authentication bypass or demo mode to production app code.

@@ -21,6 +21,10 @@ export interface Guest {
   childrenCount: number;
   partySize?: number; // Total party size; legacy entries use 1 + childrenCount.
   sourceRsvpId?: string;
+  phone?: string;
+  invitationStatus?: 'not_sent' | 'sent';
+  tableName?: string;
+  notes?: string;
   redEnvelope: number; // Tiền mừng dự kiến (VNĐ)
 }
 
@@ -30,6 +34,14 @@ export enum TaskStatus {
   DONE = "Đã xong",
   PAID = "Đã thanh toán"
 }
+
+export interface MilestoneTask {
+  id: string;
+  title: string;
+  notes: string;
+  done: boolean;
+}
+export type MilestoneTaskStore = Record<string, MilestoneTask[]>;
 
 export type WeddingSide = 'GROOM' | 'BRIDE' | 'BOTH';
 

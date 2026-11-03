@@ -116,6 +116,16 @@ describe('actual PostgreSQL schema and authorization', () => {
       await db.exec('RESET ROLE;DROP TRIGGER test_interleaving ON public.user_data;DROP FUNCTION public.test_interleaving();');
     }
   });
+  it('retains dashboard milestones across saved revisions and older clients that omit the field',async()=>{
+    await role('authenticated',owner);
+    const previous=(await db.query<{last_updated:string}>('select last_updated from public.user_data')).rows[0].last_updated;
+    const tasks={m12:[{id:'task-1',title:'Book venue',notes:'Deposit on Friday',done:true}]};
+    const payload={guests:[],budgetItems:[],milestoneTasks:tasks};
+    const revision=(await db.query<{revision:string}>('select public.save_plan($1,$2,$3) as revision',[plan,JSON.stringify(payload),previous])).rows[0].revision;
+    await db.query('select public.save_plan($1,$2,$3)',[plan,JSON.stringify({guests:[],budgetItems:[]}),revision]);
+    expect((await db.query('select milestone_tasks from public.user_data')).rows[0]).toEqual({milestone_tasks:tasks});
+    await role('anon');await expect(db.query('select milestone_tasks from public.user_data')).rejects.toThrow();
+  });
   it('resolves share codes privately and revokes partner access on leave', async () => {
     const share=(await db.query<{id:string}>(`insert into public.plan_shares(owner_uid,share_code) values('${plan}','WED-ABCDEF') returning id`)).rows[0];
     await role('authenticated',other);

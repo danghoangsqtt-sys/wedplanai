@@ -1,15 +1,25 @@
 {
   "updated": "2026-11-03",
-  "current_phase": 6,
-  "current_task": null,
-  "status": "code_complete_deployment_pending",
-  "target_version": "2.2.1",
-  "branch": "fix/audit-2026-11-03",
-  "tasks_total": 7,
-  "tasks_completed": 7,
-  "last_verified": "6.2",
-  "evidence": "61 tests across 11 files, 2 Chrome browser smoke tests, typecheck/lint/build and Deno check passed; npm audit reports 0 vulnerabilities. All 20 findings mapped to fixes and evidence; source c800fb4 pushed with clean upstream. Live Supabase deployment pending.",
+  "current_phase": 7,
+  "current_task": "7.3",
+  "status": "code_verified_remote_persistence_and_demo_restart_blocked",
+  "target_version": "2.3.0",
+  "branch": "feat/planning-workflow-2026-11-03",
+  "base": "ff6d1e1",
+  "scope": [
+    "dashboard persistence",
+    "detailed guest management",
+    "visible local sample preview"
+  ],
+  "planned_only": [
+    "phase 8 budget deposits and payments"
+  ],
   "notes": [
-    "No live Supabase migration or function deployment performed"
-  ]
+    "User selected both guest management directions",
+    "No live Supabase migration or Edge deployment performed"
+  ],
+  "evidence": "70 tests and 3 Chrome flows passed; typecheck/lint/build passed; audit zero",
+  "local_web": "http://127.0.0.1:3000 (standard dev server, requires real Supabase setup)",
+  "runtime_blocker": "Automatic approval review denied restarting the mock preview; manual alternate port command documented",
+  "persistence_blocker": "Combined commit/push command rejected: blocked by policy; remote persistence is not claimed"
 }

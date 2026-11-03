@@ -1,4 +1,4 @@
-# Thiết lập WedPlan AI 2.2.1
+# Thiết lập WedPlan AI 2.3.0
 
 Backend hiện dùng **Supabase**, không dùng Appwrite. Các biến `VITE_APPWRITE_*` và cách mở khóa bằng PIN trong tài liệu/phiên bản cũ không còn là cấu hình hợp lệ cho bản này.
 
@@ -23,8 +23,11 @@ Chạy **toàn bộ** `supabase-migration.sql` trong SQL Editor của project, d
 - Giới hạn dữ liệu riêng theo tài khoản chủ sở hữu/thành viên. Lời chúc công khai được đọc qua projection không có phone/email.
 - Thay trigger tạo profile bằng phiên bản tương thích TEXT và `search_path` cố định.
 - Cài quota AI và policy Storage cho thư mục của kế hoạch.
+- Thêm `user_data.milestone_tasks` và cập nhật `save_plan` để lưu lộ trình dashboard. Frontend chọn rõ cột này khi đọc: schema cũ sẽ báo lỗi và khóa ghi thay vì báo lưu thành công nhưng bỏ mất checklist.
 
 `supabase-fix-public-invitations.sql` hiện chứa cùng migration an toàn để tương thích đường dẫn cũ. **Không dùng nội dung DROP TABLE của script lịch sử.** Không cần chạy cả hai file; việc chạy lại migration đã được kiểm tra không xóa bản ghi hiện có.
+
+Nếu đã triển khai 2.2.1, vẫn phải chạy lại file SQL hiện tại trước khi deploy 2.3.0. Cột mới nullable giúp phân biệt plan cũ chưa chuyển checklist và plan đã lưu checklist rỗng. Client cũ bỏ qua trường mới không xóa checklist đã lưu. Checklist chỉ có trong `wedplan_ms_tasks_v2` sẽ được nhập một lần trên trình duyệt cũ sau khi xác minh cloud; hãy mở đúng trình duyệt trước khi xóa cache. Checklist đã có trên cloud được ưu tiên.
 
 Sau khi chạy, so sánh số bản ghi và nội dung mẫu ở `user_data`, `public_invitations` với snapshot trước nâng cấp. Database có schema hoặc dependency được sửa riêng ngoài repo cần được thử bằng bản sao trước khi áp dụng.
 
