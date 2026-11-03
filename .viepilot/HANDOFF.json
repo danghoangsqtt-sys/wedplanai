@@ -1,14 +1,14 @@
 {
   "updated": "2026-11-03",
-  "current_phase": 5,
-  "current_task": "5.2",
+  "current_phase": 6,
+  "current_task": "6.1",
   "status": "in_progress",
   "target_version": "2.2.1",
   "branch": "fix/audit-2026-11-03",
   "tasks_total": 7,
-  "tasks_completed": 4,
-  "last_verified": "5.1",
-  "evidence": "25 focused persistence, backup, cloud boundary and PostgreSQL tests pass; lint/typecheck/build pass; failed reads block writes and exact revision tokens prevent stale saves.",
+  "tasks_completed": 5,
+  "last_verified": "5.2",
+  "evidence": "33 focused tests pass, including acknowledged form retries, private wish projection, idempotent SQL submissions and five-person guest import; lint/typecheck/build pass.",
   "notes": [
     "No live Supabase migration or function deployment performed"
   ]

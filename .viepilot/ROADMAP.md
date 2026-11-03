@@ -120,5 +120,5 @@ Scope: A01-A16, S01/S02, D01/D02. Existing feature-expansion backlogs remain out
 | Phase | Name | Tasks | Verified | Status |
 |---|---|---:|---:|---|
 | 4 | Secure foundation | 3 | 3 | complete |
-| 5 | Reliable data and RSVP | 2 | 1 | in_progress |
-| 6 | Editor and release validation | 2 | 0 | planned |
+| 5 | Reliable data and RSVP | 2 | 2 | complete |
+| 6 | Editor and release validation | 2 | 0 | in_progress |
