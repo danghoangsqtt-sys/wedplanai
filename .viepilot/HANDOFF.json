@@ -12,9 +12,10 @@
     "phase 8 budget deposits and payments"
   ],
   "notes": [
-    "Local changes require their final local commit checkpoint",
+    "Implementation and checks committed locally at 22d137f",
     "Remote push previously denied; not retried for this follow-up",
     "No live Supabase migration, data access or deployment performed",
     "PIN alone does not synchronize separate devices"
-  ]
+  ],
+  "local_code_commit": "22d137f"
 }

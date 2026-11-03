@@ -107,7 +107,7 @@ Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilo
 - Data: local-only without separately verified cloud session. Existing browser data retained; separate devices do not synchronize from PIN alone.
 - Evidence: 75 tests, 4 Chrome flows, typecheck/lint/build and real localhost PIN entry passed.
 - Local web: http://127.0.0.1:3000.
-- Branch: feat/planning-workflow-2026-11-03; final local commit checkpoint follows. Remote push is not claimed.
+- Branch: feat/planning-workflow-2026-11-03; implementation committed locally at 22d137f. Remote push is not claimed.
 - Phase 8 budget deposits/payment balances remain planned only. Live Supabase setup is unchanged.
 
 ## Historical checkpoint reconciliation
