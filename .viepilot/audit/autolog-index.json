@@ -1,0 +1,138 @@
+{
+  "generated": "2026-11-03",
+  "commit": "2eaafe7",
+  "new": [
+    "BUG-002",
+    "BUG-003",
+    "BUG-004",
+    "BUG-005",
+    "BUG-006",
+    "BUG-007"
+  ],
+  "updated": [
+    "BUG-001"
+  ],
+  "deduplication": "An existing open request is reused when its normalized title is contained in the finding title, or Related files overlap. Reuse includes requests created earlier in this audit.",
+  "findings": [
+    {
+      "finding": "A01",
+      "request": "BUG-002",
+      "tier": 3,
+      "severity": "critical"
+    },
+    {
+      "finding": "A02",
+      "request": "BUG-002",
+      "tier": 3,
+      "severity": "high"
+    },
+    {
+      "finding": "A03",
+      "request": "BUG-002",
+      "tier": 3,
+      "severity": "high"
+    },
+    {
+      "finding": "A04",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "high"
+    },
+    {
+      "finding": "A05",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "high"
+    },
+    {
+      "finding": "A06",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "high"
+    },
+    {
+      "finding": "A07",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "high"
+    },
+    {
+      "finding": "A08",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "A09",
+      "request": "BUG-003",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "A10",
+      "request": "BUG-003",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "A11",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "A12",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "A13",
+      "request": "BUG-004",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "A14",
+      "request": "BUG-001",
+      "tier": 3,
+      "severity": "high"
+    },
+    {
+      "finding": "A15",
+      "request": "BUG-005",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "A16",
+      "request": "BUG-005",
+      "tier": 3,
+      "severity": "medium"
+    },
+    {
+      "finding": "S01",
+      "request": "BUG-006",
+      "tier": 1,
+      "severity": "medium"
+    },
+    {
+      "finding": "S02",
+      "request": "BUG-006",
+      "tier": 1,
+      "severity": "low"
+    },
+    {
+      "finding": "D01",
+      "request": "BUG-007",
+      "tier": 2,
+      "severity": "medium"
+    },
+    {
+      "finding": "D02",
+      "request": "BUG-005",
+      "tier": 2,
+      "severity": "low"
+    }
+  ]
+}

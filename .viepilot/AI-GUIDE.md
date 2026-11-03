@@ -1,0 +1,6 @@
+# WedPlan AI — working context
+
+Use repository-relative task paths. Current work: audit remediation phases 4–6, targeting 2.2.1 on `fix/audit-2026-11-03`.
+Read the current task, phase state, `.viepilot/audit-report.md` and `.viepilot/audit/guardrails.json` before edits.
+Preserve existing local/cloud user data. Use disposable databases and mocked network services for tests. Never store real credentials in the repository or public Vite build. No automatic production deployment.
+Update task/phase/tracker/handoff evidence incrementally. A task is code-verified only after appropriate tests; report deployment/configuration gates separately. Do not claim historical deployment verification from old COMPLETE labels.

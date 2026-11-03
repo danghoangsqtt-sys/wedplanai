@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "project": "wedplan-ai",
+  "audit_commit": "2eaafe7",
+  "generated": "2026-11-03",
+  "source_confidence": "official documentation + repository source + offline reproductions",
+  "stacks": [
+    "react",
+    "typescript",
+    "zustand",
+    "vite",
+    "supabase",
+    "postgresql"
+  ],
+  "preflight": [
+    "read .viepilot/audit-report.md and findings.json",
+    "use disposable database for migration/RLS tests",
+    "preserve existing data and backups",
+    "verify live policy state separately without destructive writes"
+  ],
+  "invariants": [
+    "Unauthenticated API clients cannot read or mutate owner-private data or read RSVP phones",
+    "System API secrets never occur in public build output",
+    "Failed cloud reads never authorize full-default writes",
+    "Success UI is conditional on the intended persistence acknowledgement",
+    "Backup export/import round-trip retains invitation, procedures, guests, budget and wedding date",
+    "Undo/redo survives autosave; section order and visibility affect both editor and public view",
+    "RSVP payload, DB columns and read DTOs match and preserve party size",
+    "A configured user AI key follows an explicit tested selection policy",
+    "One wedding-date source survives cloud round-trip across devices",
+    "Fresh and upgrade SQL migrations succeed without losing existing rows"
+  ],
+  "required_checks": [
+    "typecheck",
+    "lint",
+    "production build",
+    "targeted behavior tests",
+    "disposable-database RLS/migration tests",
+    "browser checks after test configuration"
+  ],
+  "current_audit_reproduction_command": "node .viepilot/audit/reproduce-audit.cjs",
+  "reproduction_semantics": "Assertions intentionally demonstrate current defects. Replace with correct-behavior regression tests when fixes are implemented."
+}

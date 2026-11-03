@@ -1,0 +1,140 @@
+{
+  "generated": "2026-11-03",
+  "command": "npm audit --json",
+  "result": {
+    "total": 14,
+    "high": 10,
+    "moderate": 3,
+    "low": 1,
+    "critical": 0
+  },
+  "note": "Audit registry output observed during this audit. Versions below are from the checked-in lockfile. Runtime reachability of each advisory is not established.",
+  "packages": [
+    {
+      "name": "@babel/core",
+      "instances": [
+        {
+          "path": "node_modules/@babel/core",
+          "version": "7.28.5"
+        }
+      ]
+    },
+    {
+      "name": "@protobufjs/utf8",
+      "instances": [
+        {
+          "path": "node_modules/@protobufjs/utf8",
+          "version": "1.1.0"
+        }
+      ]
+    },
+    {
+      "name": "baseline-browser-mapping",
+      "instances": [
+        {
+          "path": "node_modules/baseline-browser-mapping",
+          "version": "2.10.20"
+        }
+      ]
+    },
+    {
+      "name": "browserslist",
+      "instances": [
+        {
+          "path": "node_modules/browserslist",
+          "version": "4.28.0"
+        }
+      ]
+    },
+    {
+      "name": "dompurify",
+      "instances": [
+        {
+          "path": "node_modules/dompurify",
+          "version": "3.4.0"
+        }
+      ]
+    },
+    {
+      "name": "fflate",
+      "instances": [
+        {
+          "path": "node_modules/fflate",
+          "version": "0.8.2"
+        }
+      ]
+    },
+    {
+      "name": "image-size",
+      "instances": [
+        {
+          "path": "node_modules/image-size",
+          "version": "1.2.1"
+        }
+      ]
+    },
+    {
+      "name": "nanoid",
+      "instances": [
+        {
+          "path": "node_modules/nanoid",
+          "version": "3.3.11"
+        }
+      ]
+    },
+    {
+      "name": "postcss",
+      "instances": [
+        {
+          "path": "node_modules/vite/node_modules/postcss",
+          "version": "8.5.6"
+        }
+      ]
+    },
+    {
+      "name": "pptxgenjs",
+      "instances": [
+        {
+          "path": "node_modules/pptxgenjs",
+          "version": "4.0.1"
+        }
+      ]
+    },
+    {
+      "name": "protobufjs",
+      "instances": [
+        {
+          "path": "node_modules/protobufjs",
+          "version": "7.5.5"
+        }
+      ]
+    },
+    {
+      "name": "source-map-js",
+      "instances": [
+        {
+          "path": "node_modules/source-map-js",
+          "version": "1.2.1"
+        }
+      ]
+    },
+    {
+      "name": "vite",
+      "instances": [
+        {
+          "path": "node_modules/vite",
+          "version": "6.4.2"
+        }
+      ]
+    },
+    {
+      "name": "ws",
+      "instances": [
+        {
+          "path": "node_modules/ws",
+          "version": "8.20.0"
+        }
+      ]
+    }
+  ]
+}

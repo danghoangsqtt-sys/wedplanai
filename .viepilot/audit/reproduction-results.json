@@ -1,0 +1,51 @@
+{
+  "generated": "2026-11-03",
+  "scope": "offline source execution with mocked external services and a minimal React hook runner",
+  "warning": "Passing assertions confirm the current defects; these are audit reproductions, not regression tests for fixes.",
+  "results": [
+    {
+      "name": "A04: Failed initial cloud read enables a subsequent full-data write",
+      "reproduced": true
+    },
+    {
+      "name": "A12: Settings weddingDate is not the date written to cloud",
+      "reproduced": true
+    },
+    {
+      "name": "A07: Importing current backup fields resets invitation and procedures",
+      "reproduced": true
+    },
+    {
+      "name": "A06: saveUserDataToCloud resolves despite a rejected database write",
+      "reproduced": true
+    },
+    {
+      "name": "A05: Even single-event RSVP submits a column absent from the SQL schema",
+      "reproduced": true
+    },
+    {
+      "name": "A11: General AI calls choose the environment key over a configured user key",
+      "reproduced": true
+    },
+    {
+      "name": "A08: The editor clears undo history after its own debounced save",
+      "reproduced": true
+    },
+    {
+      "name": "A09: Preview ignores hidden sections and configured section order",
+      "reproduced": true
+    },
+    {
+      "name": "A10: InlineRichText ignores editor callback and is never editable",
+      "reproduced": true
+    },
+    {
+      "name": "A06: RSVP modal displays success even when its submit callback returns false",
+      "reproduced": true
+    },
+    {
+      "name": "A13: Importing a five-person RSVP creates only one guest",
+      "reproduced": true
+    }
+  ]
+}

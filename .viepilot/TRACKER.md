@@ -72,3 +72,38 @@ All planned phases complete. See **Next** section below.
 | FEAT-001 | ✨ | Bản đồ Google Map và địa chỉ | high | new |
 | BUG-001 | 🐛 | Lỗi tính năng lưu trang | high | new |
 | FEAT-002 | ✨ | Tính năng tạo QR code chia sẻ thiệp đẹp | medium | new |
+
+## Audit Backlog — 2026-11-03
+
+Audit commit `2eaafe7`: 20 findings (1 critical, 7 high, 10 medium, 2 low). Báo cáo: `.viepilot/audit-report.md`. Chưa thực hiện bản sửa.
+
+Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilot/audit/autolog-index.json` để biết phạm vi của từng request.
+
+| ID | Findings | Status |
+|----|----------|--------|
+| BUG-001 | A04, A05, A06, A07, A08, A11, A12, A14 | new |
+| BUG-002 | A01, A02, A03 | new |
+| BUG-003 | A09, A10 | new |
+| BUG-004 | A13 | new |
+| BUG-005 | A15, A16, D02 | new |
+| BUG-006 | S01, S02 | new |
+| BUG-007 | D01 | new |
+
+## Decision Log
+
+| Date | Decision | Source | State |
+|------|----------|--------|-------|
+| 2026-11-03 | BUG-002 auto-logged by vp-audit Tier 3: PIN chỉ bảo vệ giao diện; SQL cho phép khách ẩn danh truy cập dữ liệu riêng | vp-audit | Backlog |
+| 2026-11-03 | BUG-003 auto-logged by vp-audit Tier 3: Ẩn section và kéo đổi thứ tự chỉ cập nhật sidebar, không cập nhật thiệp | vp-audit | Backlog |
+| 2026-11-03 | BUG-004 auto-logged by vp-audit Tier 3: Import RSVP nhóm nhiều người chỉ tạo một khách trong kế hoạch | vp-audit | Backlog |
+| 2026-11-03 | BUG-005 auto-logged by vp-audit Tier 3: Lockfile có 14 package bị npm audit cảnh báo | vp-audit | Backlog |
+| 2026-11-03 | BUG-006 auto-logged by vp-audit Tier 1: ROADMAP và trạng thái phase/tracker không nhất quán | vp-audit | Backlog |
+| 2026-11-03 | BUG-007 auto-logged by vp-audit Tier 2: Hướng dẫn cài đặt vẫn yêu cầu Appwrite trong khi mã nguồn dùng Supabase | vp-audit | Backlog |
+
+## Current State
+
+- Milestone: audit remediation, target 2.2.1.
+- Phase: 4/6; Task: 4.1 quality foundation, in_progress.
+- Branch: fix/audit-2026-11-03.
+- Authorized: plan and implement all audited findings.
+- Deployment: no production credentials configured; migrations/functions will be prepared and locally verified.
