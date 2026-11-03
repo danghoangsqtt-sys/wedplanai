@@ -2,6 +2,10 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
+## [Unreleased] — 2.2.1
+
+- Audit remediation 4.1: Lint, 2 behavior tests and production build pass; npm audit reports zero vulnerabilities; PGlite PostgreSQL 18 booted successfully.
+
 ## [v2.1.0] — 2026-06-15: Invitation Design Upgrade (frontend-design)
 
 > Áp dụng `frontend-design` principles: typography đặc sắc, motion stagger, grain texture, signature elements cho từng theme. (tsc ✓)
