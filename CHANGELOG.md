@@ -4,6 +4,8 @@ Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận 
 
 ## [Unreleased] — 2.2.1
 
+- Audit remediation 6.1: 10 React DOM editor tests pass: Undo/Redo after autosave, ordered/hidden public sections, inline composition/paste safety, pagehide flush and back navigation; lint/typecheck/build pass.
+
 - Audit remediation 5.2: 33 focused tests pass, including acknowledged form retries, private wish projection, idempotent SQL submissions and five-person guest import; lint/typecheck/build pass.
 
 - Audit remediation 5.1: 25 focused persistence, backup, cloud boundary and PostgreSQL tests pass; lint/typecheck/build pass; failed reads block writes and exact revision tokens prevent stale saves.

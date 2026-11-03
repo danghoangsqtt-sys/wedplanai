@@ -1,14 +1,14 @@
 {
   "updated": "2026-11-03",
   "current_phase": 6,
-  "current_task": "6.1",
+  "current_task": "6.2",
   "status": "in_progress",
   "target_version": "2.2.1",
   "branch": "fix/audit-2026-11-03",
   "tasks_total": 7,
-  "tasks_completed": 5,
-  "last_verified": "5.2",
-  "evidence": "33 focused tests pass, including acknowledged form retries, private wish projection, idempotent SQL submissions and five-person guest import; lint/typecheck/build pass.",
+  "tasks_completed": 6,
+  "last_verified": "6.1",
+  "evidence": "10 React DOM editor tests pass: Undo/Redo after autosave, ordered/hidden public sections, inline composition/paste safety, pagehide flush and back navigation; lint/typecheck/build pass.",
   "notes": [
     "No live Supabase migration or function deployment performed"
   ]
