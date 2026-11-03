@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-03",
+  "kind": "prototype_only",
+  "checks_passed": 12,
+  "checks": [
+    "Baseline: 140 agreed, 57 paid, 83 outstanding; 73 after, 10 overdue",
+    "Partial settlement updates dashboard and leaves agreed total unchanged",
+    "Work completion does not create cash payments",
+    "Deposit belongs to paid total once, with allocation preview",
+    "Scheduling an already partly paid unscheduled balance moves classification without duplicating cash",
+    "Overpayment stays with its supplier; other supplier debts remain 23 million",
+    "Due today is not overdue; time buckets change at T+3 and T+7",
+    "Wedding shift moves pending due date while retaining historical actual payment date",
+    "Zero agreed price is valid and remains visible",
+    "Mobile layout has no page overflow; payment dialog and negative amount validation work",
+    "Long labels and billion-VND values remain within mobile page width",
+    "All six architecture pages render without document overflow on mobile"
+  ],
+  "javascript_errors": [],
+  "external_requests": [],
+  "screenshots": [
+    "budget-desktop.png",
+    "dashboard-desktop.png",
+    "dashboard-mobile.png",
+    "data-model-desktop.png",
+    "payment-allocation-desktop.png",
+    "payment-mobile.png"
+  ]
+}

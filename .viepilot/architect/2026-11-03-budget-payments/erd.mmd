@@ -1,0 +1,34 @@
+erDiagram
+  Plan ||--o{ BudgetItem : contains
+  BudgetItem ||--o{ PaymentSchedule : schedules
+  BudgetItem ||--o{ Payment : records
+  Payment ||--o{ PaymentAllocation : allocates
+  PaymentSchedule o|--o{ PaymentAllocation : optional_target
+  Plan {
+    string uid PK
+    string weddingDate
+    }
+  BudgetItem {
+    string id PK
+    int estimatedCost
+    int agreedCost_nullable
+    string supplierName
+    string workStatus
+    }
+  PaymentSchedule {
+    string id PK
+    int offsetDays
+    int amount
+    string settledDueDate_nullable
+    }
+  Payment {
+    string id PK
+    int amount
+    string kind
+    string paidAt
+    string note
+    }
+  PaymentAllocation {
+    string scheduleId_nullable FK
+    int amount
+    }

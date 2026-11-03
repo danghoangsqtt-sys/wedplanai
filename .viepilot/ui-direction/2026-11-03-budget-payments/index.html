@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WedPlan · Phác thảo ngân sách và công nợ</title>
+  <link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
+</head>
+<body>
+  <div class="demo-bar"><span><b>BẢN PHÁC TƯƠNG TÁC</b> · Dữ liệu mẫu, không thay đổi kế hoạch thật.</span><button id="reset">Đặt lại ví dụ</button></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard"><span class="brand-icon">♡</span> WedPlan<span>AI</span></a>
+      <div class="workspace"><span class="avatar">M&A</span><div><b>Ngày hạnh phúc</b><small>Kế hoạch của hai bạn</small></div></div>
+      <p class="nav-label">KHÔNG GIAN CƯỚI</p>
+      <nav aria-label="Điều hướng bản phác">
+        <button class="nav-button active" data-view="dashboard"><span>◫</span>Tổng quan tài chính</button>
+        <button class="nav-button" data-view="budget"><span>▤</span>Ngân sách & thanh toán</button>
+      </nav>
+      <div class="sidebar-note"><b>Cưới xong, vẫn rõ tiền.</b><p>Biết còn phải trả cho ai, bao nhiêu và ở mốc nào.</p></div>
+      <a class="architecture-link" href="../../architect/2026-11-03-budget-payments/index.html" target="_blank" rel="noopener">Xem sơ đồ dữ liệu <span>↗</span></a>
+    </aside>
+    <div class="content">
+      <header class="topbar"><span>Ngân sách đám cưới <span class="separator">/</span> <b id="breadcrumb">Tổng quan</b></span><span class="local-pill"><i></i> Phiên xem thử tại máy</span></header>
+      <main>
+        <div class="page-heading"><div><p class="eyebrow">VỮNG VÀNG CHO NGÀY CHUNG ĐÔI</p><h1 id="page-title">Nhìn rõ từng khoản cần trả.</h1><p class="subtitle" id="page-subtitle">Từ tiền cọc đầu tiên đến lần quyết toán sau đám cưới.</p></div><button class="primary" id="add-item">＋ Thêm khoản chi</button></div>
+        <section class="context-bar" aria-label="Thiết lập ví dụ">
+          <label>Ngày cưới <input id="wedding-date" type="date" value="2026-12-20" required></label>
+          <span class="context-divider"></span>
+          <label>Ngày xem giả lập <select id="asof-offset"><option value="-7">T−7 · Trước cưới 7 ngày</option><option value="0">T · Ngày cưới</option><option value="1" selected>T+1 · Sau cưới 1 ngày</option><option value="3">T+3 · Sau cưới 3 ngày</option><option value="7">T+7 · Sau cưới 7 ngày</option></select></label>
+          <span class="date-chip" id="asof-date"></span>
+          <span class="context-help">Hẹn trả tiền chỉ theo mốc T−N / T / T+N.</span>
+        </section>
+        <section id="dashboard-view">
+          <div class="metric-grid" id="metrics" aria-label="Thống kê toàn kế hoạch"></div>
+          <section class="after-hero"><div><span class="section-kicker">SAU KHI TIỆC KẾT THÚC</span><h2>Còn <span id="hero-after"></span> cần quyết toán sau cưới.</h2><p>Giữ riêng khoản này để chủ động thanh toán cho các bên.</p></div><button class="light-button" id="show-after">Xem các khoản sau cưới <span>→</span></button></section>
+          <div class="dashboard-columns">
+            <section class="panel"><div class="panel-heading"><div><h2>Lịch chi tiền theo mốc</h2><p>Chỉ hiển thị phần tiền chưa trả.</p></div><span class="small-pill">T là ngày cưới</span></div><div id="timeline" class="timeline"></div><div id="reconciliation" class="reconciliation"></div></section>
+            <section class="panel"><div class="panel-heading"><div><h2>Ưu tiên thanh toán</h2><p>Quá hạn trước, gần đến hạn tiếp theo.</p></div><span class="status-dot"></span></div><div id="priority"></div></section>
+          </div>
+          <p class="footnote">Tiền cọc nằm trong tổng đã trả. Tiền mừng dự kiến không tự trừ vào công nợ nhà cung cấp.</p>
+        </section>
+        <section id="budget-view" hidden>
+          <div class="budget-summary" id="budget-summary"></div>
+          <section class="panel filter-panel"><div class="search-row"><label class="search-label"><span>⌕</span><input id="search" type="search" placeholder="Tìm khoản chi, nhà cung cấp…" aria-label="Tìm khoản chi"></label><span id="result-count"></span></div><div id="filters" class="filter-tabs" aria-label="Lọc khoản chi"></div></section>
+          <div id="budget-list" class="budget-list"></div>
+          <p class="footnote">Trạng thái công việc và trạng thái thanh toán độc lập. Đã xong dịch vụ chưa có nghĩa là đã trả đủ tiền.</p>
+        </section>
+        <div id="notice" class="notice" hidden></div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title"><div id="detail-content"></div></dialog>
+  <dialog id="payment-dialog" class="form-dialog" aria-labelledby="payment-title">
+    <form id="payment-form">
+      <div class="dialog-heading"><div><p class="eyebrow">GHI NHẬN TIỀN THỰC ĐÃ TRẢ</p><h2 id="payment-title">Ghi nhận thanh toán</h2></div><button type="button" data-close="payment-dialog" class="icon-button" aria-label="Đóng ghi nhận thanh toán">×</button></div>
+      <div class="form-body">
+        <p id="payment-supplier" class="form-intro"></p>
+        <div class="form-grid"><label>Loại khoản trả<select id="payment-kind"><option value="payment">Thanh toán</option><option value="deposit">Tiền cọc</option></select></label><label>Ngày thực trả<input id="payment-date" type="date" required></label></div>
+        <label>Số tiền mới thực trả (VNĐ)<input id="payment-amount" type="number" min="1" step="1" max="9007199254740991" inputmode="numeric" placeholder="Ví dụ: 20000000" required></label>
+        <p id="amount-hint" class="input-hint"></p>
+        <label>Ưu tiên trả vào đợt<select id="payment-stage"></select></label>
+        <div class="allocation-box"><b>Phân bổ lần trả này</b><div id="allocation-preview"></div></div>
+        <label>Ghi chú<input id="payment-note" maxlength="300" placeholder="Ví dụ: chuyển khoản đợt quyết toán"></label>
+        <p class="form-tip">Chỉ nhập số tiền của lần trả mới. Các khoản cọc và thanh toán trước đó đã nằm trong lịch sử.</p>
+        <p id="payment-error" class="form-error" role="alert" hidden></p>
+      </div>
+      <div class="dialog-footer"><button type="button" class="secondary" data-close="payment-dialog">Hủy</button><button type="submit" class="primary">Xác nhận đã trả</button></div>
+    </form>
+  </dialog>
+  <dialog id="schedule-dialog" class="form-dialog" aria-labelledby="schedule-title">
+    <form id="schedule-form"><div class="dialog-heading"><div><p class="eyebrow">LỊCH HẸN CHƯA PHẢI TIỀN ĐÃ CHI</p><h2 id="schedule-title">Thêm đợt phải trả</h2></div><button type="button" data-close="schedule-dialog" class="icon-button" aria-label="Đóng thêm đợt">×</button></div>
+      <div class="form-body"><p id="schedule-room" class="form-intro"></p><label>Tên đợt<input id="schedule-name" required maxlength="100" placeholder="Ví dụ: quyết toán sau tiệc"></label><label>Số tiền phải trả của đợt (VNĐ)<input id="schedule-amount" required type="number" min="1" step="1" inputmode="numeric"></label><div class="form-grid"><label>Mốc hẹn<select id="schedule-side"><option value="after">Sau ngày cưới</option><option value="on">Đúng ngày cưới</option><option value="before">Trước ngày cưới</option></select></label><label>Số ngày<input id="schedule-days" type="number" min="1" max="3650" step="1" value="3" required></label></div><p id="schedule-date-hint" class="input-hint"></p><p id="schedule-error" class="form-error" role="alert" hidden></p></div>
+      <div class="dialog-footer"><button type="button" class="secondary" data-close="schedule-dialog">Hủy</button><button type="submit" class="primary">Lưu đợt thanh toán</button></div>
+    </form>
+  </dialog>
+  <dialog id="item-dialog" class="form-dialog" aria-labelledby="item-title">
+    <form id="item-form"><div class="dialog-heading"><div><p class="eyebrow">KHOẢN CHI MỚI</p><h2 id="item-title">Thêm khoản chi</h2></div><button type="button" data-close="item-dialog" class="icon-button" aria-label="Đóng thêm khoản chi">×</button></div><div class="form-body"><label>Tên khoản chi<input id="item-name" required maxlength="120" placeholder="Ví dụ: trang trí tiệc"></label><label>Nhà cung cấp<input id="item-supplier" required maxlength="150" placeholder="Tên đơn vị phụ trách"></label><div class="form-grid"><label>Dự toán (VNĐ)<input id="item-estimated" type="number" min="0" step="1" required inputmode="numeric"></label><label>Giá đã chốt (VNĐ)<input id="item-agreed" type="number" min="0" step="1" required inputmode="numeric"></label></div><p class="form-tip">Khoản mới bắt đầu với 0 đồng đã trả. Thêm lịch hẹn rồi ghi nhận cọc riêng. Giá chốt bằng 0 vẫn là giá hợp lệ.</p><p id="item-error" class="form-error" role="alert" hidden></p></div><div class="dialog-footer"><button type="button" class="secondary" data-close="item-dialog">Hủy</button><button type="submit" class="primary">Thêm khoản chi</button></div></form>
+  </dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
