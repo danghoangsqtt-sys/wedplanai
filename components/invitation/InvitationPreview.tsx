@@ -483,7 +483,7 @@ const Gallery3DCarousel: React.FC<{ images: string[]; positions?: string[]; conf
                     
                     let transform = '';
                     let opacity = 1;
-                    let zIndex = 10 - absOffset;
+                    const zIndex = 10 - absOffset;
 
                     if (isActive) {
                         transform = 'translateX(0) scale(1) translateZ(0)';

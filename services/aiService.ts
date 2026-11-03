@@ -112,12 +112,8 @@ const callGeminiDirect = async (
 };
 
 export const validateGeminiKey = async (apiKey: string): Promise<boolean> => {
-  try {
-    await callGeminiDirect("You are a helper.", "Hello", false, apiKey, 1);
-    return true;
-  } catch (error) {
-    throw error;
-  }
+  await callGeminiDirect("You are a helper.", "Hello", false, apiKey, 1);
+  return true;
 };
 
 export const generateAIContent = async (

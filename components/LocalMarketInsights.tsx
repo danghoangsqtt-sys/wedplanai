@@ -396,7 +396,7 @@ const LocalMarketInsights: React.FC<Props> = ({ onNavigateBudget }) => {
 
         for (let i = 0; i < section.items.length; i++) {
           const item = section.items[i];
-          let cost = rawSum > 0
+          const cost = rawSum > 0
             ? (i === section.items.length - 1 ? remaining : Math.round(rawCosts[i] * (sectionTotal / rawSum)))
             : Math.round(sectionTotal / Math.max(section.items.length, 1));
           if (i < section.items.length - 1) remaining -= cost;

@@ -111,3 +111,14 @@ Updated: 2026-06-18
 | C3.1 | Keyboard shortcuts: Ctrl+Z/Y, Delete, Escape | `useEditorKeyboard` hook |
 | C3.2 | Mobile preview mode toggle (375px / 768px frame) | EditorTopBar |
 | C3.3 | Section layout variants: heroLayout, galleryLayout | context panels |
+
+
+## Audit remediation - target 2.2.1 (2026-11-03)
+
+Scope: A01-A16, S01/S02, D01/D02. Existing feature-expansion backlogs remain outside this fix milestone.
+
+| Phase | Name | Tasks | Verified | Status |
+|---|---|---:|---:|---|
+| 4 | Secure foundation | 3 | 0 | in_progress |
+| 5 | Reliable data and RSVP | 2 | 0 | planned |
+| 6 | Editor and release validation | 2 | 0 | planned |

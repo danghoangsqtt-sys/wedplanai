@@ -131,7 +131,7 @@ const DetailedBudgetPlanner: React.FC = () => {
    };
 
    const filteredItems = useMemo(() => {
-      let items = budgetItems.filter(item => {
+      const items = budgetItems.filter(item => {
          const matchesSide = filterSide === 'ALL' || item.side === filterSide || item.side === 'BOTH';
          const matchesStatus = filterStatus === 'ALL' || item.status === filterStatus;
          const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -227,7 +227,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
         }
 
         // 4. Draw Footer
-        let footerY = CARD_H - 70;
+        const footerY = CARD_H - 70;
         
         ctx.textAlign = 'center';
         ctx.font = '20px Arial';
