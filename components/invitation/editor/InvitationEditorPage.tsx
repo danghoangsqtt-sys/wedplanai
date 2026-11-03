@@ -7,12 +7,13 @@ import EditorTopBar from './EditorTopBar';
 import EditorLeftSidebar from './EditorLeftSidebar';
 import EditorContextPanel from './EditorContextPanel';
 import TemplateGalleryModal from '../TemplateGalleryModal';
+import { INITIAL_INVITATION } from '../../../data/initialData';
 
 const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@400;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Spectral:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&family=DM+Sans:wght@400;500;600&family=Fahkwang:wght@400;500;600&family=Nunito:wght@400;500;600&family=Quicksand:wght@400;500;600&family=Josefin+Sans:wght@400;500;600&family=Mulish:wght@400;500;600&display=swap';
 
-const InvitationEditorPage: React.FC = () => {
+const InvitationEditorPage: React.FC<{onBack?:()=>void}> = ({onBack}) => {
     const { invitation, updateInvitation, addNotification } = useStore();
-    const { data, push, undo, redo, canUndo, canRedo, reset } = useEditorHistory(invitation);
+    const { data, push, set:replaceData, undo, redo, canUndo, canRedo, reset } = useEditorHistory(invitation);
 
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile' | false>(false);
@@ -23,10 +24,14 @@ const InvitationEditorPage: React.FC = () => {
     // undo history on our own debounced saves coming back through the store.
     const prevInvRef = useRef(invitation);
     const editorLastWriteRef = useRef<InvitationData | null>(null);
+    const writeToStore = useCallback((value:InvitationData) => {
+        editorLastWriteRef.current = value;
+        updateInvitation(value);
+    },[updateInvitation]);
     useEffect(() => {
         if (invitation !== prevInvRef.current) {
             // Only reset if this change did NOT originate from the editor itself
-            if (invitation !== editorLastWriteRef.current) {
+            if (JSON.stringify(invitation) !== JSON.stringify(editorLastWriteRef.current)) {
                 reset(invitation);
             }
             prevInvRef.current = invitation;
@@ -66,18 +71,15 @@ const InvitationEditorPage: React.FC = () => {
     useEffect(() => {
         if (syncTimeout.current) clearTimeout(syncTimeout.current);
         syncTimeout.current = setTimeout(() => {
-            editorLastWriteRef.current = latestData.current;
-            updateInvitation(latestData.current);
+            writeToStore(latestData.current);
         }, 500);
         return () => { if (syncTimeout.current) clearTimeout(syncTimeout.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data]);
+    }, [data,writeToStore]);
     useEffect(() => {
-        const flush = () => { updateInvitation(latestData.current); };
+        const flush = () => { writeToStore(latestData.current); };
         window.addEventListener('pagehide', flush);
         return () => { window.removeEventListener('pagehide', flush); flush(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [writeToStore]);
 
     const handleChange = useCallback((patch: Partial<InvitationData>) => {
         push(draft => { Object.assign(draft, patch); });
@@ -100,7 +102,7 @@ const InvitationEditorPage: React.FC = () => {
     }, [push]);
 
     const handleSave = async () => {
-        updateInvitation(data);
+        writeToStore(data);
         try {
             await useStore.getState().syncToCloud();
             addNotification('SUCCESS', 'Đã lưu thiết kế thiệp lên cloud.');
@@ -110,13 +112,13 @@ const InvitationEditorPage: React.FC = () => {
     };
 
     const handleBack = () => {
-        updateInvitation(data);
-        window.dispatchEvent(new CustomEvent('invitation-editor-back'));
+        writeToStore(data);
+        onBack?.();
     };
 
     const handleReset = () => {
         if (confirm('Đặt lại toàn bộ thiệp về mặc định?')) {
-            reset(invitation);
+            replaceData(INITIAL_INVITATION);
         }
     };
 

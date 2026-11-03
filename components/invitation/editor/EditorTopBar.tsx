@@ -277,7 +277,7 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
         <div className="shrink-0 bg-white border-b border-gray-100 z-20 select-none">
             <div className="flex items-center gap-1.5 px-3 h-[52px]">
                 {/* Back + History */}
-                <button onClick={onBack} className="flex items-center text-rose-500 hover:text-rose-700 transition-colors border border-rose-200 rounded-lg px-2 py-1 hover:bg-rose-50">
+                <button onClick={onBack} aria-label="Quay lại" className="flex items-center text-rose-500 hover:text-rose-700 transition-colors border border-rose-200 rounded-lg px-2 py-1 hover:bg-rose-50">
                     <ChevronLeft size={16} />
                 </button>
                 <div className="flex items-center gap-0.5 ml-1">

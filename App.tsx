@@ -235,7 +235,7 @@ function App() {
 
                 {activeTab === 'invitation' && (
                   <div className="h-full min-h-[600px] bg-white lg:rounded-2xl shadow-sm border border-rose-100 overflow-hidden">
-                    <InvitationEditorPage />
+                    <InvitationEditorPage onBack={()=>setActiveTab('home')} />
                   </div>
                 )}
 

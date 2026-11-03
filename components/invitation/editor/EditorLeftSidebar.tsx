@@ -13,7 +13,8 @@ import {
     Layout, Image as ImgIcon, Users, MapPin, Music2, CalendarDays, Camera,
     Heart, QrCode, Send, BookOpen, Crown, Settings, Mail, MessageCircle, Shirt
 } from 'lucide-react';
-import { InvitationData, SectionId, DEFAULT_SECTION_ORDER } from '../../../types';
+import { InvitationData, SectionId } from '../../../types';
+import { invitationSectionOrder } from '../../../lib/invitationSections';
 
 const SECTION_META: Record<SectionId, { label: string; icon: React.ReactNode; alwaysOn?: boolean }> = {
     hero:          { label: 'Bìa Thiệp',        icon: <Crown size={14} />,        alwaysOn: true },
@@ -95,7 +96,7 @@ const EditorLeftSidebar: React.FC<EditorLeftSidebarProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<SidebarTab | null>('sections');
 
-    const sectionOrder = (data.sectionOrder ?? DEFAULT_SECTION_ORDER) as SectionId[];
+    const sectionOrder = invitationSectionOrder(data);
     const visibility = data.sectionVisibility ?? {};
 
     const sensors = useSensors(

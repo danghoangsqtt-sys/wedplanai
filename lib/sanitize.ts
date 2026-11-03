@@ -61,12 +61,14 @@ export function sanitizeAudioUrl(raw: string | undefined): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   // Relative path — always safe (same origin). Encode spaces and special chars.
-  if (trimmed.startsWith('/')) {
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    try {
     // Encode only the path segments, not the slashes
     const encoded = trimmed.split('/').map((seg, i) =>
       i === 0 ? seg : encodeURIComponent(decodeURIComponent(seg))
     ).join('/');
     return encoded;
+    } catch { return null; }
   }
   try {
     const url = new URL(raw);

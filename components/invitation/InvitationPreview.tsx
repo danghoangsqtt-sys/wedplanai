@@ -1,4 +1,5 @@
 import { InlineRichText } from './InlineRichText';
+import { renderInvitationSections } from '../../lib/invitationSections';
 import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { InvitationData, LoveStoryEvent, GuestWish, WeddingEvent, SectionId } from '../../types';
 import { MapPin, Calendar, Clock, Heart, Gift, Send, Camera, MessageCircle, ChevronDown, ChevronLeft, ChevronRight, X, Volume2, VolumeX, Navigation, Bold, Italic, Underline, Strikethrough, Palette, Type } from 'lucide-react';
@@ -696,7 +697,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             if (st.bodySize) secStyleVars['--t-body-size'] = `${st.bodySize}px`;
         }
 
-        if (!ec) return { style: { ...secStyleVars, ...extraStyle } };
+        if (!ec) return { 'data-sec': id, style: { ...secStyleVars, ...extraStyle } };
 
         return {
             'data-sec': id,
@@ -861,6 +862,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
             )}
 
             <div ref={rootRef} className={`iv-root iv-theme-${tid}`} style={themeStyle}>
+                {renderInvitationSections(<>
 
                 {ec && <FloatingTextToolbar containerRef={rootRef} />}
 
@@ -971,7 +973,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                             <div className="iv-hero-body rv">
                                 {headerSticker && <div className="iv-hero-sticker" aria-hidden>{headerSticker}</div>}
 
-                                <InlineRichText tagName="p" field="openingMessage" placeholder="Lời mở đầu" value={data.openingMessage ?? (isRomantic ? 'Happy Wedding' : isGarden ? 'Save the Date' : isModern ? 'WE ARE GETTING MARRIED' : 'LỄ THÀNH HÔN')} ec={ec} className="iv-hero-pre" style={isRomantic || isGarden ? { fontFamily: 'var(--t-font-script)', fontSize: '28px' } : undefined} />
+                                <p className="iv-hero-pre" style={isRomantic || isGarden ? { fontFamily: 'var(--t-font-script)', fontSize: '28px' } : undefined}>{isRomantic ? 'Happy Wedding' : isGarden ? 'Save the Date' : isModern ? 'WE ARE GETTING MARRIED' : 'LỄ THÀNH HÔN'}</p>
 
                                 <h1 className="iv-couple">
                                     <div className="flex flex-col items-center">
@@ -1429,7 +1431,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     const dayLabels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
                     const monthName = `THÁNG ${wMonth + 1} / ${wYear}`;
                     return (
-                        <section className="iv-sec rv" style={{ background: '#F7F7F7', padding: '2.5rem 1.5rem' }}>
+                        <section className="iv-sec rv" {...secProps('calendar', { background: '#F7F7F7', padding: '2.5rem 1.5rem' })}>
                             <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.2em', color: '#555', marginBottom: '1.5rem', textTransform: 'uppercase' }}>{monthName}</p>
                             <div style={{ maxWidth: '360px', margin: '0 auto' }}>
                                 {/* Day headers */}
@@ -1470,6 +1472,10 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
 
 
 
+                {(data.openingMessage || data.openingTitle || ec) && <section className="iv-sec rv" {...secProps('opening')}>
+                    <InlineRichText tagName="h2" field="openingTitle" value={data.openingTitle || 'Lời Ngỏ'} ec={ec} className="iv-sec-title" />
+                    <InlineRichText tagName="p" field="openingMessage" value={data.openingMessage || ''} ec={ec} className="iv-wishes-text" />
+                </section>}
                 {/* ══════ FOOTER ══════ */}
                 <footer className="iv-footer rv">
                     {footerSticker && <div className="iv-footer-sticker" aria-hidden>{footerSticker}</div>}
@@ -1478,7 +1484,7 @@ const InvitationPreview: React.FC<InvitationPreviewProps> = ({ data, onRSVP, onG
                     <Divider glyph={dividerSticker} />
                     <p className="iv-footer-credit">Built with love · WedPlan AI</p>
                 </footer>
-
+                </>,data)}
             </div>
 
             {/* ══════════════════════════════════════════════════
