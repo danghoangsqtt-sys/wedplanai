@@ -1,10 +1,10 @@
 # WedPlan AI — ROADMAP
-Version: 2.1.0
-Updated: 2026-06-18
+Version: 2.2.1
+Updated: 2026-11-03
 
 ---
 
-## Phase 1 — Password Gate + Cloud Auto-Save
+## Historical Phase 1 — Password Gate + Cloud Auto-Save
 **Status:** ✅ COMPLETE
 **Source:** `docs/brainstorm/session-2026-06-15.md`
 
@@ -23,7 +23,9 @@ Updated: 2026-06-18
 | 1.5 | Thêm `loadFromCloud` action + expose ra store | `store/useStore.ts` | ✅ DONE |
 | 1.6 | Gọi `loadFromCloud` trong `PasswordGate` sau khi unlock | `components/PasswordGate.tsx` | ✅ DONE |
 
-### Definition of Done
+### Historical acceptance checklist
+
+This unchecked checklist is preserved as the original record, not a current verification claim. The PIN design is superseded by verified Supabase Auth in audit phase 4. Current release acceptance is recorded in audit phases 4-6.
 - [ ] Mở app → thấy PIN screen
 - [ ] Nhập PIN đúng → app mở, dữ liệu cloud được load
 - [ ] Thay đổi bất kỳ (guest/budget/thiệp) → tự động sync Supabase sau 2s
@@ -75,18 +77,18 @@ Updated: 2026-06-18
 
 | # | Task | Files | Status |
 |---|------|-------|--------|
-| C1.1 | `InvitationEditorPage.tsx` — layout container | `components/invitation/editor/InvitationEditorPage.tsx` | ⬜ TODO |
-| C1.2 | `EditorTopBar.tsx` — Undo/Redo, Template picker, Preview, Share | `components/invitation/editor/EditorTopBar.tsx` | ⬜ TODO |
-| C1.3 | `EditorLeftSidebar.tsx` — icon strip | `components/invitation/editor/EditorLeftSidebar.tsx` | ⬜ TODO |
-| C1.4 | `EditorCanvas.tsx` — phone frame + @dnd-kit SortableContext | `components/invitation/editor/EditorCanvas.tsx` | ⬜ TODO |
-| C1.5 | `SectionWrapper.tsx` — HOC drag handle + selected state + floating toolbar | `components/invitation/editor/SectionWrapper.tsx` | ⬜ TODO |
-| C1.6 | `InlineTextEditor.tsx` — contentEditable overlay | `components/invitation/editor/InlineTextEditor.tsx` | ⬜ TODO |
-| C1.7 | Section components: Hero, Family, Events, Gallery, LoveStory, Bank, Footer | `components/invitation/editor/sections/` | ⬜ TODO |
-| C1.8 | Context panels: Text, Photo, Color, Event, Bank | `components/invitation/editor/context-panels/` | ⬜ TODO |
-| C1.9 | `AddSectionPanel.tsx` — block picker UI | `components/invitation/editor/AddSectionPanel.tsx` | ⬜ TODO |
-| C1.10 | Undo/Redo system (`useEditorHistory` hook, immer, 20 steps) | `hooks/useEditorHistory.ts` | ⬜ TODO |
-| C1.11 | `InvitationData` migration: `sectionOrder`, `sectionVisibility` | `types.ts` | ⬜ TODO |
-| C1.12 | Wire vào App.tsx — thay InvitationManager bằng InvitationEditorPage | `App.tsx` | ⬜ TODO |
+| C1.1 | `InvitationEditorPage.tsx` — layout container | `components/invitation/editor/InvitationEditorPage.tsx` | ✅ DONE |
+| C1.2 | `EditorTopBar.tsx` — Undo/Redo, Template picker, Preview, Share | `components/invitation/editor/EditorTopBar.tsx` | ✅ DONE |
+| C1.3 | `EditorLeftSidebar.tsx` — icon strip | `components/invitation/editor/EditorLeftSidebar.tsx` | ✅ DONE |
+| C1.4 | Canvas phone frame (integrated) | `components/invitation/editor/InvitationEditorPage.tsx` | done |
+| C1.5 | SortableSectionRow (integrated) | `components/invitation/editor/EditorLeftSidebar.tsx` | done |
+| C1.6 | Inline rich-text editor | `components/invitation/InlineRichText.tsx` | done |
+| C1.7 | Shared section renderer | `components/invitation/InvitationPreview.tsx` | done |
+| C1.8 | Context panels (integrated) | `components/invitation/editor/EditorContextPanel.tsx` | done |
+| C1.9 | Section visibility (integrated) | `components/invitation/editor/EditorLeftSidebar.tsx` | done |
+| C1.10 | Undo/Redo system (`useEditorHistory` hook, immer, 20 steps) | `hooks/useEditorHistory.ts` | ✅ DONE |
+| C1.11 | `InvitationData` migration: `sectionOrder`, `sectionVisibility` | `types.ts` | ✅ DONE |
+| C1.12 | Wire vào App.tsx — thay InvitationManager bằng InvitationEditorPage | `App.tsx` | ✅ DONE |
 
 **Constraints:**
 - Giữ nguyên: `PublicInvitationView.tsx`, `cloudService.ts`, VietQR + html2canvas QR, `useStore.ts`
@@ -122,3 +124,11 @@ Scope: A01-A16, S01/S02, D01/D02. Existing feature-expansion backlogs remain out
 | 4 | Secure foundation | 3 | 3 | complete |
 | 5 | Reliable data and RSVP | 2 | 2 | complete |
 | 6 | Editor and release validation | 2 | 1 | in_progress |
+
+## Historical invitation parity milestone - 2.2.0
+
+- Phase 2: code complete; deployment SQL is superseded by the 2.2.1 migration, with live application still to be verified.
+- Phase 3: complete as declared at 9121d88; fields/sections removed intentionally at 2eaafe7 are not reintroduced by this fix release.
+- Canvas historical checkpoint: `wedplanai-legacy-canvas-vp-p1-complete` -> `08f7cad`.
+- Invitation historical checkpoint: `wedplanai-legacy-invitation-vp-p3-complete` -> `9121d88`.
+- Historical tag annotations distinguish declared completion from independently rerun verification. Current fixes have new tested checkpoints.

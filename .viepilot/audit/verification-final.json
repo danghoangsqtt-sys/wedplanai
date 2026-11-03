@@ -1,0 +1,65 @@
+{
+  "updated": "2026-11-03",
+  "version": "2.2.1",
+  "baseline": "2eaafe7",
+  "branch": "fix/audit-2026-11-03",
+  "checks": [
+    {
+      "command": "npm run check",
+      "exit_code": 0,
+      "test_files": 11,
+      "tests_passed": 61,
+      "includes": [
+        "typecheck",
+        "lint",
+        "vitest",
+        "production build"
+      ]
+    },
+    {
+      "command": "PLAYWRIGHT_CHANNEL=chrome npm run test:e2e",
+      "exit_code": 0,
+      "tests_passed": 2,
+      "backend": "mocked",
+      "screenshots_reviewed": true
+    },
+    {
+      "command": "npm audit --json",
+      "exit_code": 0,
+      "vulnerabilities": 0,
+      "evidence": "dependency-audit-final.json"
+    },
+    {
+      "command": "npm exec --yes --package=deno -- deno check supabase/functions/gemini/index.ts",
+      "exit_code": 0
+    }
+  ],
+  "limitations": [
+    "Live Supabase migration/Auth/storage/function configuration not applied",
+    "No real Gemini API request or key rotation",
+    "No remote CI run claimed",
+    "PGlite serializes sessions: conditional first-insert revision guard reviewed, multi-session concurrency not executed"
+  ],
+  "findings": {
+    "A01": "fixed_in_code_or_docs_verified",
+    "A02": "fixed_in_code_or_docs_verified",
+    "A03": "fixed_in_code_or_docs_verified",
+    "A04": "fixed_in_code_or_docs_verified",
+    "A05": "fixed_in_code_or_docs_verified",
+    "A06": "fixed_in_code_or_docs_verified",
+    "A07": "fixed_in_code_or_docs_verified",
+    "A08": "fixed_in_code_or_docs_verified",
+    "A09": "fixed_in_code_or_docs_verified",
+    "A10": "fixed_in_code_or_docs_verified",
+    "A11": "fixed_in_code_or_docs_verified",
+    "A12": "fixed_in_code_or_docs_verified",
+    "A13": "fixed_in_code_or_docs_verified",
+    "A14": "fixed_in_code_or_docs_verified",
+    "A15": "fixed_in_code_or_docs_verified",
+    "A16": "fixed_in_code_or_docs_verified",
+    "S01": "fixed_in_code_or_docs_verified",
+    "S02": "fixed_in_code_or_docs_verified",
+    "D01": "fixed_in_code_or_docs_verified",
+    "D02": "fixed_in_code_or_docs_verified"
+  }
+}

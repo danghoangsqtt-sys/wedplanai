@@ -1,8 +1,8 @@
 # WedPlan AI — TRACKER
-Version: 2.2.0
-Updated: 2026-06-26
+Version: 2.2.1
+Updated: 2026-11-03
 
-## Current Milestone
+## Historical milestone - invitation upgrade
 **Wedding Invitation Upgrade v2** — làm thiệp cưới chuyên nghiệp & hiện đại
 
 ### Phase 1 — Render Completeness + Theme Polish
@@ -17,7 +17,7 @@ Updated: 2026-06-26
 - [x] `submitRSVP` / `submitWish` / `loadInvitationResponses` (graceful)
 - [x] Public view wire RSVP + wishes lên cloud; owner panel "Phản Hồi Khách Mời"
 - [x] 0 TS errors, build pass
-- [ ] **User action:** chạy SQL `invitation_responses` trong Supabase (session doc)
+- [ ] **Deployment pending:** follow the full current SETUP.md migration/Auth/function checklist; this historical SQL-only instruction is superseded.
 
 ### Phase 3 — Theme Parity + Wedding Invite Feature Parity
 **Status:** ✅ COMPLETE (v2.2.0) — 2026-06-26
@@ -50,8 +50,8 @@ Updated: 2026-06-26
 
 ---
 
-## Active Work — None
-All planned phases complete. See **Next** section below.
+## Active Work - Audit remediation
+Audit phases 4-6 are tracked below. Historical milestones above describe the earlier code state; live deployment is not inferred from their COMPLETE labels.
 
 ---
 
@@ -60,7 +60,7 @@ All planned phases complete. See **Next** section below.
 - **Canvas Phase 3** (backlog): polish — mobile preview toggle, Delete key shortcut, section layout variants
 - **Logging Phase 2** (backlog): instrument aiService → aiLog, user actions → uiLog
 - **Invite Parity P4** (backlog): Masonry/bento gallery style, FAB stack overlay
-- **User action:** chạy SQL `invitation_responses` trong Supabase → RSVP/lời chúc thật chảy về
+- **Deployment pending:** complete SETUP.md and verify real backend access; do not use historical SQL-only snippets.
 
 ---
 
@@ -70,24 +70,24 @@ All planned phases complete. See **Next** section below.
 | ID | Type | Title | Priority | Status |
 |----|------|-------|----------|--------|
 | FEAT-001 | ✨ | Bản đồ Google Map và địa chỉ | high | new |
-| BUG-001 | 🐛 | Lỗi tính năng lưu trang | high | new |
+| BUG-001 | 🐛 | Lỗi tính năng lưu trang | high | resolved (code) |
 | FEAT-002 | ✨ | Tính năng tạo QR code chia sẻ thiệp đẹp | medium | new |
 
 ## Audit Backlog — 2026-11-03
 
-Audit commit `2eaafe7`: 20 findings (1 critical, 7 high, 10 medium, 2 low). Báo cáo: `.viepilot/audit-report.md`. Chưa thực hiện bản sửa.
+Audit commit `2eaafe7`: 20 findings (1 critical, 7 high, 10 medium, 2 low). Báo cáo: `.viepilot/audit-report.md`. See audit/remediation-report.md for implemented fixes and deployment requirements.
 
 Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilot/audit/autolog-index.json` để biết phạm vi của từng request.
 
 | ID | Findings | Status |
 |----|----------|--------|
-| BUG-001 | A04, A05, A06, A07, A08, A11, A12, A14 | new |
-| BUG-002 | A01, A02, A03 | new |
-| BUG-003 | A09, A10 | new |
-| BUG-004 | A13 | new |
-| BUG-005 | A15, A16, D02 | new |
-| BUG-006 | S01, S02 | new |
-| BUG-007 | D01 | new |
+| BUG-001 | A04, A05, A06, A07, A08, A11, A12, A14 | resolved (code) |
+| BUG-002 | A01, A02, A03 | resolved (code) |
+| BUG-003 | A09, A10 | resolved (code) |
+| BUG-004 | A13 | resolved (code) |
+| BUG-005 | A15, A16, D02 | resolved (code) |
+| BUG-006 | S01, S02 | resolved (code) |
+| BUG-007 | D01 | resolved (code) |
 
 ## Decision Log
 
@@ -108,3 +108,7 @@ Các phát hiện được gom theo title/file overlap theo skill; xem `.viepilo
 - Branch: fix/audit-2026-11-03.
 - Evidence: 10 React DOM editor tests pass: Undo/Redo after autosave, ordered/hidden public sections, inline composition/paste safety, pagehide flush and back navigation; lint/typecheck/build pass.
 - Deployment: live SQL/function/Auth setup remains to be applied with actual configuration.
+
+## Historical checkpoint reconciliation
+
+Canvas task rows now match the integrated implementation and phase-state. Two historical completion tags were reconstructed at their declaring commits (08f7cad and 9121d88), with annotations that historical tests were not rerun. New audit phase tags record the verified fix work. The June 30 cleanup intentionally removed unused invitation sections; earlier feature checklists are historical, not promises to restore those sections.

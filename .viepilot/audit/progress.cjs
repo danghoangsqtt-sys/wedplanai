@@ -37,7 +37,9 @@ for(const p of [4,5,6]){
 }
 fs.writeFileSync(roadmapPath,roadmap);
 const changePath=path.join(root,'CHANGELOG.md'); let changes=fs.readFileSync(changePath,'utf8');
+if (!changes.includes('## [v2.2.1]')) {
 if(!changes.includes('## [Unreleased] — 2.2.1')) changes=changes.replace(/\n## /, '\n## [Unreleased] — 2.2.1\n\n## ');
 changes=changes.replace('## [Unreleased] — 2.2.1','## [Unreleased] — 2.2.1\n\n- Audit remediation '+current+': '+evidence);
+}
 fs.writeFileSync(changePath,changes);
 console.log(`Verified ${current}; next ${next||'release review'}`);

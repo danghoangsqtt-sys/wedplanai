@@ -1,0 +1,10 @@
+flowchart TB
+  UI[React editor and planning pages] --> Store[Zustand persisted state and dirty queue]
+  Store --> RPC[Atomic save_plan RPC with revision check]
+  RPC --> DB[(Private plan and public invitation)]
+  Gate[Auth gate] --> Auth[Auth getUser and plan authorization]
+  UI --> AI[Personal key or authenticated Edge proxy]
+  AI --> Quota[(Private atomic AI quota)]
+  Public[Public React view] --> Wishes[Safe wish RPC]
+  Public --> Forms[Idempotent validated form RPC]
+  Files[Owner-prefixed image paths] --> Storage[Supabase Storage owner guard]

@@ -188,7 +188,8 @@ RETURNS TIMESTAMPTZ LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$
 DECLARE previous TIMESTAMPTZ; revision TIMESTAMPTZ := clock_timestamp(); BEGIN
   IF NOT public.can_access_plan(plan_uid) THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
   SELECT last_updated INTO previous FROM public.user_data WHERE id = plan_uid FOR UPDATE;
-  IF FOUND AND previous IS DISTINCT FROM expected_updated_at THEN
+  IF (FOUND AND previous IS DISTINCT FROM expected_updated_at)
+    OR (NOT FOUND AND expected_updated_at IS NOT NULL) THEN
     RAISE EXCEPTION 'Plan changed on another device; reload before saving' USING ERRCODE='40001';
   END IF;
   IF coalesce(jsonb_typeof(plan_data->'guests'),'') <> 'array' OR coalesce(jsonb_typeof(plan_data->'budgetItems'),'') <> 'array' THEN
@@ -201,7 +202,13 @@ DECLARE previous TIMESTAMPTZ; revision TIMESTAMPTZ := clock_timestamp(); BEGIN
   ON CONFLICT(id) DO UPDATE SET guests=EXCLUDED.guests,budget_items=EXCLUDED.budget_items,
     procedures=EXCLUDED.procedures,fengshui_profile=EXCLUDED.fengshui_profile,
     fengshui_results=EXCLUDED.fengshui_results,invitation=EXCLUDED.invitation,
-    wedding_date=EXCLUDED.wedding_date,last_updated=revision;
+    wedding_date=EXCLUDED.wedding_date,last_updated=revision
+  WHERE public.user_data.last_updated IS NOT DISTINCT FROM expected_updated_at;
+  -- SELECT FOR UPDATE cannot lock a missing row. Recheck the winning revision
+  -- inside ON CONFLICT so simultaneous first saves cannot overwrite each other.
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Plan changed on another device; reload before saving' USING ERRCODE='40001';
+  END IF;
   IF jsonb_typeof(plan_data->'invitation') = 'object' THEN
     INSERT INTO public.public_invitations(uid,invitation_json,updated_at)
     VALUES(plan_uid,plan_data->'invitation',revision)
@@ -265,6 +272,21 @@ REVOKE ALL ON FUNCTION public.consume_ai_quota(TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.consume_ai_quota(TEXT) TO authenticated;
 
 CREATE INDEX IF NOT EXISTS idx_inv_resp_uid ON public.invitation_responses(uid,kind,created_at DESC);
+
+-- Replace the historical trigger with a schema-qualified, TEXT-compatible one.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  INSERT INTO public.profiles(id,email,display_name,photo_url,role,is_active)
+  VALUES(NEW.id::text,NEW.email,coalesce(NEW.raw_user_meta_data->>'full_name',split_part(NEW.email,'@',1)),
+    coalesce(NEW.raw_user_meta_data->>'avatar_url',''),'USER',false)
+  ON CONFLICT(id) DO NOTHING;
+  RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC,anon,authenticated;
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Storage is optional in the disposable DB. Preserve unrelated bucket policies.
 DO $$ BEGIN

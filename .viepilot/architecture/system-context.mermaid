@@ -1,0 +1,9 @@
+flowchart LR
+  Owner[Plan owner] --> App[WedPlan browser app]
+  Guest[Public guest] --> Invite[Public invitation]
+  App --> Auth[Supabase Auth]
+  App --> Data[Supabase RLS and RPC]
+  Invite --> Public[Public invitation and wish projection]
+  Invite --> Submit[Validated response RPC]
+  App --> Edge[Authorized AI Edge Function]
+  Edge --> Gemini[Google Gemini]

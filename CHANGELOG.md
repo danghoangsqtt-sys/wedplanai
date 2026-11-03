@@ -2,19 +2,22 @@
 
 Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận tại đây.
 
-## [Unreleased] — 2.2.1
+## [v2.2.1] - 2026-11-03: Audit remediation
 
-- Audit remediation 6.1: 10 React DOM editor tests pass: Undo/Redo after autosave, ordered/hidden public sections, inline composition/paste safety, pagehide flush and back navigation; lint/typecheck/build pass.
+- Require verified Supabase Auth and per-plan RLS; preserve legacy plan data through explicit owner mapping.
+- Replace destructive/invalid SQL with an idempotent preserving migration, private RSVP reads and safe public wish projection.
+- Protect full-plan writes after read errors and stale revisions; serialize pending edits and acknowledge cloud saves explicitly.
+- Round-trip complete versioned backups, preserving fields omitted by old backups; share one wedding-date source.
+- Await idempotent RSVP/wish delivery, preserve event selections, and import full party sizes with source-ID deduplication.
+- Retain Undo/Redo through autosave; render ordered/visible sections in both views and restore sanitized inline editing.
+- Move system Gemini credentials to an authenticated, quota-limited Edge Function; honor explicitly configured personal keys.
+- Add patched quality tools, PostgreSQL/RLS and React behavior tests, browser smoke checks and CI.
+- Setup migration required before using a real backend; see SETUP.md. Code verification does not mean production configuration was applied.
 
-- Audit remediation 5.2: 33 focused tests pass, including acknowledged form retries, private wish projection, idempotent SQL submissions and five-person guest import; lint/typecheck/build pass.
+## [v2.2.0] - 2026-06-30: Historical release record
 
-- Audit remediation 5.1: 25 focused persistence, backup, cloud boundary and PostgreSQL tests pass; lint/typecheck/build pass; failed reads block writes and exact revision tokens prevent stale saves.
-
-- Audit remediation 4.3: 24 tests pass; Deno check, lint and build pass; dummy system key absent from public chunks; owner AI quota verified in PostgreSQL.
-
-- Audit remediation 4.2: 12 Auth and PostgreSQL tests pass, including fresh/legacy migration, private RSVP protection, stale revision and sharing checks; lint and build pass.
-
-- Audit remediation 4.1: Lint, 2 behavior tests and production build pass; npm audit reports zero vulnerabilities; PGlite PostgreSQL 18 booted successfully.
+- Record the existing June 26-30 invitation, RSVP dashboard, audio and version-sync changes visible at baseline commit 2eaafe7.
+- This entry reconstructs missing release documentation; it does not claim additional historical deployment verification.
 
 ## [v2.1.0] — 2026-06-15: Invitation Design Upgrade (frontend-design)
 

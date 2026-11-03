@@ -8,11 +8,11 @@ const owner = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
 const plan = 'e8a57bf1-58c2-45ae-b1ab-65c1e6921ad9';
 const auth = `CREATE ROLE anon; CREATE ROLE authenticated;
- CREATE SCHEMA auth; CREATE TABLE auth.users(id UUID PRIMARY KEY);
+ CREATE SCHEMA auth; CREATE TABLE auth.users(id UUID PRIMARY KEY,email TEXT,raw_user_meta_data JSONB DEFAULT '{}');
  CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS
  $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  GRANT USAGE ON SCHEMA auth,public TO anon,authenticated;
- INSERT INTO auth.users VALUES('${owner}'),('${other}');`;
+ INSERT INTO auth.users(id) VALUES('${owner}'),('${other}');`;
 let db: PGlite;
 async function role(name: 'anon' | 'authenticated', uid = '') {
   await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claim.sub','${uid}',false); SET ROLE ${name};`);
@@ -87,6 +87,35 @@ describe('actual PostgreSQL schema and authorization', () => {
     expect((await db.query('select invitation_json from public.public_invitations')).rows[0]).toMatchObject({ invitation_json:{groomName:'Updated'} });
     await expect(db.query('select public.save_plan($1,$2,$3)',[plan,JSON.stringify(payload),previous])).rejects.toThrow(/another device/);
   });
+  it('accepts only the first empty-plan save and rejects stale saves after deletion',async()=>{
+    const payload=JSON.stringify({guests:[],budgetItems:[],invitation:{groomName:'First save'}});
+    await db.exec('DELETE FROM public.user_data');
+    await role('authenticated',owner);
+    const revision=(await db.query<{revision:string}>('select public.save_plan($1,$2,null) as revision',[plan,payload])).rows[0].revision;
+    await expect(db.query('select public.save_plan($1,$2,null)',[plan,payload])).rejects.toThrow(/another device/);
+    await db.exec('delete from public.user_data');
+    await expect(db.query('select public.save_plan($1,$2,$3)',[plan,payload,revision])).rejects.toThrow(/another device/);
+    expect((await db.query('select id from public.user_data')).rows).toHaveLength(0);
+  });
+  it('rolls back the public invitation when an insert-time database conflict occurs',async()=>{
+    // Inject a same-statement conflict to force a PostgreSQL cardinality error.
+    // This verifies rollback, not concurrent sessions (PGlite serializes them).
+    await db.exec(`DELETE FROM public.user_data;
+      CREATE FUNCTION public.test_interleaving() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN
+        IF pg_trigger_depth()=1 THEN
+          INSERT INTO public.user_data(id,last_updated) VALUES(NEW.id,clock_timestamp());
+        END IF; RETURN NEW; END $$;
+      CREATE TRIGGER test_interleaving BEFORE INSERT ON public.user_data
+        FOR EACH ROW EXECUTE FUNCTION public.test_interleaving();`);
+    try {
+      await role('authenticated',owner);
+      await expect(db.query('select public.save_plan($1,$2,null)',[plan,JSON.stringify({guests:[],budgetItems:[],invitation:{groomName:'Overwrite'}})])).rejects.toMatchObject({code:'21000'});
+      expect((await db.query('select id from public.user_data')).rows).toHaveLength(0);
+      expect((await db.query('select invitation_json from public.public_invitations')).rows[0]).toEqual({invitation_json:{rsvpEnabled:true,guestbookEnabled:true}});
+    } finally {
+      await db.exec('RESET ROLE;DROP TRIGGER test_interleaving ON public.user_data;DROP FUNCTION public.test_interleaving();');
+    }
+  });
   it('resolves share codes privately and revokes partner access on leave', async () => {
     const share=(await db.query<{id:string}>(`insert into public.plan_shares(owner_uid,share_code) values('${plan}','WED-ABCDEF') returning id`)).rows[0];
     await role('authenticated',other);
@@ -116,7 +145,7 @@ describe('actual PostgreSQL schema and authorization', () => {
     const legacy=new PGlite();
     try {
       await legacy.exec(auth + `
-        INSERT INTO auth.users VALUES('${plan}');
+        INSERT INTO auth.users(id) VALUES('${plan}');
         CREATE TABLE public.user_data(id UUID PRIMARY KEY REFERENCES auth.users(id), guests JSONB DEFAULT '[]',budget_items JSONB DEFAULT '[]',procedures JSONB DEFAULT '{}',fengshui_profile JSONB,fengshui_results JSONB,invitation JSONB,wedding_date DATE,last_updated TIMESTAMPTZ DEFAULT now(),created_at TIMESTAMPTZ DEFAULT now());
         CREATE TABLE public.public_invitations(uid UUID PRIMARY KEY REFERENCES auth.users(id),invitation_json JSONB NOT NULL,updated_at TIMESTAMPTZ DEFAULT now());
         ALTER TABLE public.user_data ENABLE ROW LEVEL SECURITY;
@@ -128,5 +157,24 @@ describe('actual PostgreSQL schema and authorization', () => {
       expect((await legacy.query('select guests from public.user_data')).rows[0]).toEqual({guests:[{name:'Keep Me'}]});
       expect((await legacy.query('select invitation_json from public.public_invitations')).rows[0]).toEqual({invitation_json:{groomName:'Keep My Wedding'}});
     } finally { await legacy.close(); }
+  });
+  it('creates new Auth profiles without relying on the legacy UUID foreign key',async()=>{
+    await db.exec("insert into auth.users(id,email) values('55555555-5555-4555-8555-555555555555','new@example.test')");
+    expect((await db.query("select display_name,role from public.profiles where id='55555555-5555-4555-8555-555555555555'")).rows[0]).toEqual({display_name:'new',role:'USER'});
+  });
+  it('restricts writes to owner storage folders even when an old broad policy exists',async()=>{
+    const storage=new PGlite();
+    try {
+      await storage.exec(auth+`CREATE SCHEMA storage;CREATE TABLE storage.objects(bucket_id TEXT,name TEXT);
+        ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+        GRANT USAGE ON SCHEMA storage TO anon,authenticated;GRANT ALL ON storage.objects TO anon,authenticated;
+        CREATE POLICY old_broad ON storage.objects FOR ALL USING(true) WITH CHECK(true);`);
+      await storage.exec(migration);
+      await storage.exec(`INSERT INTO private.plan_owners VALUES('${plan}','${owner}');SELECT set_config('request.jwt.claim.sub','${owner}',false);SET ROLE authenticated;`);
+      await storage.exec(`INSERT INTO storage.objects VALUES('wedkho','${plan}/photo.jpg')`);
+      await expect(storage.exec("INSERT INTO storage.objects VALUES('wedkho','unowned/photo.jpg')")).rejects.toThrow();
+      await storage.exec("RESET ROLE;SELECT set_config('request.jwt.claim.sub','',false);SET ROLE anon;");
+      await expect(storage.exec(`INSERT INTO storage.objects VALUES('wedkho','${plan}/attacker.jpg')`)).rejects.toThrow();
+    } finally { await storage.close(); }
   });
 });

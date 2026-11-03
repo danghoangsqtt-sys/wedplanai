@@ -38,6 +38,11 @@
     "disposable-database RLS/migration tests",
     "browser checks after test configuration"
   ],
-  "current_audit_reproduction_command": "node .viepilot/audit/reproduce-audit.cjs",
-  "reproduction_semantics": "Assertions intentionally demonstrate current defects. Replace with correct-behavior regression tests when fixes are implemented."
+  "reproduction_semantics": "Historical defect assertions apply to baseline 2eaafe7 only. Current correct-behavior regression tests are under tests/.",
+  "historical_reproduction_command": "node .viepilot/audit/reproduce-audit.cjs",
+  "current_regression_commands": [
+    "npm run check",
+    "npm run test:e2e",
+    "deno check supabase/functions/gemini/index.ts"
+  ]
 }

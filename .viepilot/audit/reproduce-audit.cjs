@@ -6,6 +6,10 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const ts = require('typescript');
 const ROOT = path.resolve(__dirname, '../..');
+if (JSON.parse(fs.readFileSync(path.join(ROOT,'package.json'),'utf8')).version !== '2.2.0') {
+  console.error('Historical defect reproductions apply only to baseline 2eaafe7 (2.2.0). Run npm test for current regression checks.');
+  process.exit(2);
+}
 const results = [];
 const log = new Proxy({}, { get: () => () => {} });
 function environment(extra = {}) {

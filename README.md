@@ -1,71 +1,68 @@
-<div align="center">
-  <img src="./picture/banner.jpg" alt="WedPlan Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px" />
+# WedPlan AI
 
-  <h1>💍 Nền Tảng Lập Kế Hoạch Đám Cưới</h1>
-  
-  <p><strong>Giải pháp toàn diện giúp tổ chức ngày trọng đại hoàn hảo, dễ dàng và cá nhân hóa.</strong></p>
+![Version 2.2.1](https://img.shields.io/badge/Version-2.2.1-blue)
 
-  <p>
-    <img src="https://img.shields.io/badge/Web_Application-Private-black" alt="Status" />
-    <img src="https://img.shields.io/badge/Version-2.2.0-blue" alt="Version" />
-  </p>
-</div>
+Ứng dụng lập kế hoạch cưới: quản lý khách mời, ngân sách, quy trình, thiệp điện tử, RSVP và tư vấn AI.
 
-<br />
+Phiên bản 2.2.1 sửa các lỗi được ghi nhận trong audit: phân quyền, đồng bộ dữ liệu, backup, RSVP và trình chỉnh sửa thiệp. **Bản nâng cấp cần áp dụng SQL, liên kết tài khoản chủ sở hữu và cấu hình Edge Function theo [SETUP.md](SETUP.md) trước khi sử dụng với backend thật.**
 
-## 🌟 Giới Thiệu
+## Chạy dự án
 
-Đây là một ứng dụng đột phá và chuyên nghiệp dành riêng cho giới trẻ, giúp hiện thực hóa một quy trình lên kế hoạch cưới liền mạch. Với sự tích hợp các Trợ lý Ảo và tính năng điện toán đám mây tiên tiến, dữ liệu của người dùng được bảo vệ chặt chẽ thông qua hệ thống bảo mật hiện đại.
+Yêu cầu Node.js `^22.12.0`, `^24.0.0` hoặc `>=26.0.0` theo `package.json` (CI dùng Node 24).
 
-Mọi chức năng phức tạp như phân bổ tài chính, gửi thiệp, thiết lập bàn tiệc, quản lý nhóm gia đình đều được số hóa, đảm bảo một quy trình chuẩn bị sự kiện diễn ra không tì vết.
+```sh
+npm ci
+```
 
----
+Sao chép `.env.example` thành `.env.local`, điền URL và public key Supabase, rồi hoàn thành hướng dẫn database/Auth trong [SETUP.md](SETUP.md).
 
-## ✨ Tính Năng Nổi Bật
-
-### 🤖 Trợ Lý Thông Minh Xuyên Suốt
-Hệ thống tự động đồng hành cùng người dùng xuyên suốt toàn bộ lộ trình:
-- Phân tích rủi ro trong quản trị tài chính.
-- Theo sát tiến độ các đầu mục công việc chưa hoàn thiện.
-- Nhắc nhở người thân và bạn bè đồng bộ công tác qua không gian làm việc chung.
-
-### 👥 Quản Lý Khách Mời & Ngân Sách
-- Xây dựng danh sách khách mời tự động, khoa học với khả năng phân loại khách theo độ ưu tiên.
-- Lên bảng ngân sách dự trù chi tiết với mô hình phòng chống rớt giá và kiểm soát phát sinh.
-- Biểu đồ hệ thống thống kê trực quan.
-
-### ✉️ Thiệp Mời Số & Nhận Diện Truy Cập (Check-in)
-- Thiết kế thiệp điện tử vô cùng cao cấp: Hoạt ảnh 3D, cánh hoa rơi, âm thanh nhạc nền sống động.
-- Tạo đường dẫn chia sẻ cá nhân hóa ẩn danh hoàn toàn an toàn cho người nhận.
-- Tích hợp công nghệ nhận diện mã nhanh (QR Code) ở bên hông (Side panel) tiện ích, dành cho các bước xác minh và chia sẻ hình ảnh 1 cách thuận tiện.
-
-### ☁️ Quyền Riêng Tư Cấp Độ Cao
-Mọi thông tin cá nhân từ tổng ngân sách đến số lượng khách mời đều được bảo mật qua kiến trúc bất đối xứng của hệ thống đám mây, chống mọi tác nhân dò rỉ dữ liệu. Dữ liệu sao lưu hoàn toàn thuộc quyền sở hữu của người thiết lập ban đầu.
-
----
-
-## 🚀 Hướng Dẫn Sử Dụng
-Mã nguồn này là phiên bản *Private Production*.
-Nếu bạn được cấp quyền phát triển, hãy làm theo hướng dẫn tại thư mục thiết lập nội bộ để tải xuống khóa hệ thống.
-
-```bash
-# 1. Cài đặt các gói thành phần
-npm install
-
-# 2. Khởi động môi trường giả lập Server
+```sh
 npm run dev
 ```
 
-*(Các cấu hình biến môi trường kết nối máy chủ dữ liệu bảo mật đã được di chuyển riêng khỏi kho lưu trữ công khai để đảm bảo an toàn an ninh mạng).*
+Mở `http://localhost:3000`. Nếu chưa cấu hình máy chủ, ứng dụng hiển thị trạng thái cần thiết lập; build vẫn có thể kiểm tra offline.
 
----
+## Cách hoạt động
 
-## 🤝 Hỗ Trợ Kỹ Thuật
+- Chủ sở hữu đăng nhập bằng Supabase Auth. Database kiểm tra quyền cho từng truy vấn; cờ trình duyệt hoặc PIN cũ không cấp quyền truy cập.
+- Thiệp công khai dùng `/?view=invitation&uid=PLAN_UID`. Khách xem thiệp và gửi phản hồi mà không cần tài khoản; số điện thoại RSVP và email không thuộc dữ liệu lời chúc công khai.
+- Tự lưu phân biệt thay đổi trên thiết bị với dữ liệu đã được cloud xác nhận. Khi có xung đột giữa thiết bị, ứng dụng giữ bản cục bộ và yêu cầu chọn bản muốn giữ.
+- Backup phiên bản 2 chứa khách, ngân sách, quy trình, thiệp, phong thủy và ngày cưới. Backup cũ giữ lại các phần không có trong file, thay vì đặt về mặc định.
+- Gemini key hệ thống chỉ nằm trong Edge Function. Key cá nhân do chủ sở hữu nhập được ưu tiên khi có; không đưa key hệ thống vào biến `VITE_*`.
 
-Mọi thắc mắc và báo cáo bảo mật xin vui lòng gửi về trực tiếp trên kênh nội bộ để duy trì tính minh bạch và tránh các lỗ hổng khai thác (Zero-day vulnerabilities).
+## Kiểm tra
 
----
+```sh
+npm run check
+npm audit
+```
 
-<div align="center">
-  <b>Bảo mật toàn diện — Trải nghiệm vượt mong đợi.</b>
-</div>
+`check` chạy typecheck, lint, test và build. Các test database dùng PostgreSQL/PGlite trong bộ nhớ; test React và API dùng dữ liệu giả lập.
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+Trên PowerShell có Chrome sẵn, có thể đặt `$env:PLAYWRIGHT_CHANNEL='chrome'` trước khi chạy E2E. Smoke test khởi động server ở cổng 3017 với cấu hình giả và chặn request Supabase bằng mock, không dùng dữ liệu production.
+
+Edge Function được kiểm tra riêng:
+
+```sh
+deno check supabase/functions/gemini/index.ts
+```
+
+## Cấu trúc
+
+| Đường dẫn | Vai trò |
+|---|---|
+| `App.tsx`, `components/` | Giao diện và các màn hình nghiệp vụ |
+| `store/useStore.ts` | Trạng thái cục bộ, hàng đợi lưu, revision và phục hồi |
+| `services/` | Supabase, AI và nghiệp vụ |
+| `lib/` | Backup, thống kê khách, section rendering và bộ lọc nội dung |
+| `supabase-migration.sql` | Cài mới/nâng cấp database không xóa bảng dữ liệu |
+| `supabase/functions/gemini/` | AI phía máy chủ có Auth, phân quyền và quota |
+| `tests/` | Kiểm tra hành vi, SQL, bảo mật và trình duyệt |
+| `.viepilot/` | Kế hoạch, bằng chứng audit và trạng thái sửa lỗi |
+
+Chi tiết thay đổi: [CHANGELOG.md](CHANGELOG.md). Kết quả sửa audit: [remediation-report.md](.viepilot/audit/remediation-report.md).

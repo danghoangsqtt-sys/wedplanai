@@ -1,5 +1,7 @@
 # Báo cáo audit WedPlan AI — 2026-11-03
 
+> Historical baseline audit. Remediation evidence and current status: [remediation-report.md](audit/remediation-report.md).
+
 Commit: `2eaafe7`, nhánh `main`, phiên bản `2.2.0`. Trạng thái: **ISSUES_FOUND**.
 
 Phát hiện **20 vấn đề**: 1 critical, 7 high, 10 medium, 2 low. Severity là mức ảnh hưởng kỹ thuật; mức triển khai production của các policy/secret chưa được xác minh.
