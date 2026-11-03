@@ -4,6 +4,8 @@ Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận 
 
 ## [Unreleased] — 2.2.1
 
+- Audit remediation 5.1: 25 focused persistence, backup, cloud boundary and PostgreSQL tests pass; lint/typecheck/build pass; failed reads block writes and exact revision tokens prevent stale saves.
+
 - Audit remediation 4.3: 24 tests pass; Deno check, lint and build pass; dummy system key absent from public chunks; owner AI quota verified in PostgreSQL.
 
 - Audit remediation 4.2: 12 Auth and PostgreSQL tests pass, including fresh/legacy migration, private RSVP protection, stale revision and sharing checks; lint and build pass.
