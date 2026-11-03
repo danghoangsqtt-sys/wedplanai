@@ -10,6 +10,7 @@ import { WEDDING_PROCEDURES } from '../data/wedding-procedures';
 import { supabase, TABLES } from '../lib/supabase';
 import { OWNER_UID } from '../lib/constants';
 import { restoreBackup } from '../lib/backup';
+import { guestPartySize } from '../lib/guestStats';
 
 export interface GuestUsage {
   fengShuiCount: number;
@@ -151,7 +152,7 @@ let syncTimeout: ReturnType<typeof setTimeout>;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 let syncPromise: Promise<void> | null = null;
 let loadPromise: Promise<void> | null = null;
-const messageOf = (error: unknown) => error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Kh?ng th? ??ng b? d? li?u.';
+const messageOf = (error: unknown) => error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Không thể đồng bộ dữ liệu.';
 const getEffectiveUidFromState = (state: AppState): string | null => {
   if (!state.user) return null;
   return state.sharedPlan?.status === 'active' && !state.isSharedPlanOwner ? state.sharedPlan.ownerUid : state.user.uid;
@@ -257,7 +258,8 @@ export const useStore = create<AppState>()(
 
       updateGuest: (updatedGuest) => {
         if (!updatedGuest.id || !updatedGuest.name?.trim()) return;
-        const sanitized = { ...updatedGuest, name: updatedGuest.name.trim().slice(0, 100) };
+        const base = { ...updatedGuest, childrenCount: Math.min(99, Math.max(0, Math.trunc(Number(updatedGuest.childrenCount) || 0))) };
+        const sanitized = { ...base, name: base.name.trim().slice(0, 100), partySize: Math.min(100, guestPartySize(base)) };
         set((state) => ({ guests: state.guests.map(g => g.id === sanitized.id ? sanitized : g) }));
         triggerCloudSync(get);
       },
@@ -387,7 +389,7 @@ export const useStore = create<AppState>()(
         const restored = restoreBackup(data, get());
         set({ ...restored, budgetItems: sanitizeBudgetIds(restored.budgetItems),
           ...(get().user ? { user: { ...get().user!, weddingDate: restored.invitation.date || null } } : {}) });
-        get().addNotification('SUCCESS', '?? kh?i ph?c d? li?u c?c b?.');
+        get().addNotification('SUCCESS', 'Đã khôi phục dữ liệu cục bộ.');
         triggerCloudSync(get);
       },
 
@@ -592,7 +594,7 @@ export const useStore = create<AppState>()(
       syncToCloud: () => {
         clearTimeout(syncTimeout);
         if (syncPromise) return syncPromise;
-        if (!get().isCloudLoaded) return Promise.reject(new Error('Ch?a x?c minh d? li?u cloud. H?y t?i l?i tr??c khi ??ng b?.'));
+        if (!get().isCloudLoaded) return Promise.reject(new Error('Chưa xác minh dữ liệu cloud. Hãy tải lại trước khi đồng bộ.'));
         syncPromise = (async () => {
           set({ isSyncing: true, syncError: null });
           try {
@@ -630,7 +632,7 @@ export const useStore = create<AppState>()(
             const remoteRevision = cloudData?.revision ?? null;
             if (current.hasUnsyncedChanges && !options.discardLocalChanges && remoteRevision !== current.cloudRevision) {
               set({ syncStatus: 'conflict' });
-              throw new Error('Cloud ?? thay ??i tr?n thi?t b? kh?c. H?y xu?t backup c?c b? tr??c khi ch?n d?ng b?n cloud.');
+              throw new Error('Cloud đã thay đổi trên thiết bị khác. Hãy xuất backup cục bộ trước khi chọn dùng bản cloud.');
             }
             if (cloudData && (!current.hasUnsyncedChanges || options.discardLocalChanges)) {
               const invitation = cloudData.invitation || current.invitation;

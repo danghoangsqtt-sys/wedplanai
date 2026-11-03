@@ -34,6 +34,7 @@ export function restoreBackup(raw:unknown,current:PlanSnapshot):PlanSnapshot {
   safeTree(raw);
   if(raw.schemaVersion!==undefined && ![1,2].includes(raw.schemaVersion)) throw new Error('Phiên bản backup chưa được hỗ trợ.');
   if(raw.guests!==undefined && (!Array.isArray(raw.guests)||!raw.guests.every((g:any)=>plain(g)&&typeof g.id==='string'&&typeof g.name==='string'&&g.name.length<=100&&[0,50,80,100].includes(g.probability)&&Number.isInteger(g.childrenCount)&&g.childrenCount>=0&&g.childrenCount<=100&&finite(g.redEnvelope)))) throw new Error('Danh sách khách trong backup không hợp lệ.');
+  if(raw.guests?.some((g:any)=>g.partySize!==undefined&&(!Number.isInteger(g.partySize)||g.partySize<1+g.childrenCount||g.partySize>100))) throw new Error('Số người trong nhóm khách không hợp lệ.');
   if(raw.budgetItems!==undefined && (!Array.isArray(raw.budgetItems)||!raw.budgetItems.every((b:any)=>plain(b)&&typeof b.itemName==='string'&&typeof b.category==='string'&&finite(b.estimatedCost)&&finite(b.actualCost)))) throw new Error('Ngân sách trong backup không hợp lệ.');
   if(raw.procedures!==undefined && (!plain(raw.procedures)||!['NORTH','CENTRAL','SOUTH'].every(region=>Array.isArray(raw.procedures[region])))) throw new Error('Quy trình trong backup không hợp lệ.');
   if(raw.invitation!==undefined) {

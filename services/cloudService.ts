@@ -3,6 +3,7 @@ import { Guest, BudgetItem, UserProfile, ProcedureStep, WeddingRegion, Invitatio
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { cloudLog, uploadLog } from '../lib/logger';
 import { isValidUid } from '../lib/sanitize';
+import { newUuid } from '../lib/ids';
 
 export interface UserCloudData {
   guests: Guest[];
@@ -85,6 +86,8 @@ export interface InvitationResponse {
   guestCount?: number | null;  // rsvp only
   message?: string | null;     // rsvp note / wish content
   createdAt: string;
+  selectedEventIds?: string[];
+  email?: string | null;
 }
 
 const mapResponseRow = (row: any): InvitationResponse => ({
@@ -97,15 +100,18 @@ const mapResponseRow = (row: any): InvitationResponse => ({
   guestCount: row.guest_count ?? null,
   message: row.message ?? null,
   createdAt: row.created_at,
+  selectedEventIds: row.selected_event_ids ?? [],
+  email: row.email ?? null,
 });
 
 export const submitRSVP = async (
   uid: string,
-  payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }
+  payload: { id?:string; name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }
 ): Promise<boolean> => {
   if (!isValidUid(uid) || !payload.name?.trim()) return false;
   try {
-    const { error } = await supabase.from(TABLES.INVITATION_RESPONSES).insert({
+    const { data: accepted, error } = await supabase.rpc('submit_invitation_response', { response: {
+      id: payload.id || newUuid(),
       uid,
       kind: 'rsvp',
       name: payload.name,
@@ -114,9 +120,9 @@ export const submitRSVP = async (
       guest_count: payload.guestCount ?? null,
       message: payload.message ?? null,
       selected_event_ids: payload.selectedEventIds ?? null,
-    });
+    }});
     if (error) throw error;
-    return true;
+    return accepted === true;
   } catch (e) {
     cloudLog.warn('submitRSVP failed (table may not be migrated yet)', e);
     return false;
@@ -125,18 +131,20 @@ export const submitRSVP = async (
 
 export const submitWish = async (
   uid: string,
-  wish: { name: string; message: string }
+  wish: { id?:string; name: string; message: string; email?:string }
 ): Promise<boolean> => {
   if (!isValidUid(uid) || !wish.name?.trim() || !wish.message?.trim()) return false;
   try {
-    const { error } = await supabase.from(TABLES.INVITATION_RESPONSES).insert({
+    const { data: accepted, error } = await supabase.rpc('submit_invitation_response', { response: {
+      id: wish.id || newUuid(),
       uid,
       kind: 'wish',
       name: wish.name,
       message: wish.message,
-    });
+      email: wish.email || null,
+    }});
     if (error) throw error;
-    return true;
+    return accepted === true;
   } catch (e) {
     cloudLog.warn('submitWish failed (table may not be migrated yet)', e);
     return false;
@@ -160,8 +168,15 @@ export const loadInvitationResponses = async (
     };
   } catch (e) {
     cloudLog.warn('loadInvitationResponses failed (table may not be migrated yet)', e);
-    return { rsvps: [], wishes: [] };
+    throw e;
   }
+};
+
+export const loadPublicWishes = async (uid:string):Promise<InvitationResponse[]> => {
+  if(!isValidUid(uid)) return [];
+  const {data,error}=await supabase.rpc('get_public_wishes',{plan_uid:uid});
+  if(error) throw error;
+  return (data||[]).map(row=>mapResponseRow({...row,uid,kind:'wish'}));
 };
 
 export const loadPublicInvitation = async (uid: string): Promise<InvitationData | null> => {

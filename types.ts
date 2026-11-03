@@ -19,6 +19,8 @@ export interface Guest {
   address?: string;
   probability: AttendanceProbability;
   childrenCount: number;
+  partySize?: number; // Total party size; legacy entries use 1 + childrenCount.
+  sourceRsvpId?: string;
   redEnvelope: number; // Tiền mừng dự kiến (VNĐ)
 }
 

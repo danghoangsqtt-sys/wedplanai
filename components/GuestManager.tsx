@@ -6,6 +6,7 @@ import { useStore } from '../store/useStore';
 import { sanitizeGuestInput, isValidAttendanceProbability } from '../lib/sanitize';
 import { loadInvitationResponses, InvitationResponse } from '../services/cloudService';
 import { OWNER_UID } from '../lib/constants';
+import { guestFromRsvp, guestPartySize } from '../lib/guestStats';
 
 const generateId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -21,15 +22,17 @@ const GuestManager: React.FC = () => {
   // RSVP tab state
   const [rsvpList, setRsvpList] = useState<InvitationResponse[]>([]);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [rsvpError, setRsvpError] = useState('');
   const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
 
   const loadRsvp = useCallback(async () => {
     setRsvpLoading(true);
+    setRsvpError('');
     try {
       const { rsvps } = await loadInvitationResponses(OWNER_UID);
       setRsvpList(rsvps);
     } catch {
-      /* ignore */
+      setRsvpError('Không tải được phản hồi. Vui lòng thử lại.');
     } finally {
       setRsvpLoading(false);
     }
@@ -41,24 +44,8 @@ const GuestManager: React.FC = () => {
 
   // Import RSVP submission → add to guests[] — default 500k (mức cơ bản Việt Nam)
   const handleImportRsvp = (r: InvitationResponse) => {
-    if (importedIds.has(r.id)) return;
-    // BUG-007 fix: check duplicate by name (case-insensitive) before adding
-    // importedIds resets on navigate, so this is the true duplicate guard
-    const normalizedName = r.name.trim().toLowerCase();
-    const alreadyExists = guests.some(g => g.name.trim().toLowerCase() === normalizedName);
-    if (alreadyExists) {
-      // Still mark as imported so the UI shows "Đã import"
-      setImportedIds(prev => new Set([...prev, r.id]));
-      return;
-    }
-    const newGuest: Guest = {
-      id: generateId(),
-      name: r.name.trim().slice(0, 100),
-      group: GuestGroup.FRIEND,
-      probability: r.attending === 'yes' ? AttendanceProbability.CONFIRMED : AttendanceProbability.UNLIKELY,
-      childrenCount: 0,
-      redEnvelope: 500000, // Mức mừng cơ bản 500.000đ (Việt Nam)
-    };
+    if ((importedIds.has(r.id) || guests.some(g => g.sourceRsvpId === r.id))) return;
+    const newGuest = guestFromRsvp(r, generateId());
     addGuest(newGuest);
     setImportedIds(prev => new Set([...prev, r.id]));
   };
@@ -205,14 +192,19 @@ const GuestManager: React.FC = () => {
   // --- INLINE EDIT ROW (Desktop) ---
   const EditRow: React.FC<{ guest: Guest }> = ({ guest }) => (
     <div className="grid grid-cols-12 gap-2 px-4 py-2 items-center border-b border-rose-200 bg-rose-50/60 text-sm">
+      <div className="col-span-2 space-y-1">
       <input
         autoFocus
-        className="col-span-2 px-2 py-1 rounded border border-rose-300 focus:border-rose-500 outline-none text-sm"
+        className="w-full px-2 py-1 rounded border border-rose-300 focus:border-rose-500 outline-none text-sm"
         value={editForm.name ?? ''}
         onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
         onKeyDown={(e) => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') handleEditCancel(); }}
         placeholder="Họ tên..."
       />
+      <label className="text-[10px] text-gray-500">Tổng số người
+        <input aria-label="Tổng số người" type="number" min="1" max="100" value={guestPartySize({ ...guest, ...editForm } as Guest)} onChange={e=>setEditForm(f=>({...f,partySize:Math.max(1,Math.min(100,Number(e.target.value)||1))}))} className="ml-1 w-12 rounded border px-1" />
+      </label>
+      </div>
       <select
         title="Nhóm khách"
         className="col-span-2 px-2 py-1 rounded border border-gray-300 outline-none text-sm"
@@ -271,7 +263,7 @@ const GuestManager: React.FC = () => {
     if (editingId === guest.id) return <EditRow guest={guest} />;
     return (
       <div className="grid grid-cols-12 gap-2 px-4 h-[54px] items-center border-b border-gray-100 hover:bg-rose-50/30 transition-colors text-sm text-gray-700">
-        <div className="col-span-2 font-medium truncate" title={guest.name}>{guest.name}</div>
+        <div className="col-span-2 font-medium truncate" title={guest.name}>{guest.name}{guestPartySize(guest)>1 && <small className="ml-1 text-gray-400">({guestPartySize(guest)} người)</small>}</div>
         <div className="col-span-2">
           <span className="bg-white border border-gray-200 px-2 py-1 rounded text-xs text-gray-600 truncate block w-fit max-w-full">
             {guest.group}
@@ -337,6 +329,9 @@ const GuestManager: React.FC = () => {
             value={editForm.address ?? ''}
             onChange={(e) => setEditForm(f => ({ ...f, address: e.target.value }))}
           />
+          <label className="text-xs text-gray-500">Tổng số người
+            <input aria-label="Tổng số người" type="number" min="1" max="100" value={guestPartySize({ ...guest, ...editForm } as Guest)} onChange={e=>setEditForm(f=>({...f,partySize:Math.max(1,Math.min(100,Number(e.target.value)||1))}))} className="ml-2 w-20 rounded border p-1" />
+          </label>
           <div className="grid grid-cols-2 gap-2">
             <select
               title="Nhóm khách"
@@ -396,7 +391,7 @@ const GuestManager: React.FC = () => {
       <div className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm flex flex-col justify-between mb-2">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0 pr-2">
-            <h3 className="font-bold text-gray-800 text-sm truncate">{guest.name}</h3>
+            <h3 className="font-bold text-gray-800 text-sm truncate">{guest.name}{guestPartySize(guest)>1 && <small className="ml-1 text-gray-400">({guestPartySize(guest)} người)</small>}</h3>
             <div className="flex flex-wrap gap-2 mt-1">
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full inline-block">{guest.group}</span>
               {guest.address && (
@@ -450,6 +445,7 @@ const GuestManager: React.FC = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden h-full flex flex-col">
+      {rsvpError && <div role="alert" className="bg-amber-50 p-3 text-sm text-amber-800">{rsvpError} <button className="underline" onClick={loadRsvp}>Thử lại</button></div>}
 
       {/* ── Tab Bar ── */}
       <div className="flex border-b border-rose-100 flex-shrink-0 bg-rose-50/30">
@@ -464,7 +460,7 @@ const GuestManager: React.FC = () => {
         >
           <Users className="w-4 h-4" />
           Danh Sách
-          <span className="bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full text-[10px]">{guests.length}</span>
+          <span className="bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full text-[10px]">{guests.reduce((sum,g)=>sum+guestPartySize(g),0)}</span>
         </button>
         <button
           type="button"
@@ -600,15 +596,15 @@ const GuestManager: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleImportRsvp(r)}
-                      disabled={importedIds.has(r.id)}
-                      title={importedIds.has(r.id) ? 'Đã thêm vào danh sách' : 'Thêm vào danh sách khách mời'}
+                      disabled={(importedIds.has(r.id) || guests.some(g => g.sourceRsvpId === r.id))}
+                      title={(importedIds.has(r.id) || guests.some(g => g.sourceRsvpId === r.id)) ? 'Đã thêm vào danh sách' : 'Thêm vào danh sách khách mời'}
                       className={`flex-shrink-0 p-2 rounded-lg text-xs flex items-center gap-1 transition-all ${
-                        importedIds.has(r.id)
+                        (importedIds.has(r.id) || guests.some(g => g.sourceRsvpId === r.id))
                           ? 'bg-gray-100 text-gray-400 cursor-default'
                           : 'bg-white border border-emerald-300 text-emerald-600 hover:bg-emerald-50'
                       }`}
                     >
-                      {importedIds.has(r.id)
+                      {(importedIds.has(r.id) || guests.some(g => g.sourceRsvpId === r.id))
                         ? <Check className="w-3.5 h-3.5" />
                         : <Download className="w-3.5 h-3.5" />
                       }

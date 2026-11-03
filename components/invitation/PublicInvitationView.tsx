@@ -1,8 +1,9 @@
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { loadPublicInvitation, submitRSVP, submitWish, loadInvitationResponses } from '../../services/cloudService';
+import { loadPublicInvitation, submitRSVP, submitWish, loadPublicWishes } from '../../services/cloudService';
 import { InvitationData, GuestWish } from '../../types';
 import InvitationPreview from './InvitationPreview';
+import { newUuid } from '../../lib/ids';
 import { sanitizeAudioUrl } from '../../lib/sanitize';
 import { Loader2, AlertCircle, MailOpen, Volume2, VolumeX, Heart, Mail, X, CheckCircle2, Send, Users, MessageCircle, Music } from 'lucide-react';
 
@@ -56,14 +57,17 @@ interface RSVPModalProps {
     brideName: string;
     inviteData?: InvitationData;
     onClose: () => void;
-    onSubmit: (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }) => void;
+    onSubmit: (payload: { id?:string; name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }) => Promise<boolean>;
 }
-const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData, onClose, onSubmit }) => {
+export const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData, onClose, onSubmit }) => {
     const [form, setForm] = useState({ name: '', phone: '', guests: '1', attending: 'yes', note: '' });
     const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
     // BUG-005 fix: submitting state to prevent double-tap / spam
     const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
+    const responseId = useRef(newUuid());
+    const inFlight = useRef(false);
     const isMultiEvent = !!(inviteData?.rsvpMultiEvent);
 
     // Build event list: use rsvpEventSelections if configured, else fallback to events[]
@@ -83,16 +87,19 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData,
         );
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.name.trim() || submitting) return;
+        if (!form.name.trim() || inFlight.current) return;
+        inFlight.current = true; setSubmitError('');
         // BUG-005 fix: set submitting state immediately
         setSubmitting(true);
         const attending = isMultiEvent ? (selectedEvents.length > 0 ? 'yes' : 'no') : form.attending;
         // BUG-014 fix: parse '5+' as 5 (store actual number, not the string)
         const rawGuests = form.guests === '5+' ? '5' : form.guests;
         const guestCount = attending === 'yes' ? (parseInt(rawGuests, 10) || 1) : null;
-        onSubmit({
+        try {
+        const accepted = await onSubmit({
+            id: responseId.current,
             name: form.name.trim(),
             phone: form.phone.trim() || undefined,
             attending,
@@ -100,7 +107,10 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData,
             message: (form.note.trim() || (form.guests === '5+' && attending === 'yes' ? '5+ người' : undefined)) || undefined,
             selectedEventIds: isMultiEvent ? selectedEvents : undefined,
         });
+        if (!accepted) throw new Error('not acknowledged');
         setSubmitted(true);
+        } catch { setSubmitError('Chưa gửi được phản hồi. Nội dung vẫn được giữ, bạn có thể thử lại.'); }
+        finally { inFlight.current = false; setSubmitting(false); }
     };
 
     if (submitted) {
@@ -138,12 +148,13 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData,
                     </button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                    {submitError && <p role="alert" className="text-sm text-red-600">{submitError}</p>}
                     <div>
                         <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Họ tên *</label>
                         <input
                             className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-rose-400 outline-none"
                             value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                            placeholder="Nguyễn Văn A" required
+                            placeholder="Nguyễn Văn A" aria-label="Họ tên" maxLength={100} required
                         />
                     </div>
                     <div>
@@ -151,7 +162,7 @@ const RSVPModal: React.FC<RSVPModalProps> = ({ groomName, brideName, inviteData,
                         <input
                             className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-rose-400 outline-none"
                             value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                            placeholder="0912 345 678" type="tel"
+                            placeholder="0912 345 678" type="tel" maxLength={30}
                         />
                     </div>
 
@@ -245,24 +256,28 @@ interface GuestbookModalProps {
     brideName: string;
     showEmail?: boolean;
     onClose: () => void;
-    onSubmit: (wish: GuestWish) => void;
+    onSubmit: (wish: GuestWish & { email?:string }) => Promise<boolean>;
 }
-const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, showEmail, onClose, onSubmit }) => {
+export const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, showEmail, onClose, onSubmit }) => {
     const [form, setForm] = useState({ name: '', email: '', message: '' });
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
+    const responseId = useRef(newUuid());
+    const inFlight = useRef(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.name.trim() || !form.message.trim()) return;
-        const wish: GuestWish = {
-            // BUG-006 fix: use randomUUID to prevent ID collision between concurrent submissions
-            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `wish-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            name: form.name.trim(),
-            message: form.message.trim(),
-            createdAt: new Date().toISOString(),
-        };
-        onSubmit(wish);
-        setSubmitted(true);
+        if (!form.name.trim() || !form.message.trim() || inFlight.current) return;
+        inFlight.current = true; setSubmitting(true); setSubmitError('');
+        try {
+            const accepted = await onSubmit({ id: responseId.current, name: form.name.trim(),
+                message: form.message.trim(), createdAt: new Date().toISOString(),
+                ...(showEmail && form.email.trim() ? { email: form.email.trim() } : {}) });
+            if (!accepted) throw new Error('not acknowledged');
+            setSubmitted(true);
+        } catch { setSubmitError('Chưa gửi được lời chúc. Nội dung vẫn được giữ, bạn có thể thử lại.'); }
+        finally { inFlight.current = false; setSubmitting(false); }
     };
 
     if (submitted) {
@@ -295,6 +310,7 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, s
                     </button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                    {submitError && <p role="alert" className="text-sm text-red-600">{submitError}</p>}
                     {/* Name + Email row */}
                     <div className={showEmail ? 'grid grid-cols-2 gap-3' : ''}>
                         <div>
@@ -302,7 +318,7 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, s
                             <input
                                 className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-amber-400 outline-none"
                                 value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                placeholder="Nguyễn Văn A" required
+                                placeholder="Nguyễn Văn A" aria-label="Tên của bạn" maxLength={100} required
                             />
                         </div>
                         {showEmail && (
@@ -311,7 +327,7 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, s
                                 <input
                                     className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-amber-400 outline-none"
                                     value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                                    placeholder="email@..." type="email"
+                                    placeholder="email@..." type="email" maxLength={254}
                                 />
                             </div>
                         )}
@@ -319,6 +335,7 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, s
                     <div>
                         <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Lời chúc *</label>
                         <textarea
+                            aria-label="Lời chúc"
                             className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-amber-400 outline-none resize-none h-28"
                             value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
                             placeholder="Chúc cô dâu chú rể trăm năm hạnh phúc, sớm có con ..."
@@ -326,7 +343,7 @@ const GuestbookModal: React.FC<GuestbookModalProps> = ({ groomName, brideName, s
                         />
                         <p className="text-[10px] text-gray-400 mt-1 text-right">{form.message.length}/300</p>
                     </div>
-                    <button type="submit" className="w-full bg-gradient-to-r from-amber-400 to-orange-400 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-amber-300/50 transition-all flex items-center justify-center gap-2">
+                    <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-amber-400 to-orange-400 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-amber-300/50 transition-all flex items-center justify-center gap-2">
                         <Heart className="w-4 h-4 fill-current" /> GỬI LỜI CHÚC
                     </button>
                 </form>
@@ -411,16 +428,6 @@ const PublicInvitationView: React.FC = () => {
                 // 1. Try cloud first
                 let inviteData = await loadPublicInvitation(uid);
 
-                // 2. Fallback: localStorage mirror (set by updateInvitation in no-auth mode)
-                if (!inviteData) {
-                    try {
-                        const cached = localStorage.getItem(`wedplan_pub_inv_${uid}`);
-                        if (cached) {
-                            inviteData = JSON.parse(cached);
-                        }
-                    } catch { /* ignore */ }
-                }
-
                 if (inviteData) {
                     // Validate musicUrl: if it points to a non-existent file, use a valid default
                     const VALID_AUDIO_PATHS = [
@@ -452,7 +459,7 @@ const PublicInvitationView: React.FC = () => {
                     // BUG-012 fix: only load wishes when guestbook is enabled
                     if (inviteData.guestbookEnabled) {
                         try {
-                            const { wishes } = await loadInvitationResponses(uid);
+                            const wishes = await loadPublicWishes(uid);
                             setCloudWishes(wishes.map(w => ({ id: w.id, name: w.name, message: w.message ?? '', createdAt: w.createdAt })));
                         } catch { /* ignore */ }
                     }
@@ -534,23 +541,21 @@ const PublicInvitationView: React.FC = () => {
     };
 
 
-    const handleWishSubmit = (wish: GuestWish) => {
-        const params = new URLSearchParams(window.location.search);
-        const uid = params.get('uid') || 'unknown';
-        const updated = [wish, ...localWishes];
-        setLocalWishes(updated);
-        try {
-            localStorage.setItem(`wishes_${uid}`, JSON.stringify(updated));
-        } catch { /* storage full */ }
-        // Persist to cloud so the couple (and other guests) actually receive it
-        submitWish(uid, { name: wish.name, message: wish.message });
+    const handleWishSubmit = async (wish: GuestWish & { email?:string }): Promise<boolean> => {
+        const uid = new URLSearchParams(window.location.search).get('uid') || '';
+        const accepted = await submitWish(uid, { id: wish.id, name: wish.name, message: wish.message, email: wish.email });
+        if (!accepted) return false;
+        const publicWish:GuestWish = { id:wish.id, name:wish.name, message:wish.message, createdAt:wish.createdAt };
+        setLocalWishes(previous => {
+            const updated = [publicWish, ...previous.filter(w => w.id !== wish.id)];
+            try { localStorage.setItem(`wishes_${uid}`, JSON.stringify(updated)); } catch { /* storage unavailable */ }
+            return updated;
+        });
+        return true;
     };
-
-    const handleRSVPSubmit = (payload: { name: string; phone?: string; attending: string; guestCount?: number | null; message?: string; selectedEventIds?: string[] }) => {
-        const params = new URLSearchParams(window.location.search);
-        const uid = params.get('uid') || 'unknown';
-        // Persist to cloud so the couple receives the RSVP (including multi-event selections)
-        submitRSVP(uid, payload);
+    const handleRSVPSubmit = (payload: { id?:string; name:string; phone?:string; attending:string; guestCount?:number|null; message?:string; selectedEventIds?:string[] }):Promise<boolean> => {
+        const uid = new URLSearchParams(window.location.search).get('uid') || '';
+        return submitRSVP(uid, payload);
     };
 
     // --- LOADING ---

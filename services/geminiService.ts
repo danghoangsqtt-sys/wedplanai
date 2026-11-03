@@ -1,4 +1,5 @@
 
+import { guestAdults } from '../lib/guestStats';
 import { generateAIContent } from "./aiService";
 import { DashboardStats, GuestGroup } from "../types";
 import { useStore } from "../store/useStore";
@@ -77,11 +78,11 @@ export const getFinancialAdvice = async (
 
   // --- Build rich context from real data ---
   const guestByGroup = {
-    nhaTrai: guests.filter(g => g.group === GuestGroup.GROOM).length,
-    nhaGai: guests.filter(g => g.group === GuestGroup.BRIDE).length,
-    banBe: guests.filter(g => g.group === GuestGroup.FRIEND).length,
-    dongNghiep: guests.filter(g => g.group === GuestGroup.WORK).length,
-    confirmed: guests.filter(g => g.probability === 100).length,
+    nhaTrai: guests.filter(g => g.group === GuestGroup.GROOM).reduce((sum,g)=>sum+guestAdults(g),0),
+    nhaGai: guests.filter(g => g.group === GuestGroup.BRIDE).reduce((sum,g)=>sum+guestAdults(g),0),
+    banBe: guests.filter(g => g.group === GuestGroup.FRIEND).reduce((sum,g)=>sum+guestAdults(g),0),
+    dongNghiep: guests.filter(g => g.group === GuestGroup.WORK).reduce((sum,g)=>sum+guestAdults(g),0),
+    confirmed: guests.filter(g => g.probability === 100).reduce((sum,g)=>sum+guestAdults(g),0),
     totalChildren: guests.reduce((acc, g) => acc + g.childrenCount, 0),
   };
 

@@ -154,6 +154,34 @@ $$;
 REVOKE ALL ON FUNCTION public.get_public_wishes(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_public_wishes(TEXT) TO anon, authenticated;
 
+-- Public forms receive an idempotent acknowledgement without SELECT access to
+-- private response rows. All fields are revalidated inside this definer function.
+CREATE OR REPLACE FUNCTION public.submit_invitation_response(response JSONB)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE r public.invitation_responses; saved public.invitation_responses; allowed BOOLEAN; BEGIN
+  r := jsonb_populate_record(null::public.invitation_responses,response);
+  r.selected_event_ids := coalesce(r.selected_event_ids,'{}');
+  SELECT EXISTS(SELECT 1 FROM public.public_invitations i WHERE i.uid=r.uid
+    AND CASE WHEN r.kind='wish' THEN i.invitation_json->>'guestbookEnabled' ELSE i.invitation_json->>'rsvpEnabled' END='true')
+    AND r.id IS NOT NULL AND char_length(trim(r.name)) BETWEEN 1 AND 100
+    AND coalesce(char_length(r.phone),0)<=30 AND coalesce(char_length(r.email),0)<=254
+    AND coalesce(char_length(r.message),0)<=2000 AND cardinality(r.selected_event_ids)<=20
+    AND ((r.kind='rsvp' AND r.attending IN ('yes','no') AND (r.guest_count IS NULL OR r.guest_count BETWEEN 1 AND 100))
+      OR (r.kind='wish' AND char_length(trim(r.message)) BETWEEN 1 AND 2000 AND r.phone IS NULL))
+    INTO allowed;
+  IF NOT coalesce(allowed,false) THEN RAISE EXCEPTION 'Invalid response' USING ERRCODE='22023'; END IF;
+  INSERT INTO public.invitation_responses(id,uid,kind,name,phone,attending,guest_count,message,selected_event_ids,email)
+  VALUES(r.id,r.uid,r.kind,r.name,r.phone,r.attending,r.guest_count,r.message,r.selected_event_ids,r.email)
+  ON CONFLICT(id) DO NOTHING;
+  SELECT * INTO saved FROM public.invitation_responses WHERE id=r.id;
+  IF row(saved.uid,saved.kind,saved.name,saved.phone,saved.attending,saved.guest_count,saved.message,coalesce(saved.selected_event_ids,'{}'),saved.email)
+    IS DISTINCT FROM row(r.uid,r.kind,r.name,r.phone,r.attending,r.guest_count,r.message,r.selected_event_ids,r.email)
+    THEN RAISE EXCEPTION 'Response ID already used' USING ERRCODE='22023'; END IF;
+  RETURN true;
+END $$;
+REVOKE ALL ON FUNCTION public.submit_invitation_response(JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.submit_invitation_response(JSONB) TO anon, authenticated;
+
 -- Atomic compare-and-save: no last-write-wins overwrite after a stale read.
 CREATE OR REPLACE FUNCTION public.save_plan(plan_uid TEXT, plan_data JSONB, expected_updated_at TIMESTAMPTZ)
 RETURNS TIMESTAMPTZ LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$

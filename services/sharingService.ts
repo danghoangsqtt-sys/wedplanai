@@ -71,7 +71,7 @@ export async function joinPlanByCode(
 
   const { data: rows, error } = await supabase.rpc('join_plan_by_code', { invite_code: normalizedCode });
   if (error) throw new Error(error.message);
-  if (!rows?.[0]) throw new Error('Kh?ng th? tham gia k? ho?ch.');
+  if (!rows?.[0]) throw new Error('Không thể tham gia kế hoạch.');
   return rowToSharedPlan(rows[0]);
 }
 

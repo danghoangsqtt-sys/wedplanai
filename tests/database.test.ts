@@ -65,6 +65,14 @@ describe('actual PostgreSQL schema and authorization', () => {
     expect(rows).toHaveLength(1);
     expect(Object.keys(rows[0]).sort()).toEqual(['created_at','id','message','name']);
   });
+  it('acknowledges identical public retries once and rejects ID reuse with different content',async()=>{
+    await role('anon');
+    const response={id:'44444444-4444-4444-8444-444444444444',uid:plan,kind:'rsvp',name:'Family',attending:'yes',guest_count:5,selected_event_ids:['event-a']};
+    for(let i=0;i<2;i++) expect((await db.query('select public.submit_invitation_response($1) as ok',[JSON.stringify(response)])).rows[0]).toEqual({ok:true});
+    await expect(db.query('select public.submit_invitation_response($1)',[JSON.stringify({...response,name:'Changed'})])).rejects.toThrow(/already used/);
+    await role('authenticated',owner);
+    expect((await db.query('select id from public.invitation_responses')).rows).toHaveLength(1);
+  });
   it('blocks disabled forms and invalid/unbounded submissions', async () => {
     await db.exec(`update public.public_invitations set invitation_json='{"rsvpEnabled":false,"guestbookEnabled":false}'`);
     await role('anon');

@@ -12,6 +12,7 @@ import Notifications from './components/ui/Notifications';
 import { useStore } from './store/useStore';
 import PasswordGate from './components/PasswordGate';
 import { OWNER_UID } from './lib/constants';
+import { guestAdults, guestPartySize } from './lib/guestStats';
 import { isSupabaseConfigured } from './lib/supabase';
 import { logAppVisit } from './services/cloudService';
 import { AlertTriangle, Loader2 } from 'lucide-react';
@@ -148,14 +149,14 @@ function App() {
 
   // --- Statistics Calculation Logic ---
   const stats: DashboardStats = useMemo(() => {
-    const totalGuests = guests.length;
+    const totalGuests = guests.reduce((sum,g)=>sum+guestAdults(g),0);
     const weightedGuestCount = guests.reduce((acc, guest) => {
-      const totalPeople = 1 + guest.childrenCount;
+      const totalPeople = guestPartySize(guest);
       const prob = guest.probability / 100;
       return acc + (totalPeople * prob);
     }, 0);
     const totalChildren = guests.reduce((acc, g) => acc + g.childrenCount, 0);
-    const confirmedGuests = guests.filter(g => g.probability === AttendanceProbability.CONFIRMED).length;
+    const confirmedGuests = guests.filter(g => g.probability === AttendanceProbability.CONFIRMED).reduce((sum,g)=>sum+guestAdults(g),0);
     const expectedGiftMoney = guests.reduce((acc, guest) => acc + (guest.redEnvelope * (guest.probability / 100)), 0);
     const totalBudget = budgetItems.reduce((acc, item) => acc + item.estimatedCost, 0);
     const totalActual = budgetItems.reduce((acc, item) => acc + item.actualCost, 0);
