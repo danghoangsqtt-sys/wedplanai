@@ -4,6 +4,8 @@ Tất cả các thay đổi nổi bật của dự án sẽ được ghi nhận 
 
 ## [Unreleased] — 2.2.1
 
+- Audit remediation 4.2: 12 Auth and PostgreSQL tests pass, including fresh/legacy migration, private RSVP protection, stale revision and sharing checks; lint and build pass.
+
 - Audit remediation 4.1: Lint, 2 behavior tests and production build pass; npm audit reports zero vulnerabilities; PGlite PostgreSQL 18 booted successfully.
 
 ## [v2.1.0] — 2026-06-15: Invitation Design Upgrade (frontend-design)
