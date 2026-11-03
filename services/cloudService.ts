@@ -1,4 +1,5 @@
 import { isMilestoneTaskStore } from '../lib/milestoneTasks';
+import { validateBudgetPaymentData } from '../lib/budgetPayments';
 import { supabase, TABLES } from '../lib/supabase';
 import { Guest, BudgetItem, UserProfile, ProcedureStep, WeddingRegion, InvitationData } from '../types';
 import { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
@@ -45,6 +46,7 @@ export const saveUserDataToCloud = async (
   if (!isValidUid(uid) || !Array.isArray(data.guests) || !Array.isArray(data.budgetItems)) {
     throw new Error('Invalid plan data');
   }
+  data.budgetItems.forEach(validateBudgetPaymentData);
   // The database commits private data and its public invitation in one transaction.
   const { data: revision, error } = await supabase.rpc('save_plan', {
     plan_uid: uid, plan_data: data, expected_updated_at: expectedRevision,
@@ -63,6 +65,7 @@ export const loadUserDataFromCloud = async (uid: string): Promise<UserCloudData 
   if (error) { cloudLog.error('load failed', error); throw error; }
   if (!doc) return null;
   if (!Array.isArray(doc.guests) || !Array.isArray(doc.budget_items)) throw new Error('Invalid cloud data');
+  doc.budget_items.forEach(validateBudgetPaymentData);
   if (doc.milestone_tasks != null && !isMilestoneTaskStore(doc.milestone_tasks)) throw new Error('Invalid cloud milestones');
   return {
     guests: doc.guests, budgetItems: doc.budget_items,

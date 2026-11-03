@@ -66,12 +66,43 @@ export interface BudgetItem {
   status: TaskStatus;
   estimatedCost: number;
   actualCost: number;
+  agreedCost?: number;
+  supplierName?: string;
+  supplierPhone?: string;
+  paymentSchedule?: BudgetPaymentStage[];
+  payments?: BudgetPayment[];
   note?: string;
   phaseId?: TimelinePhase;
   aiHint?: string;
 }
 
+export interface BudgetPaymentStage {
+  id: string;
+  label: string;
+  offsetDays: number;
+  amount: number;
+  settledDueDate?: string;
+}
+export interface BudgetPayment {
+  id: string;
+  kind: 'deposit' | 'payment';
+  amount: number;
+  paidAt: string;
+  note?: string;
+  allocations: { scheduleId: string | null; amount: number }[];
+  voidedAt?: string;
+  voidReason?: string;
+}
+export type BudgetPaymentFilter = 'all' | 'remaining' | 'before' | 'after' | 'overdue' | 'dueSoon' | 'unscheduled' | 'unreconciled' | 'history';
+export interface BudgetPaymentSummary {
+  estimated: number; agreed: number; forecast: number;
+  paid: number; deposits: number; remaining: number; provisionalRemaining: number;
+  overpaid: number; before: number; after: number; unscheduled: number;
+  overdue: number; dueSoon: number; unreconciledCount: number; unpricedCount: number;
+}
+
 export interface DashboardStats {
+  budgetPayments?: BudgetPaymentSummary;
   totalGuests: number;
   weightedGuestCount: number;
   totalChildren: number;

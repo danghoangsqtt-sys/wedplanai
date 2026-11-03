@@ -11,6 +11,8 @@ import { supabase, TABLES } from '../lib/supabase';
 import { OWNER_UID } from '../lib/constants';
 import { restoreBackup } from '../lib/backup';
 import { guestPartySize } from '../lib/guestStats';
+import type { BudgetPaymentFilter } from '../types';
+import { validateBudgetPaymentData } from '../lib/budgetPayments';
 import type { MilestoneTaskStore } from '../types';
 import { isMilestoneTaskStore, readLegacyMilestoneTasks } from '../lib/milestoneTasks';
 
@@ -60,6 +62,9 @@ interface AppState {
   // App Data
   guests: Guest[];
   budgetItems: BudgetItem[];
+  budgetFilter: BudgetPaymentFilter;
+  setBudgetFilter: (filter: BudgetPaymentFilter) => void;
+  mutateBudgetItem: (id: string, mutate: (item: BudgetItem) => BudgetItem) => void;
   procedures: Record<WeddingRegion, ProcedureStep[]>;
   milestoneTasks: MilestoneTaskStore;
   setMilestoneTasks: (tasks: MilestoneTaskStore) => void;
@@ -184,6 +189,19 @@ export const useStore = create<AppState>()(
       },
       guests: INITIAL_GUESTS,
       budgetItems: INITIAL_BUDGET_ITEMS,
+      budgetFilter: 'all',
+      setBudgetFilter: (filter) => set({ budgetFilter: filter }),
+      mutateBudgetItem: (id, mutate) => {
+        set(state => {
+          const item=state.budgetItems.find(row=>row.id===id);
+          if(!item)throw new Error('Khoản chi không còn tồn tại.');
+          const updated=mutate(item);
+          if(updated.id!==id)throw new Error('Không được thay đổi định danh khoản chi.');
+          validateBudgetPaymentData(updated);
+          return {budgetItems:state.budgetItems.map(row=>row.id===id?updated:row)};
+        });
+        triggerCloudSync(get);
+      },
       procedures: WEDDING_PROCEDURES,
       milestoneTasks: {},
       setMilestoneTasks: (tasks) => {
@@ -283,18 +301,16 @@ export const useStore = create<AppState>()(
       },
 
       addBudgetItem: (item) => {
-        set((state) => ({ budgetItems: [...state.budgetItems, item] }));
+        const initialized={...item,payments:item.payments??[],paymentSchedule:item.paymentSchedule??[]};
+        validateBudgetPaymentData(initialized);
+        if(get().budgetItems.some(row=>row.id===initialized.id))throw new Error('Khoản chi đã tồn tại.');
+        set((state) => ({ budgetItems: [...state.budgetItems, initialized] }));
         get().addNotification('SUCCESS', 'Đã thêm khoản chi mới.');
         triggerCloudSync(get);
       },
 
       updateBudgetItem: (id, field, value) => {
-        set((state) => ({
-          budgetItems: state.budgetItems.map(item =>
-            item.id === id ? { ...item, [field]: value } : item
-          )
-        }));
-        triggerCloudSync(get);
+        get().mutateBudgetItem(id,item=>({...item,[field]:value}));
       },
 
       deleteBudgetItem: (id) => {
@@ -304,6 +320,7 @@ export const useStore = create<AppState>()(
       },
 
       setBudgetItems: (items) => {
+        items.forEach(validateBudgetPaymentData);
         set({ budgetItems: items });
         triggerCloudSync(get);
       },

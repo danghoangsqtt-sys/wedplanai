@@ -1,6 +1,7 @@
 import type { Guest, BudgetItem, ProcedureStep, WeddingRegion, InvitationData } from '../types';
 import type { CoupleProfile, HarmonyResult, AuspiciousDate } from '../types/fengshui';
 import { isMilestoneTaskStore } from './milestoneTasks';
+import { validateBudgetPaymentData } from './budgetPayments';
 
 export interface PlanSnapshot {
   milestoneTasks?: import('../types').MilestoneTaskStore;
@@ -40,6 +41,7 @@ export function restoreBackup(raw:unknown,current:PlanSnapshot):PlanSnapshot {
   if(raw.guests?.some((g:any)=>g.partySize!==undefined&&(!Number.isInteger(g.partySize)||g.partySize<1+g.childrenCount||g.partySize>100))) throw new Error('Số người trong nhóm khách không hợp lệ.');
   if(raw.guests?.some((g:any)=>[['phone',30],['address',200],['tableName',50],['notes',2000]].some(([key,max])=>g[key]!==undefined&&(typeof g[key]!=='string'||g[key].length>Number(max))) || (g.invitationStatus!==undefined&&!['not_sent','sent'].includes(g.invitationStatus)))) throw new Error('Thông tin khách mời trong backup không hợp lệ.');
   if(raw.budgetItems!==undefined && (!Array.isArray(raw.budgetItems)||!raw.budgetItems.every((b:any)=>plain(b)&&typeof b.itemName==='string'&&typeof b.category==='string'&&finite(b.estimatedCost)&&finite(b.actualCost)))) throw new Error('Ngân sách trong backup không hợp lệ.');
+  raw.budgetItems?.forEach(validateBudgetPaymentData);
   if(raw.procedures!==undefined && (!plain(raw.procedures)||!['NORTH','CENTRAL','SOUTH'].every(region=>Array.isArray(raw.procedures[region])))) throw new Error('Quy trình trong backup không hợp lệ.');
   if(raw.milestoneTasks!==undefined && !isMilestoneTaskStore(raw.milestoneTasks)) throw new Error('Lộ trình trong backup không hợp lệ.');
   if(raw.invitation!==undefined) {

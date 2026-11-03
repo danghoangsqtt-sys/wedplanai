@@ -1,14 +1,16 @@
 # Phase 8 — Ngân sách đặt cọc và công nợ
 
-Trạng thái: planned, chưa triển khai. Nhu cầu: biết đã đặt cọc bao nhiêu và còn phải thanh toán bao nhiêu cho từng khoản chi và toàn bộ đám cưới.
+Trạng thái: in_progress. Người dùng đã duyệt bản phác và yêu cầu triển khai ngày 2026-11-03. Nguồn: docs/brainstorm/session-2026-11-03.md và hai workspace 2026-11-03-budget-payments.
 
 ## Quy ước số liệu
 
-- Giữ `estimatedCost` là dự toán; `actualCost` là tổng giá chốt/thực tế, không dùng làm tiền đã trả.
+- Giữ `estimatedCost` là dự toán; bảo toàn `actualCost` lịch sử, không tự coi nó là giá chốt mới hoặc tiền đã trả. Đối chiếu rõ trước khi chuyển.
 - Thêm `agreedCost?: number` nếu cần phân biệt giá chốt bằng 0 với dữ liệu cũ chưa nhập. Tổng nghĩa vụ thanh toán ưu tiên giá chốt đã nhập; nếu chưa chốt dùng dự toán và gắn nhãn tạm tính.
 - `payments[]`: id, amount, kind (`deposit` hoặc `payment`), paidAt, note. Tổng cọc là tổng giao dịch deposit; tổng đã trả gồm cọc và các đợt thanh toán. Không cộng cọc hai lần.
 - Còn phải trả = max(tổng giá chốt − tổng đã trả, 0). Trả dư hiển thị riêng max(đã trả − giá chốt, 0); không giấu bằng số âm hoặc tự sửa giao dịch.
-- `paymentDueDate`, `supplierName`, `supplierPhone` là tùy chọn. Trạng thái thanh toán suy ra từ số tiền; trạng thái công việc Chưa làm/Đang làm/Đã xong giữ độc lập.
+- Lịch hẹn **chỉ** theo `offsetDays` trước/đúng/sau ngày cưới. Ngày thực trả lưu riêng, không đổi khi dời ngày cưới. `supplierName`, `supplierPhone` là tùy chọn.
+- Có `paymentSchedule[]`, `payments[]` và phân bổ giao dịch vào đợt. Trạng thái thanh toán suy ra từ số tiền, độc lập trạng thái công việc. Cọc nằm trong tổng đã trả.
+- Một nguồn tính dùng chung cho list/dashboard/CSV/AI; không bù trả dư nhà cung cấp này vào công nợ nhà cung cấp khác. Theo dõi riêng khoản chưa chốt/chưa đối chiếu, không khẳng định công nợ đã chốt cho các khoản đó.
 - Dữ liệu cũ không có giao dịch hiển thị “Chưa ghi nhận thanh toán”; không tự coi `actualCost` là đã trả, kể cả trạng thái PAID. Cung cấp thao tác xác nhận chuyển đổi có xem trước khi người dùng muốn ghi nhận.
 - VND là số nguyên hữu hạn không âm; ngày hợp lệ; tổng đã trả tính từ giao dịch, không lưu đồng thời một trường tổng dễ lệch. Có xác nhận khi xóa giao dịch.
 

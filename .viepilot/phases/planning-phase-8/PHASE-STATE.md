@@ -1,11 +1,13 @@
 # Phase 8 state
 
-Status: planned. No budget payment implementation has started.
+Status: in_progress. User approved the prototype and requested shipping implementation on 2026-11-03.
 
 | Task | Scope | Status |
 |---|---|---|
-| 8.1 | Payment model, calculations, legacy/backup compatibility | planned |
-| 8.2 | Deposit and staged-payment history, suppliers and due dates | planned |
+| 8.1 | Payment model, calculations, legacy/backup compatibility | code verified locally |
+| 8.2 | Deposit and staged-payment history, suppliers and due dates | in_progress |
 | 8.3 | Dashboard balances, filters, export and browser regression | planned |
 
-Specification: SPEC.md. The current user request asks for a concrete upgrade plan. Do not claim these fields are already available in the 2.3.0 preview.
+Written task contracts precede shipping edits. PIN access remains unchanged; no live backend deployment or remote push is assumed.
+
+8.1: 21 focused ledger/persistence tests, typecheck and lint pass. Local checkpoint follows; no remote persistence claimed. 8.2 contract read before UI edits.
