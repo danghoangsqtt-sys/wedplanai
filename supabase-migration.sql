@@ -207,6 +207,31 @@ END $$;
 REVOKE ALL ON FUNCTION public.leave_shared_plan(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.leave_shared_plan(UUID) TO authenticated;
 
+CREATE TABLE IF NOT EXISTS private.ai_usage (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  usage_day DATE NOT NULL, daily_count INT NOT NULL,
+  minute_start TIMESTAMPTZ NOT NULL, minute_count INT NOT NULL
+);
+REVOKE ALL ON private.ai_usage FROM PUBLIC, anon, authenticated;
+CREATE OR REPLACE FUNCTION public.consume_ai_quota(plan_uid TEXT)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE accepted UUID; BEGIN
+  IF NOT public.can_manage_plan(plan_uid) THEN RETURN false; END IF;
+  INSERT INTO private.ai_usage(user_id,usage_day,daily_count,minute_start,minute_count)
+  VALUES(auth.uid(),current_date,1,date_trunc('minute',now()),1)
+  ON CONFLICT(user_id) DO UPDATE SET
+    usage_day=current_date,
+    daily_count=CASE WHEN ai_usage.usage_day=current_date THEN ai_usage.daily_count+1 ELSE 1 END,
+    minute_start=date_trunc('minute',now()),
+    minute_count=CASE WHEN ai_usage.minute_start=date_trunc('minute',now()) THEN ai_usage.minute_count+1 ELSE 1 END
+  WHERE (ai_usage.usage_day<>current_date OR ai_usage.daily_count<200)
+    AND (ai_usage.minute_start<>date_trunc('minute',now()) OR ai_usage.minute_count<10)
+  RETURNING user_id INTO accepted;
+  RETURN accepted IS NOT NULL;
+END $$;
+REVOKE ALL ON FUNCTION public.consume_ai_quota(TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.consume_ai_quota(TEXT) TO authenticated;
+
 CREATE INDEX IF NOT EXISTS idx_inv_resp_uid ON public.invitation_responses(uid,kind,created_at DESC);
 
 -- Storage is optional in the disposable DB. Preserve unrelated bucket policies.

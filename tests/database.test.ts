@@ -21,6 +21,7 @@ beforeAll(async () => { db = new PGlite(); await db.exec(auth); await db.exec(mi
 beforeEach(async () => {
   await db.exec(`RESET ROLE; DELETE FROM public.invitation_responses; DELETE FROM public.public_invitations;
     DELETE FROM public.user_data; DELETE FROM private.plan_owners; DELETE FROM public.plan_shares;
+    DELETE FROM private.ai_usage;
     INSERT INTO private.plan_owners VALUES('${plan}','${owner}');
     INSERT INTO public.user_data(id,guests) VALUES('${plan}','[{"name":"Private Guest"}]');
     INSERT INTO public.public_invitations(uid,invitation_json) VALUES('${plan}','{"rsvpEnabled":true,"guestbookEnabled":true}');`);
@@ -87,6 +88,13 @@ describe('actual PostgreSQL schema and authorization', () => {
     expect((await db.query('select id from public.user_data')).rows).toHaveLength(1);
     await db.query('select public.leave_shared_plan($1)',[share.id]);
     expect((await db.query('select id from public.user_data')).rows).toHaveLength(0);
+  });
+  it('limits AI usage atomically and denies another account', async () => {
+    await role('authenticated',owner);
+    for(let i=0;i<10;i++) expect((await db.query(`select public.consume_ai_quota('${plan}') as ok`)).rows[0]).toEqual({ok:true});
+    expect((await db.query(`select public.consume_ai_quota('${plan}') as ok`)).rows[0]).toEqual({ok:false});
+    await role('authenticated',other);
+    expect((await db.query(`select public.consume_ai_quota('${plan}') as ok`)).rows[0]).toEqual({ok:false});
   });
   it('upgrades legacy UUID/FK/policies without discarding user or invitation rows', async () => {
     const legacy=new PGlite();

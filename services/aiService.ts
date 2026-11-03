@@ -1,6 +1,8 @@
 
 import { UserProfile } from "../types";
 import { GoogleGenAI } from "@google/genai";
+import { useStore } from '../store/useStore';
+import { supabase } from '../lib/supabase';
 
 // --- ERROR CLASSIFICATION ---
 const classifyGeminiError = (error: any): string => {
@@ -56,11 +58,13 @@ const callGeminiDirect = async (
   customApiKey?: string,
   maxRetries: number = 3 // Always default to 3 retries (to handle 503 Service Unavailable properly)
 ) => {
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY;
-  const apiKey = customApiKey || envKey;
-
+  const apiKey = customApiKey?.trim() || useStore.getState().settings.geminiApiKey?.trim();
   if (!apiKey) {
-    throw new Error("Thiếu API Key Gemini. Vui lòng kiểm tra Cài đặt hoặc file .env.local");
+    const { data, error } = await supabase.functions.invoke('gemini', {
+      body: { kind: 'text', systemPrompt, userMessage, isJson },
+    });
+    if (error || !data?.text) throw new Error('Không thể kết nối AI hệ thống. Vui lòng thử lại hoặc cấu hình API Key cá nhân.');
+    return data.text as string;
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -112,6 +116,7 @@ const callGeminiDirect = async (
 };
 
 export const validateGeminiKey = async (apiKey: string): Promise<boolean> => {
+  if (!apiKey.trim()) throw new Error('Vui lòng nhập API Key.');
   await callGeminiDirect("You are a helper.", "Hello", false, apiKey, 1);
   return true;
 };
@@ -132,9 +137,14 @@ export const generateWeddingSticker = async (
   action: string,
   refImages: { groom?: string, bride?: string } // Base64 strings
 ) => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-  if (!apiKey) throw new Error("Thiếu API Key để tạo ảnh.");
+  const apiKey = useStore.getState().settings.geminiApiKey?.trim();
+  if (!apiKey) {
+    const { data, error } = await supabase.functions.invoke('gemini', {
+      body: { kind: 'sticker', promptDescription, action, refImages },
+    });
+    if (error || !data?.image) throw new Error('Không thể tạo ảnh bằng AI hệ thống. Vui lòng thử lại.');
+    return data.image as string;
+  }
 
   const ai = new GoogleGenAI({ apiKey });
 
@@ -203,7 +213,6 @@ export const generateWeddingSticker = async (
  * Lấy mẹo thực hiện task từ AI
  */
 export const askAITaskTip = async (taskName: string, category: string, apiKey: string): Promise<string> => {
-  if (!apiKey) return "Vui lòng cấu hình API Key để sử dụng tính năng này.";
   
   const systemPrompt = `Bạn là chuyên gia tư vấn tổ chức đám cưới tại Việt Nam.
 Người dùng đang cần thực hiện công việc: "${taskName}" (Mảng: ${category}).

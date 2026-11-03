@@ -1,0 +1,4 @@
+[functions.gemini]
+# The handler verifies getUser(token) and owner authorization explicitly, including
+# projects using new asymmetric JWT keys that the legacy gateway cannot verify.
+verify_jwt = false
